@@ -1,0 +1,13 @@
+{
+  "_doc": "VISION AGENT PROMPT — Future agent for coordinate-based visual interactions (screen reading, image recognition).",
+  "_note": "This full instruction set can later be moved to a database or local reference for future developers. Only send relevant modules to the LLM to reduce token usage.",
+  "_howToUpdate": "When implementing the vision agent, create a 'tools_vision' module in modules/ and add its ID here.",
+  "_integration": "Future: Will be used when J.A.R.V.I.S. receives commands that require visual understanding of the screen (e.g., 'what color is this button?', 'click the red icon').",
+  "_status": "NOT YET IMPLEMENTED — Placeholder for future multi-modal vision capabilities.",
+
+  "agent": "vision",
+  "description": "Vision agent for coordinate-based and visual interactions. Requires multi-modal LLM.",
+  "modules": ["personality"],
+  "vision_prompt": "You can see the user's screen. Describe what you see and interact with elements by their visual position. Use coordinates (x, y) when clicking elements that don't have DOM IDs.",
+  "max_tokens_hint": 200
+}

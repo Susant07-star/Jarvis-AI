@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+selenium
+undetected-chromedriver
+webdriver-manager
+pydantic

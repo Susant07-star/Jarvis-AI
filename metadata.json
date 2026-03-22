@@ -1,0 +1,7 @@
+{
+  "name": "J.A.R.V.I.S. Web Interface",
+  "description": "A modular, scalable, voice-enabled AI assistant running on a full-stack architecture.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

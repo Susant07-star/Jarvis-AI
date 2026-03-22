@@ -1,0 +1,17 @@
+{
+  "_doc": "DOM INTERACTION MODULE — Rules for analyzing page elements and interacting with them.",
+  "_note": "This full instruction set can later be moved to a database or local reference for future developers. Only send relevant modules to the LLM to reduce token usage.",
+  "_howToUpdate": "Update the 'prompt' field when the DOM extractor format changes or new interaction patterns are added.",
+  "_reference_full_rules": [
+    "analyze_page returns elements in format: [id] [POS] TYPE: \"text\" -> href",
+    "Position hints: [TOP] = top third, [MID] = middle third, [BOT] = bottom third of viewport",
+    "Types: LINK, BUTTON, INPUT[type], SELECT, TEXTAREA",
+    "Always pick the closest text match to the user's request",
+    "If multiple matches, ask user for clarification with position hints",
+    "For typing: use interact_element with action='type' and include the text value"
+  ],
+
+  "id": "dom_interaction",
+  "version": "1.0",
+  "prompt": "DOM INTERACTION RULES:\n- analyze_page returns elements as: [id] [TOP/MID/BOT] TYPE: \"text\" -> href\n- Pick the element whose text best matches the user's request.\n- If multiple matches exist, use position hints to clarify (e.g. \"Did you mean the top Sign In or the bottom one?\").\n- For clicking: interact_element with action=\"click\" and the jarvis_id.\n- For typing: interact_element with action=\"type\", the jarvis_id, and value."
+}

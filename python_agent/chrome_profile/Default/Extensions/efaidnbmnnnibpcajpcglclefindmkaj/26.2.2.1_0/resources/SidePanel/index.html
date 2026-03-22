@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="../../libs/jquery-3.1.1.min.js"></script>
+    <script type="module" src="sidepanel.js" defer></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #sidepanel {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #sidepanelPreRendered {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loader-container {
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            gap: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #lottie-animation {
+            height: 80px;
+        }
+
+        #tooltipTextEnabled {
+            font-family: 'Adobe Clean', sans-serif;
+            font-size: 14px;
+            line-height: 21px;
+            text-align: center;
+            vertical-align: middle;
+            width: 212px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="loader-container hidden">
+        <div id="lottie-animation"></div>
+        <div id="tooltipTextEnabled" class="translate"></div>
+    </div>
+    <iframe
+        id="sidepanel"
+        title="Adobe Chatbot"
+        class="hidden"
+    >
+    </iframe>
+</body>
+</html>

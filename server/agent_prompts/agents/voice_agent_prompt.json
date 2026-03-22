@@ -1,0 +1,11 @@
+{
+  "_doc": "VOICE AGENT PROMPT — Minimal prompt for voice-only interactions (greetings, questions, general chat).",
+  "_note": "This full instruction set can later be moved to a database or local reference for future developers. Only send relevant modules to the LLM to reduce token usage.",
+  "_howToUpdate": "Add/remove module IDs in the 'modules' array. The prompt_builder will assemble the final prompt from these modules.",
+  "_integration": "Used when J.A.R.V.I.S. receives a voice command that doesn't require browser interaction (e.g., 'hi', 'what time is it?', 'tell me a joke').",
+
+  "agent": "voice",
+  "description": "Voice-only agent for conversational interactions. No browser tools needed.",
+  "modules": ["personality", "behavior_rules"],
+  "max_tokens_hint": 100
+}

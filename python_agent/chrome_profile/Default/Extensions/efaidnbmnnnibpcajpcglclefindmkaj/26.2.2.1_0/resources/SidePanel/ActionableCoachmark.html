@@ -1,0 +1,158 @@
+<!-- ActionableCoachmark.html -->
+
+<style>
+    @font-face {
+        font-family: 'AdobeClean-Regular';
+        src: url('../../browser/css/fonts/AdobeClean-Regular.otf') format('opentype');
+    }
+    @font-face {
+        font-family: 'AdobeClean-Bold';
+        src: url('../../browser/css/fonts/AdobeClean-Bold.otf') format('opentype');
+    }
+    .actionable-coachmark {
+        display: flex;
+        flex-direction: column;
+        font-family: 'AdobeClean-Regular', adobe-clean, "Adobe Clean", sans-serif;
+        position: fixed;
+        right: 10px;
+        bottom: 20px;
+        z-index: 2147483647;
+        pointer-events: all;
+        opacity: 1;
+        background: white;
+        border-radius: 16px;
+        width: 328px;
+        padding: 12px;
+        box-shadow: 0px 2px 8px 0px #00000029;
+        background-clip: padding-box, border-box;
+        border: 1px solid transparent;
+        background-origin: border-box;
+        background-image: linear-gradient(white, white),
+            linear-gradient(90deg, #E11E36 0%, #5E4BDB 100%);
+    }
+
+    .actionable-coachmark h2 {
+        font-family: "Adobe Clean", adobe-clean, 'AdobeClean-Regular', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 23px;
+        color: #222222;
+        margin: 6px 0;
+    }
+
+    .actionable-coachmark p {
+        font-family: 'AdobeClean-Regular', adobe-clean, "Adobe Clean", sans-serif;
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        line-height: 21px;
+        font-weight: 400;
+        color: #222222;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 24px;
+    }
+
+    .close-btn {
+        display: flex;
+        cursor: pointer;
+        padding: 5px;
+        height: 8px;
+        width: 8px;
+    }
+
+    .nudge-input-box {
+        display: flex;
+        align-items: center;
+        border: 1px solid #B1B1B1;
+        border-radius: 10px;
+        padding: 8px;
+        position: relative;
+    }
+
+    .nudge-input-box textarea {
+        border: none;
+        outline: none;
+        flex-grow: 1;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow-x: auto;
+        height: 18px;
+        font-family: 'AdobeClean-Regular', adobe-clean, "Adobe Clean", sans-serif;
+        resize: none;
+        margin-right: 8px;
+        /*font-style: italic;*/
+        background: transparent;
+        cursor: text;
+        color: #464646;
+    }
+
+    .nudge-clicked {
+        border: 2px solid #222222;
+    }
+
+    .nudge-input-box textarea:focus {
+        background: white;
+        color: #000000;
+    }
+
+    .nudge-input-box img {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+
+    .nudge-input-box svg {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+
+    .nudge-input-box textarea::-webkit-scrollbar {
+        display: none;
+    }
+</style>
+
+<div class="actionable-coachmark" role="dialog" aria-labelledby="Acrobat AI Assistant Dialog">
+    <div class="header">
+        <svg width="16" height="16" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24.2932 15.0533C22.4388 13.1361 17.3748 13.9172 16.1624 14.0592C14.3793 12.355 13.1668 10.2959 12.7389 9.5858C13.3808 7.66864 13.8087 5.75148 13.88 3.69231C13.88 1.91716 13.1668 0 11.1698 0C10.4565 0 9.81462 0.426035 9.458 0.994083C8.60213 2.48521 8.95874 5.46746 10.3139 8.52071C9.52933 10.7219 8.8161 12.8521 6.81906 16.6154C4.75069 17.4675 0.399997 19.4556 0.0433821 21.5858C-0.0992637 22.2249 0.114705 22.8639 0.613965 23.3609C1.11323 23.787 1.75513 24 2.39704 24C5.03598 24 7.60361 20.3787 9.38668 17.3254C10.8845 16.8284 13.2381 16.1183 15.5918 15.6923C18.3734 18.1065 20.7983 18.4615 22.0822 18.4615C23.7939 18.4615 24.4358 17.7515 24.6498 17.1124C25.0064 16.4024 24.7924 15.6213 24.2932 15.0533ZM22.5101 16.2604C22.4388 16.7574 21.7969 17.2544 20.6557 16.9704C19.3006 16.6154 18.0881 15.9763 17.0182 15.1243C17.9454 14.9822 20.0138 14.7692 21.5116 15.0533C22.0822 15.1953 22.6527 15.5503 22.5101 16.2604ZM10.5992 1.63314C10.7418 1.42012 10.9558 1.27811 11.1698 1.27811C11.8117 1.27811 11.9543 2.05917 11.9543 2.69823C11.883 4.18935 11.5977 5.68047 11.0984 7.10059C10.0286 4.26035 10.2426 2.27219 10.5992 1.63314ZM10.4565 15.4083C11.0271 14.2722 11.8117 12.284 12.097 11.432C12.7389 12.497 13.8087 13.7751 14.3793 14.3432C14.3793 14.4142 12.1683 14.8402 10.4565 15.4083ZM6.24847 18.2485C4.60805 20.9467 2.8963 22.6509 1.9691 22.6509C1.82645 22.6509 1.68381 22.5799 1.54116 22.5089C1.32719 22.3669 1.25587 22.1538 1.32719 21.8698C1.54116 20.8757 3.39556 19.5266 6.24847 18.2485Z" fill="#B40000"/>
+        </svg>
+        <span class="close-btn" role="button" aria-label="Close Acrobat AI Assistant Dialog">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_4832_40255)">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M5.23789 4.00042L7.69413 1.54442C7.85834 1.38028 7.95062 1.15763 7.95067 0.925443C7.95072 0.69326 7.85854 0.470567 7.6944 0.306352C7.53025 0.142138 7.3076 0.0498553 7.07542 0.0498047C6.84323 0.0497541 6.62054 0.14194 6.45633 0.306082L3.99991 2.7625L1.54325 0.306082C1.37903 0.142005 1.15636 0.0498814 0.924227 0.0499779C0.69209 0.0500745 0.469498 0.142383 0.305421 0.306597C0.141343 0.470811 0.0492199 0.693479 0.0493165 0.925617C0.0494131 1.15775 0.141722 1.38034 0.305936 1.54442L2.762 4.00042L0.305936 6.45647C0.142457 6.6207 0.050775 6.84306 0.0509944 7.07478C0.0512139 7.30651 0.143317 7.52869 0.307107 7.69261C0.470897 7.85653 0.693006 7.94881 0.924732 7.94921C1.15646 7.94962 1.37889 7.85811 1.54325 7.69476L3.99991 5.23834L6.45633 7.69476C6.62053 7.85891 6.84322 7.95109 7.0754 7.95105C7.30758 7.951 7.53023 7.85873 7.69437 7.69452C7.85851 7.53031 7.9507 7.30762 7.95066 7.07544C7.95061 6.84327 7.85833 6.62062 7.69413 6.45647L5.23789 4.00042Z" fill="#222222"/>
+                </g>
+                <defs>
+                <clipPath id="clip0_4832_40255">
+                <rect width="8" height="8" fill="white"/>
+                </clipPath>
+                </defs>
+            </svg>
+        </span>
+    </div>
+    <h2 id="aiAcHeader" class="translate"></h2>
+    <p id="aiAcBody" class="translate"></p>
+    <div class="nudge-input-box">
+        <textarea type="text" class="nudgeInput" aria-label="Brief webpage overview input"></textarea>
+        <svg class="submitBtn" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 4C0 1.79086 1.79086 0 4 0H20C22.2091 0 24 1.79086 24 4V20C24 22.2091 22.2091 24 20 24H4C1.79086 24 0 22.2091 0 20V4Z" fill="url(#paint0_linear_4832_40279)"/>
+            <mask id="mask0_4832_40279" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="4" y="4" width="16" height="16">
+            <path d="M18.9187 11.9791C18.9184 11.7435 18.7814 11.5292 18.5646 11.4328L7.24592 6.3466C7.04097 6.25434 6.80094 6.28501 6.62527 6.42532C6.44933 6.56646 6.36702 6.79351 6.41203 7.01421L7.42933 12.0068L6.45181 16.991C6.41286 17.1885 6.47584 17.3907 6.61615 17.531C6.63245 17.5473 6.65013 17.5628 6.66808 17.5774C6.84486 17.7166 7.08406 17.7459 7.28846 17.6531L18.5668 12.5266C18.7817 12.4288 18.919 12.2148 18.9187 11.9791ZM15.5247 11.3821L8.53142 11.4034L7.82154 7.92102L15.5247 11.3821ZM7.85359 16.0782L8.53542 12.6027L15.5457 12.5814L7.85359 16.0782Z" fill="#292929"/>
+            </mask>
+            <g mask="url(#mask0_4832_40279)">
+            <rect x="4" y="4" width="16" height="16" fill="white"/>
+            </g>
+            <defs>
+            <linearGradient id="paint0_linear_4832_40279" x1="0.311036" y1="0.140625" x2="24.311" y2="24.1406" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#D73220"/>
+            <stop offset="0.291667" stop-color="#D92361"/>
+            <stop offset="1" stop-color="#7155FA"/>
+            </linearGradient>
+            </defs>
+        </svg>
+    </div>
+</div>

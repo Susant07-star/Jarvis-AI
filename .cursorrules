@@ -1,0 +1,7 @@
+# Always read PROJECT_INSTRUCTIONS.md before modifying any files in this repository.
+# It contains the single source of truth for the multi-agent J.A.R.V.I.S. architecture, including:
+# - Node.js frontend/orchestrator rules
+# - Python Microservice/Agent architecture rules
+# - Asynchronous enforcement guidelines
+
+Read existing TypeScript logic (`server/websocket.ts`, `server/tools.ts`) and Python agent logic (`python_agent/`) to understand the split of responsibilities before adding features.

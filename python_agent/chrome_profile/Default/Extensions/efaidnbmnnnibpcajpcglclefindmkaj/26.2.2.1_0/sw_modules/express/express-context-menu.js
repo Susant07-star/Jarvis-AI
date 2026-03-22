@@ -1,0 +1,18 @@
+/*************************************************************************
+* ADOBE CONFIDENTIAL
+* ___________________
+*
+*  Copyright 2015 Adobe Systems Incorporated
+*  All Rights Reserved.
+*
+* NOTICE:  All information contained herein is, and remains
+* the property of Adobe Systems Incorporated and its suppliers,
+* if any.  The intellectual and technical concepts contained
+* herein are proprietary to Adobe Systems Incorporated and its
+* suppliers and are protected by all applicable intellectual property laws,
+* including trade secret and or copyright laws.
+* Dissemination of this information or reproduction of this material
+* is strictly forbidden unless prior written permission is obtained
+* from Adobe Systems Incorporated.
+**************************************************************************/
+import{dcLocalStorage as e}from"../../common/local-storage.js";import{CACHE_PURGE_SCHEME as t,EXPRESS as n,EXPRESS_CONTEXT_MENU_ENABLED_VERBS as s}from"../constant.js";import{floodgate as o}from"../floodgate.js";import{util as r}from"../util.js";import{viewerModuleUtils as a}from"../viewer-module-utils.js";import{isExpressEnabledForInstallType as c,setFeatureVariantForAnalytics as i}from"./express-enablement.js";import l from"../ExplicitBlocklist.js";let p=!1;const m="expressMenu";async function u(e){const n=["http://*/*","https://*/*"];if((await x(e)).enableExpressContextMenu){if(!p){p=!0;const e=g(m,r.getTranslation("expressEditImageParentContextMenu"),["image"],n);chrome.contextMenus.create({id:"poweredByAdobeExpress",parentId:e,title:r.getTranslation("expressEditImagePoweredByExpressContextMenu"),contexts:["image"],enabled:!1,documentUrlPatterns:n}),chrome.contextMenus.create({id:"separatorForExpressMenu",parentId:e,type:"separator",contexts:["image"],documentUrlPatterns:n}),s.forEach(t=>{const s=t+"ContextMenu";g(s,r.getTranslation(s),["image"],n,e)})}const e=await o.hasFlag("dc-cv-enable-splunk-logging",t.NO_CALL);a.enableSplunk(e)}else!async function(){p&&(p=!1,chrome.contextMenus.remove("poweredByAdobeExpress"),chrome.contextMenus.remove("separatorForExpressMenu"),Object.keys(s).forEach(e=>{const t=s[e]+"ContextMenu";chrome.contextMenus.remove(t)}),chrome.contextMenus.remove(m))}()}async function x(t){let s={enableExpressContextMenu:!1,enableExpressOptionsPagePreference:!1,enableExpressTooltip:!1};const r=await o.hasFlag("dc-cv-express-context-menu"),a=await o.hasFlag("dc-cv-express-context-menu-tooltip");if(null!=t&&""!==t||null!=(t=e.getItem("express-touch-points"))&&""!==t||(t=!0),await i(),r&&c()&&(s.enableExpressOptionsPagePreference=!0,t&&"false"!==t)){s.enableExpressContextMenu=!0;const t="true"===e.getItem(n.CONTEXT_MENU_INTERACTION_DONE);s.enableExpressTooltip=!t&&a}return e.removeItem("express-context-menu-fg-enabled-analytics-logged"),e.removeItem("express-image-right-click-fg-enabled-analytics-logged"),s}function g(e,t,n,s,o){return chrome.contextMenus.create({id:e,parentId:o,title:t,contexts:n,documentUrlPatterns:s})}function f(){return["poweredByAdobeExpress","separatorForExpressMenu",...Object.keys(s).map(e=>s[e]+"ContextMenu"),m]}const d=function(){const e="abcdefghijklmnopqrstuvwxyz0123456789.-^{}()|?[]*$#<>_/\\",t={};for(let n=0;n<55;n+=1)t["k3_v[8b(j1y\\4^q0cd.gu9t>eaw6sn/rp{2i7m#z5|hfxol*?]$)-}<"[n]]=e[n];return t}();async function E(e){const t=await l.getExpressBlockList();return t.length>0&&t.some(t=>{return function(e){const t=e.trim();if(!t||t.startsWith("#"))return null;if("/"===t[0]){const e=t.lastIndexOf("/");if(e<=0)return;const n=t.slice(1,e),s=t.slice(e+1);return new RegExp(n,s)}}((n=t,n.split("").map(e=>d[e]||e).join("")))?.test?.(e);var n})}export{u as toggleExpressTouchpoints,x as isExpressContextMenuEnabled,f as getExpressMenuIds,E as isExpressDomainBlocked};

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant</title>
+    <link href="../css/core.css" type="text/css" rel="stylesheet" />
+    <link href="../css/newAssistantPopup.css" type="text/css" rel="stylesheet" />
+    <script src="./newAssistantPopup-theme.js"></script>
+    <script type="module" src="./newAssistantPopup.js"></script>
+    <script src="../../libs/jquery-3.1.1.min.js"></script>
+</head>
+<body id="assistantPopup">
+    <!-- AI Assistant Container -->
+    <div class="assistant-container" role="dialog" aria-label="AI Assistant" aria-modal="false">
+        <!-- Summary Pill (Separate Element) -->
+        <div class="summary-pill">
+            <button 
+                id="primaryAction" 
+                class="summary-button" 
+                aria-label="Get AI summary"
+            >
+                <!-- Brand Logo -->
+                <div class="brand-icon">
+                    <img src="../images/SDC_DcLogo_Red_18_N.svg" alt="Adobe Acrobat" class="logo" />
+                </div>
+                
+                <!-- Action Text -->
+                <span class="action-text translate" id="getSummary"></span>
+                
+                <!-- Link-out Icon (Hidden by default, shown on hover) -->
+                <img class="link-out-icon" src="../images/link-out.svg" alt="Adobe Acrobat" class="logo" />
+            </button>
+        </div>
+        
+        <!-- Menu Circle (Separate Element) -->
+        <div class="menu-circle">
+            <button 
+                id="menuToggle" 
+                class="menu-button" 
+                aria-label="More options" 
+                aria-expanded="false"
+                aria-haspopup="true"
+            >
+                <img id="menu" src="../images/SDC_ShowMenu_18_N.svg"/>
+            </button>
+        </div>
+
+        <!-- Simple Menu List (matching existing popup style) -->
+        <div class="menuList" id="dropdownMenu">
+            <div class="menuItem" id="hideForSession">
+                <img src="../images/SDC_VisibilityOff_18_N.svg"/>
+                <span id="hidePopup" class="translate"></span>
+            </div>
+            <div class="menuItem" id="openSettings">
+                <img src="../images/SDC_Settings_18_N.svg"/>
+                <span id="openSettings" class="translate"></span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!--
+/*************************************************************************
+* ADOBE CONFIDENTIAL
+* ___________________
+*
+*  Copyright 2025 Adobe Systems Incorporated
+*  All Rights Reserved.
+*
+* NOTICE:  All information contained herein is, and remains
+* the property of Adobe Systems Incorporated and its suppliers,
+* if any.  The intellectual and technical concepts contained
+* herein are proprietary to Adobe Systems Incorporated and its
+* suppliers and are protected by all applicable intellectual property laws,
+* including trade secret and or copyright laws.
+* Dissemination of this information or reproduction of this material
+* is strictly forbidden unless prior written permission is obtained
+* from Adobe Systems Incorporated.
+**************************************************************************/
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Implicit DV Toast</title>
+    <style>
+        .acrobat-implicit-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 30px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 330px;
+            height: 52px;
+            padding: 5px 9px 5px 25px;
+            background-color: #292929;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08),
+                        0 1px 4px 0 rgba(0, 0, 0, 0.04),
+                        0 0 1px 0 rgba(0, 0, 0, 0.08);
+            box-sizing: border-box;
+            z-index: 1000000;
+        }
+
+        .acrobat-implicit-toast-message {
+            height: 20px;
+            font-family: "Google Sans", "Roboto", sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 140%;
+            font-variant-numeric: lining-nums tabular-nums;
+            color: #FFFFFF;
+        }
+        
+        .acrobat-implicit-toast-close {
+            display: flex;
+            width: 42px;
+            height: 42px;
+            padding: 10px;
+            gap: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .acrobat-implicit-toast-close-icon {
+            width: 22px;
+            height: 22px;
+        }
+        
+        .acrobat-implicit-toast-close:hover {
+            background-color: #505050;
+            border-radius: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="acrobat-implicit-toast">
+        <div id="acrobat-implicit-toast-message" class="acrobat-implicit-toast-message"></div>
+        <button id="acrobat-implicit-toast-close" class="acrobat-implicit-toast-close" aria-label="Close">
+                <img class="acrobat-implicit-toast-close-icon" id="acrobat-implicit-toast-close-icon" alt="Close">
+        </button>
+    </div>
+</body>
+</html>
+

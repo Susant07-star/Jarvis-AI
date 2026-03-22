@@ -1,0 +1,1291 @@
+{
+   "ConvertVerbDescription": {
+      "message": "Konvertiere Dokumente in eine oder aus einer PDF-Datei."
+   },
+   "Disable": {
+      "message": "Deaktivieren"
+   },
+   "EditVerbDescription": {
+      "message": "Ordne, drehe oder lösche Seiten in deiner PDF-Datei."
+   },
+   "Enable": {
+      "message": "Aktivieren"
+   },
+   "LearnMoreURL": {
+      "message": "https://helpx.adobe.com/de/acrobat/kb/acrobat-pro-aip-for-chrome.html"
+   },
+   "LearnMoreURLEdge": {
+      "message": "https://helpx.adobe.com/de/acrobat/kb/acrobat-pro-aip-for-edge.html"
+   },
+   "LocalFileAccessAndSummaryCoachmarkButton": {
+      "message": "Zusammenfassungen aktivieren"
+   },
+   "LocalFileAccessAndSummaryCoachmarkSubtext": {
+      "message": "Vorbehaltlich verfügbarer Credits"
+   },
+   "acrobatEmbeddedTouchPointPreferenceDescription": {
+      "message": "Die Verknüpfung kann zum Öffnen von PDF-Dateien innerhalb der Erweiterung verwendet werden, um das Bearbeiten, Zusammenfassen, Speichern und vieles mehr zu erleichtern."
+   },
+   "acrobatEmbeddedTouchPointPreferenceTitle": {
+      "message": "Acrobat-Verknüpfung in eingebetteten Web-PDFs anzeigen"
+   },
+   "acrobatGdriveTripleDotMenuTouchPointText": {
+      "message": "Mit Acrobat öffnen"
+   },
+   "acrobatGmailFteToolTipButton": {
+      "message": "OK"
+   },
+   "acrobatGmailFteToolTipDescription": {
+      "message": "Mit Acrobat in Chrome bearbeiten, konvertieren, kommentieren und signieren"
+   },
+   "acrobatGmailFteToolTipTitle": {
+      "message": "PDF-Datei in Acrobat öffnen"
+   },
+   "acrobatGsuiteFteToolTipButton": {
+      "message": "OK"
+   },
+   "acrobatGsuiteFteToolTipButtonDV": {
+      "message": "OK"
+   },
+   "acrobatGsuiteFteToolTipButtonNonDV": {
+      "message": "OK"
+   },
+   "acrobatGsuiteFteToolTipDescription": {
+      "message": "Mit Acrobat in Chrome bearbeiten, konvertieren, kommentieren und signieren"
+   },
+   "acrobatGsuiteFteToolTipDescriptionDV": {
+      "message": "Teste PDF-Tools wie Bearbeiten, Kommentieren, Konvertieren und e-Signatur von $surfaceName$ aus, indem du Acrobat als Standard-PDF-Viewer einstellst.",
+      "placeholders": {
+         "surfaceName": {
+            "content": "$1"
+         }
+      }
+   },
+   "acrobatGsuiteFteToolTipDescriptionNonDV": {
+      "message": "Teste Acrobat-PDF-Tools wie Bearbeiten, Kommentieren, Konvertieren und E-Signatur – direkt in $surfaceName$.",
+      "placeholders": {
+         "surfaceName": {
+            "content": "$1"
+         }
+      }
+   },
+   "acrobatGsuiteFteToolTipTitle": {
+      "message": "PDF-Datei in Acrobat öffnen"
+   },
+   "acrobatGsuiteFteToolTipTitleDV": {
+      "message": "Öffnen aller PDF-Dateien in Adobe Acrobat"
+   },
+   "acrobatGsuiteFteToolTipTitleNonDV": {
+      "message": "Öffne diese PDF-Datei in Adobe Acrobat"
+   },
+   "acrobatGsuiteTouchPointPreferenceDescription": {
+      "message": "Füge Acrobat-Symbole zu Gmail und Google Drive hinzu, um PDF-Dateien schnell in Acrobat zu öffnen und schnell auf PDF-Tools zuzugreifen."
+   },
+   "acrobatGsuiteTouchPointPreferenceTitle": {
+      "message": "Acrobat in Gmail und Google Drive integrieren"
+   },
+   "acrobatLinkedInPDFTouchPointPreferenceDescription": {
+      "message": "Integriere Acrobat in Websites wie Gmail, Google Drive, Outlook und LinkedIn, um einfachen Zugriff auf PDF-Tools zu erhalten."
+   },
+   "acrobatTouchPointInOtherSitesPrefDescription": {
+      "message": "Integriere Acrobat in Websites wie Gmail, Google Drive, Outlook, LinkedIn und mehr, um einfachen Zugriff auf PDF-Tools zu erhalten."
+   },
+   "acrobatTouchPointInOtherSitesPreferenceDescription": {
+      "message": "Integriere Acrobat in Websites wie Gmail und Google Drive, um einfachen Zugriff auf PDF-Tools zu erhalten."
+   },
+   "acrobatTouchPointInOtherSitesPreferenceTitle": {
+      "message": "Acrobat-Optionen auf anderen Websites anzeigen"
+   },
+   "acrobatTouchPointInOtherSurfacesPreferenceDescription": {
+      "message": "Integriere Acrobat in Websites wie Gmail, Google Drive und Outlook, um einfachen Zugriff auf PDF-Tools zu erhalten."
+   },
+   "addWebpageToExistingPdfSpaceContextMenu": {
+      "message": "Webseite zu vorhandenem PDF Space hinzufügen..."
+   },
+   "addWebpageToNewPdfSpaceContextMenu": {
+      "message": "Webseite zu einem neuen PDF Space hinzufügen..."
+   },
+   "addWebpageToProjectContextMenuTitle": {
+      "message": "Zu einem ein PDF Space hinzufügen..."
+   },
+   "addWebpageToProjectFailed": {
+      "message": "Webseite konnte nicht zum PDF Space hinzugefügt werden"
+   },
+   "addWebpageToProjectIngestionStarted": {
+      "message": "Wir fügen diese Webseite deinem PDF Space hinzu. Du wirst bei Abschluss des Vorgangs benachrichtigt."
+   },
+   "addWebpageToProjectSuccess": {
+      "message": "Webseite wurde zu $collectionName$ hinzugefügt",
+      "placeholders": {
+         "collectionName": {
+            "content": "$1"
+         }
+      }
+   },
+   "addWebpageToProjectViewAction": {
+      "message": "PDF Space anzeigen"
+   },
+   "adobeAcrobatParentMenuTitle": {
+      "message": "Adobe Acrobat: PDF-Dateien und PDF Spaces erstellen und bearbeiten"
+   },
+   "adobeYoloErrorMessage": {
+      "message": "Dieser Link ist leider ungültig"
+   },
+   "adobeYoloMessage": {
+      "message": "Du wirst bei Acrobat angemeldet..."
+   },
+   "aiAcBody": {
+      "message": "Fasse Webseiten schnell zusammen und erhalte wichtige Erkenntnisse mit dem KI-Assistenten von Acrobat."
+   },
+   "aiAcHeader": {
+      "message": "Mehr Möglichkeiten mit deiner Acrobat-Erweiterung"
+   },
+   "aiMarkerTouchpointPreferenceDescription": {
+      "message": "Lass dir das Menü für den KI-Assistenten immer anzeigen, wenn du den Mauszeiger über PDF-Dateien auf Webseiten bewegst."
+   },
+   "aiMarkerTouchpointPreferenceTitle": {
+      "message": "Kontextmenü für den KI-Assistenten"
+   },
+   "analyticsOptinTitle": {
+      "message": "Nutzungsdaten senden"
+   },
+   "appearancePrefDesc": {
+      "message": "Zwischen dunklem und hellem Design wechseln"
+   },
+   "appearancePrefOp1": {
+      "message": "Systemeinstellung verwenden"
+   },
+   "appearancePrefOp2": {
+      "message": "Dunkelmodus"
+   },
+   "appearancePrefOp3": {
+      "message": "Hellmodus"
+   },
+   "appearancePrefTitle": {
+      "message": "Einstellungen für den Dunkelmodus"
+   },
+   "askAssistantBannerContentText": {
+      "message": "Erhalte schnelle Zusammenfassungen und wichtige Erkenntnisse zu Webseiten mit dem KI-Assistenten."
+   },
+   "askAssistantBannerTitle": {
+      "message": "KI-Assistent für Webseiten"
+   },
+   "bypassGenAIWebpageEligibilityDescription": {
+      "message": "Wenn diese Option aktiviert ist, ist auf allen Webseiten generative KI unabhängig von Gültigkeitsprüfungen verfügbar. Das ist nur für interne Benutzende von Adobe verfügbar."
+   },
+   "bypassGenAIWebpageEligibilityTitle": {
+      "message": "Den KI-Assistenten für Webseiten auf allen Seiten aktivieren"
+   },
+   "canQuesBriefOverview": {
+      "message": "Gib mir einen kurzen Überblick über diesen Artikel."
+   },
+   "canQuesCreateFAQ": {
+      "message": "Eine Liste mit häufig gestellten Fragen auf Grundlage dieser Information erstellen"
+   },
+   "canQuesDraftEmail": {
+      "message": "Entwirf eine E-Mail mit einer Zusammenfassung der wichtigsten Punkte."
+   },
+   "canQuesImpTopics": {
+      "message": "Alle wichtigen Themen und Stichwörter auflisten"
+   },
+   "canQuesSummarise": {
+      "message": "Artikel zusammenfassen"
+   },
+   "cancel": {
+      "message": "Abbr."
+   },
+   "chatgptConvertToPDF": {
+      "message": "Chat in PDF konvertieren"
+   },
+   "closeButton": {
+      "message": "Schließen"
+   },
+   "clusterBeta": {
+      "message": "Beta"
+   },
+   "clusterDevelop": {
+      "message": "Entwickeln"
+   },
+   "clusterRelease": {
+      "message": "Versionshinweise"
+   },
+   "convertToPDFFTEBody": {
+      "message": "Konvertiere deine $surfaceName$ in PDF-Dateien direkt mit der Adobe Acrobat-Erweiterung und greife auf Tools zum Bearbeiten, Signieren uvm. zu.",
+      "placeholders": {
+         "surfaceName": {
+            "content": "$1"
+         }
+      }
+   },
+   "convertToPDFFTEHeading": {
+      "message": "$docTypeName$ in eine PDF-Datei konvertieren",
+      "placeholders": {
+         "docTypeName": {
+            "content": "$1"
+         }
+      }
+   },
+   "convertToPDFTouchPointTooltip": {
+      "message": "Konvertieren und in Acrobat öffnen"
+   },
+   "convertToPdf": {
+      "message": "In PDF konvertieren"
+   },
+   "cropImageContextMenu": {
+      "message": "Bild zuschneiden"
+   },
+   "dcWebBookmarkTitle": {
+      "message": "Adobe Acrobat-Startseite"
+   },
+   "doNotShowButton": {
+      "message": "Nicht mehr anzeigen"
+   },
+   "domainPreferenceTitle": {
+      "message": "Websites, auf denen der KI-Assistent FAB versteckt ist"
+   },
+   "downloadBannerContinue": {
+      "message": "Einschalten"
+   },
+   "downloadBannerText": {
+      "message": "Öffne alle heruntergeladenen PDF-Dateien in Acrobat, indem du die Anwendung in Chrome als Standard-PDF-Viewer in festlegst."
+   },
+   "editImageContextMenu": {
+      "message": "Bild bearbeiten"
+   },
+   "editMegaVerbText": {
+      "message": "Bearbeiten"
+   },
+   "effectsImageContextMenu": {
+      "message": "Effekte anwenden"
+   },
+   "embeddedPDFHideIconForNow": {
+      "message": "Symbol vorerst ausblenden"
+   },
+   "embeddedPDFManagePreferences": {
+      "message": "Voreinstellungen verwalten"
+   },
+   "embeddedPDFOpenInAcrobatTooltip": {
+      "message": "In Acrobat öffnen"
+   },
+   "embeddedPDFOpenPDFInAcrobat": {
+      "message": "PDF in Acrobat öffnen"
+   },
+   "embeddedPDFTouchPointFTEBody": {
+      "message": "Bearbeiten, zusammenfassen und mehr direkt über die Acrobat-Erweiterung. Du kannst diese Verknüpfung jederzeit in den Voreinstellungen ausblenden."
+   },
+   "embeddedPDFTouchPointFTEHeader": {
+      "message": "Öffne diese PDF-Datei in Adobe Acrobat"
+   },
+   "enableGenAIAutoSummarizeDescription": {
+      "message": "Wenn du den KI-Assistenten oder die generative Zusammenfassung verwendest, werden deine Dokumente in der Cloud verarbeitet. Wenn du diese Funktion deaktivierst, werden deine Dokumente nicht über diese Funktionen verarbeitet."
+   },
+   "enableGenAIAutoSummarizeTitle": {
+      "message": "Alle in Acrobat geöffneten Dokumente automatisch zusammenfassen"
+   },
+   "enableGenAIFeaturesDescription": {
+      "message": "Deine Datei wird in der Cloud verarbeitet. Das dient zur Bereitstellung generativer KI bei Klick auf generative KI-Funktionen. Wenn du diese Funktion deaktivierst, wird die Verarbeitung deiner Datei verhindert und die generative KI wird deaktiviert. Du kannst sie jederzeit wieder aktivieren."
+   },
+   "enableGenAIFeaturesTitle": {
+      "message": "Funktionen der generativen KI in Acrobat aktivieren"
+   },
+   "envDev": {
+      "message": "Entwicklung"
+   },
+   "envLocalDev": {
+      "message": "Lokale Entwicklung"
+   },
+   "envProd": {
+      "message": "Produktion"
+   },
+   "envStage": {
+      "message": "Phase"
+   },
+   "envTest": {
+      "message": "Test"
+   },
+   "errorBoundaryDescription": {
+      "message": "Es ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut."
+   },
+   "errorBoundaryRetryButton": {
+      "message": "Erneut versuchen"
+   },
+   "errorBoundaryTitle": {
+      "message": "Es ist ein Fehler aufgetreten"
+   },
+   "expressContextualFteCtaLabel": {
+      "message": "Schließen"
+   },
+   "expressContextualFteDescription": {
+      "message": "Schneide in Adobe Acrobat Dinge zu, entferne den Hintergrund, passe Farben an und mehr – unterstützt von Adobe Express."
+   },
+   "expressContextualFteTitle": {
+      "message": "Bilder schnell und einfach bearbeiten"
+   },
+   "expressDropdownMenuTitle": {
+      "message": "Adobe Acrobat"
+   },
+   "expressDropdownMenuTooltip": {
+      "message": "Einfach zuschneiden, Hintergrund entfernen und mehr – unterstützt von Adobe Express"
+   },
+   "expressEditImageParentContextMenu": {
+      "message": "Bild bearbeiten"
+   },
+   "expressEditImagePoweredByExpressContextMenu": {
+      "message": "Unterstützt durch Adobe Express"
+   },
+   "expressExportOptionsDownloadLabel": {
+      "message": "Herunterladen"
+   },
+   "expressExportOptionsSaveLabel": {
+      "message": "Speichern"
+   },
+   "expressFTEDescription": {
+      "message": "Führe einen Rechtsklick aus, um ein Bild mit KI zuzuschneiden, zu entfernen oder neu zu gestalten."
+   },
+   "expressFTEFooter": {
+      "message": "Über \u003Cb>Adobe Acrobat\u003C/b>"
+   },
+   "expressFTETitle": {
+      "message": "Bild mit Adobe Express bearbeiten"
+   },
+   "expressHideforSession": {
+      "message": "Vorerst ausblenden"
+   },
+   "expressManageinSettings": {
+      "message": "Voreinstellungen"
+   },
+   "expressPopoverFTEDescription": {
+      "message": "Klicke mit der rechten Maustaste auf ein beliebiges Online-Bild, um den Hintergrund schnell zu entfernen, zuzuschneiden oder es mithilfe von KI mit Adobe Express neu zu gestalten"
+   },
+   "expressPopoverFTETitle": {
+      "message": "Bearbeite deine Bilder im Browser"
+   },
+   "expressPublishModalTitle": {
+      "message": "Bild wird heruntergeladen..."
+   },
+   "expressTouchpointPreferenceDescription": {
+      "message": "Mit der Adobe Acrobat-Erweiterung kannst du Bilder mit Adobe Express bearbeiten. Wenn du diese Funktion deaktivierst, wird diese Funktion entfernt. Du kannst sie jederzeit wieder aktivieren."
+   },
+   "expressTouchpointPreferenceTitle": {
+      "message": "Adobe Express-Aktionen in Acrobat aktivieren"
+   },
+   "extensionMenuTitle": {
+      "message": "Acrobat-Erweiterung – Schneller Zugriff auf deine gesamten PDF-Werkzeuge"
+   },
+   "fabPillAskAI": {
+      "message": "KI zu Seite befragen"
+   },
+   "fabPillConvertToPDF": {
+      "message": "In PDF konvertieren"
+   },
+   "fabPillSummarize": {
+      "message": "Mit KI zusammenfassen"
+   },
+   "fabPillsFteHeaderText": {
+      "message": "Mehr Möglichkeiten mit deiner Acrobat-Erweiterung"
+   },
+   "fabPillsHeaderText": {
+      "message": "Adobe Acrobat"
+   },
+   "failToastText": {
+      "message": "Ein unerwarteter Fehler ist aufgetreten. Versuche es später erneut."
+   },
+   "frictionlesOfflineMessage": {
+      "message": "Bitte wende dich an deine Netzwerk-Administration, um die Verbindung wieder herzustellen"
+   },
+   "frictionlessWidgetErrorGeneric": {
+      "message": "Beim Laden ist ein Fehler aufgetreten. Versuche es erneut."
+   },
+   "frictionlessWidgetErrorInitFailed": {
+      "message": "Widget konnte nicht initialisiert werden. Versuche es erneut."
+   },
+   "frictionlessWidgetErrorLoadFailed": {
+      "message": "Das Widget konnte nicht geladen werden. Überprüfe deine Verbindung und versuche es erneut."
+   },
+   "frictionlessWidgetErrorLoading": {
+      "message": "Fehler beim Laden des Widgets"
+   },
+   "frictionlessWidgetErrorTimeout": {
+      "message": "Ladezeitüberschreitung"
+   },
+   "frictionlessWidgetErrorTimeoutMessage": {
+      "message": "Das Laden des Widgets hat zu lange gedauert. Es könnte ein Netzwerk- oder Serverproblem vorliegen. Klicke auf „Wiederholen“, um es erneut zu versuchen."
+   },
+   "frictionlessWidgetErrorUnableToLoad": {
+      "message": "Fehler beim Einlesen"
+   },
+   "frictionlessWidgetErrorUnsupportedFormat": {
+      "message": "hat kein unterstütztes Format"
+   },
+   "frictionlessWidgetErrorUploadFailed": {
+      "message": "Beim Hochladen der Datei ist ein Fehler aufgetreten"
+   },
+   "frictionlessWidgetNoConnectionTitle": {
+      "message": "Keine Verbindung"
+   },
+   "frictionlessWidgetOfflineMessage": {
+      "message": "Überprüfe deine Internetverbindung und versuche es erneut."
+   },
+   "frictionlessWidgetOfflineRetryInfo": {
+      "message": "Wir versuchen es automatisch erneut, wenn du wieder mit dem Internet verbunden bist."
+   },
+   "frictionlessWidgetOfflineTitle": {
+      "message": "Du bist offline"
+   },
+   "frictionlessWidgetRetryButton": {
+      "message": "Wiederholen"
+   },
+   "fteDocTypeNameFile": {
+      "message": "Datei"
+   },
+   "fteDocTypeNamePresentation": {
+      "message": "Präsentation"
+   },
+   "fteDocTypeNameSheet": {
+      "message": "Blatt"
+   },
+   "fteOwnershipSideRedCardContent": {
+      "message": "Wenn du Acrobat als Standard-PDF-Viewer festlegst, kannst du direkt in Chrome kommentieren, Formulare ausfüllen, signieren und vieles mehr."
+   },
+   "fteSideCardPrimaryHeader": {
+      "message": "Acrobat verwenden"
+   },
+   "fteSideCardSecondaryHeader": {
+      "message": "direkt in Chrome"
+   },
+   "gDriveDVPAppListCoachMarkContent": {
+      "message": "Aktiviere das Kontrollkästchen „Standardmäßig verwenden“, um Google Drive-PDFs beim nächsten Mal direkt in Acrobat zu öffnen"
+   },
+   "gDriveDVPCoachMarkTitle": {
+      "message": "Acrobat als Standard-Viewer festlegen"
+   },
+   "gDriveDVPManageAppCoachMarkContent": {
+      "message": "Klicke auf 'Apps verwalten', um PDF-Dateien anzuzeigen, zu kommentieren und zu bearbeiten, indem du alle Google Drive-PDFs direkt in Acrobat öffnest"
+   },
+   "gSuiteDVPAddOnDefaultDesc": {
+      "message": "Das Acrobat Add-on ist jetzt als Standard festgelegt"
+   },
+   "gdriveImplicitDVFTEBody": {
+      "message": "Öffne PDF-Dateien in der Acrobat-Erweiterung über das Symbol in Google Drive. Stelle dies als Standard über das Menü „Mehr“ (...) von Acrobat ein."
+   },
+   "gdriveImplicitDVFTEHeader": {
+      "message": "PDF-Dateien jederzeit in Acrobat anzeigen"
+   },
+   "gdriveImplicitDVNotification": {
+      "message": "PDF-Dateien werden in Google Drive geöffnet."
+   },
+   "genAIFabPreferenceDescription": {
+      "message": "Die Schaltfläche für den KI-Assistenten wird immer am Rand des Browser-Fensters angezeigt."
+   },
+   "genAIFabPreferenceTitle": {
+      "message": "Schaltfläche für den KI-Assistenten"
+   },
+   "generativeFillImageContextMenu": {
+      "message": "Generatives Füllen"
+   },
+   "genericDVPCoachMarkContent": {
+      "message": "Klicke auf „Apps verwalten“, scrolle dann nach unten zu „Acrobat Add-on“ und klicke auf das Kontrollkästchen „Standardmäßig verwenden“"
+   },
+   "getInsight": {
+      "message": "Mit dem KI-Assistenten Erkenntnisse gewinnen"
+   },
+   "getSummary": {
+      "message": "Mit KI zusammenfassen"
+   },
+   "gmailCompressPDFTouchPoint": {
+      "message": "PDF komprimieren"
+   },
+   "gmailCompressPDFTouchPointFTEDescription": {
+      "message": "Wähle das Symbol aus, um mit dem Komprimieren-Tool in Acrobat die Dateigröße zu verringern, um Uploads zu beschleunigen und Speicherplatz auf Google Drive zu sparen."
+   },
+   "gmailCompressPDFTouchPointFTEHeader": {
+      "message": "Dateigröße mit Adobe Acrobat verringern"
+   },
+   "gmailCompressPDFTouchPointFteDescription": {
+      "message": "Komprimiere deine Datei für schnellere Uploads und mehr Platz auf Google Drive."
+   },
+   "gmailCompressPDFTouchPointOnHoverTooltip": {
+      "message": "PDF komprimieren, um Speicherplatz zu sparen und schneller hochzuladen"
+   },
+   "gmailConvertToPdf": {
+      "message": "In PDF konvertieren"
+   },
+   "gmailConvertToPdfFteToolTipDescription": {
+      "message": "Konvertiere Gmail-Dateien in das PDF-Format und bearbeite sie direkt in deinem Browser. Kein Download erforderlich."
+   },
+   "gmailConvertToPdfFteToolTipTitle": {
+      "message": "Dateien mit Acrobat in das PDF-Format konvertieren"
+   },
+   "gmailImplicitDVFTEBody": {
+      "message": "Öffne PDF-Dateien in der Acrobat-Erweiterung über das Symbol in Gmail. Stelle dies als Standard über das Menü „Mehr“ (...) von Acrobat."
+   },
+   "gmailImplicitDVFTEHeader": {
+      "message": "PDF-Dateien jederzeit in Acrobat anzeigen"
+   },
+   "gmailImplicitDVNotification": {
+      "message": "PDF-Anhänge werden in Gmail geöffnet."
+   },
+   "gmailPromptFTETooltip": {
+      "message": "Öffne PDF-Dateien in Acrobat, um Werkzeuge wie „Bearbeiten“, „Signieren“ und mehr zu verwenden"
+   },
+   "googleSheetsOrientationHeading": {
+      "message": "Ausrichtung"
+   },
+   "googleSheetsOrientationLandscape": {
+      "message": "Querformat"
+   },
+   "googleSheetsOrientationPortrait": {
+      "message": "Hochformat"
+   },
+   "googleSheetsScaleFitColumns": {
+      "message": "Alle Spalten auf eine Seite"
+   },
+   "googleSheetsScaleFitRows": {
+      "message": "Alle Zeilen auf eine Seite"
+   },
+   "googleSheetsScaleFitSheet": {
+      "message": "Alles auf eine Seite"
+   },
+   "googleSheetsScaleHeading": {
+      "message": "Skalierung"
+   },
+   "googleSheetsSettingsDialogTitle": {
+      "message": "In PDF konvertieren"
+   },
+   "gsuiteEditWithAcrobat": {
+      "message": "Mit Acrobat bearbeiten"
+   },
+   "gsuiteOpenWithAcrobat": {
+      "message": "In Acrobat öffnen"
+   },
+   "hideFabForDomain": {
+      "message": "Für diese Seite deaktivieren"
+   },
+   "hideForNow": {
+      "message": "Vorerst ausblenden"
+   },
+   "hidePopup": {
+      "message": "Für diese Sitzung ausblenden"
+   },
+   "imageToolsContextMenuTooltip": {
+      "message": "Optionen aus Adobe Acrobat und Adobe Express bearbeiten"
+   },
+   "imageToolsDropdownContextMenu": {
+      "message": "Bearbeitungswerkzeuge"
+   },
+   "imageToolsDropdownFteDescription": {
+      "message": "Konvertiere mit Adobe Acrobat deine Bilder in PDFs oder bearbeite sie im Browser mit Adobe Express."
+   },
+   "imageToolsDropdownFteTitle": {
+      "message": "Bilder in Gmail konvertieren und bearbeiten"
+   },
+   "imageToolsDropdownFteTitleForGdrive": {
+      "message": "Bilder in Google Drive konvertieren und bearbeiten"
+   },
+   "insertObjectImageContextMenu": {
+      "message": "Objekt einfügen"
+   },
+   "linkedInChatPDFTouchPointFTEBody": {
+      "message": "Mit Adobe Acrobat kannst du Dateien bearbeiten, e-signieren und KI-gestützte Erkenntnisse erhalten."
+   },
+   "linkedInChatPDFTouchPointFTEHeader": {
+      "message": "Adobe Acrobat-Tools für PDF-Dateien testen"
+   },
+   "linkedInFeedPDFTouchPointFTEBody": {
+      "message": "Du kannst diese PDF-Datei bearbeiten, überblicken und mehr, indem du sie über die Acrobat-Erweiterung öffnest."
+   },
+   "linkedInFeedPDFTouchPointFTEHeader": {
+      "message": "Öffne diese PDF-Datei in Adobe Acrobat"
+   },
+   "linkedInOpenInAcrobat": {
+      "message": "In Acrobat öffnen"
+   },
+   "linkedInSummarizePDF": {
+      "message": "PDF-Datei zusammenfassen"
+   },
+   "localFileAccessAndSummaryCoachmarkDescription": {
+      "message": "Erhalte eine schnelle, KI-gestützte Zusammenfassung, indem du Acrobat den Zugriff auf die Datei erlaubst."
+   },
+   "localFileAccessAndSummaryCoachmarkHeader": {
+      "message": "Eine Zusammenfassung dieses Dokuments erhalten"
+   },
+   "localFileAnimationCoachmarkDescription": {
+      "message": "Erlaube den Zugriff auf Datei-URLs, um Dateien von diesem Gerät über die Acrobat-Erweiterung öffnen zu können."
+   },
+   "localFileAnimationCoachmarkHeader": {
+      "message": "Nur ein Schritt und du bist fertig!"
+   },
+   "localFileBlockingPageOpenInChrome": {
+      "message": "Datei in Chrome öffnen"
+   },
+   "localFileBlockingPageTitle": {
+      "message": "Acrobat-Erweiterung aktivieren"
+   },
+   "localFileOptionDesc": {
+      "message": "Gewähre Acrobat-Erweiterungszugriff auf die URLs deiner lokalen Dateien, um alle deine PDF-Dateien in der Acrobat-Erweiterung von Chrome zu öffnen."
+   },
+   "localFileOptionTitle": {
+      "message": "Lokale PDF-Dateien in Acrobat öffnen"
+   },
+   "localFilePromptContinueButton": {
+      "message": "Fortfahren"
+   },
+   "localFilePromptDescription": {
+      "message": "Ermögliche Acrobat von diesem Gerät aus den Zugriff auf Dateien, damit du sofort auf all deine Werkzeuge zugreifen kannst. So kannst du im Handumdrehen PDF-Dateien bearbeiten, Dateien konvertieren und e-signieren."
+   },
+   "localFilePromptHeader": {
+      "message": "In Acrobat öffnen, um Bearbeitungen, Signatur und mehr vorzunehmen"
+   },
+   "localFileSummaryCoachmarkHeader": {
+      "message": "Du hast es fast geschafft. Gib Acrobat Zugriff auf Datei-URLs, um Zusammenfassungen erhalten zu können."
+   },
+   "localFteContinue": {
+      "message": "Zu Einstellungen gehen"
+   },
+   "localFteDescription": {
+      "message": "Hole das Beste aus der Acrobat-Erweiterung heraus und öffne damit alle PDF-Dateien. Aktiviere in den Erweiterungseinstellungen „Zugriff auf Datei-URLs erlauben“."
+   },
+   "localFteDontShowAgainText": {
+      "message": "Nicht mehr anzeigen"
+   },
+   "localFteTitle": {
+      "message": "Zu Acrobat wechseln, um deine lokalen Dateien zu öffnen"
+   },
+   "neverDisplayFab": {
+      "message": "Nie anzeigen"
+   },
+   "openInAcrobat": {
+      "message": "In Acrobat öffnen"
+   },
+   "openSettings": {
+      "message": "In den Einstellungen verwalten"
+   },
+   "optionsFailurePrompt": {
+      "message": "Deine Änderungen können nicht gespeichert werden. Versuche es später erneut"
+   },
+   "optionsSuccessPrompt": {
+      "message": "Einstellungen erfolgreich gespeichert"
+   },
+   "optionsSuccessPromptReloadRequired": {
+      "message": "Die Voreinstellung wird erst nach dem erneuten Laden angezeigt"
+   },
+   "outlookErrorToastDescription": {
+      "message": "Es ist ein Fehler aufgetreten. Schließe die Datei und versuche es erneut."
+   },
+   "outlookErrorToastTitle": {
+      "message": "Datei kann nicht geöffnet werden"
+   },
+   "outlookPDFTouchPointFTEBody": {
+      "message": "Bearbeite, überblicke und signiere PDF-Dateien, indem du sie in Acrobat öffnest."
+   },
+   "outlookPDFTouchPointFTEHeader": {
+      "message": "Öffne diese PDF-Datei in Adobe Acrobat"
+   },
+   "pdfOpenInAcrobatContextMenu": {
+      "message": "In Acrobat öffnen"
+   },
+   "pdfOwnerShipDmbConfirmBtn": {
+      "message": "Weiter"
+   },
+   "pdfOwnerShipSideRedCardConfirmBtn": {
+      "message": "Weiter"
+   },
+   "pdfOwnershipDefSideCardcontent": {
+      "message": "Wenn du Adobe Acrobat als deinen Standard-PDF-Viewer festlegst, kannst du anzeigen, kommentieren, Formulare ausfüllen, signieren und vieles mehr."
+   },
+   "pdfOwnershipExploreAcrobat": {
+      "message": "Acrobat in Chrome verwenden"
+   },
+   "pdfOwnershipExploreAcrobatEdge": {
+      "message": "Acrobat in Microsoft Edge verwenden"
+   },
+   "pdfOwnershipExploreOptionsDescription": {
+      "message": "Mache Acrobat zum Standard-PDF-Viewer in deinem Browser, um auf Kommentare, Ausfüllen und Signieren sowie weitere PDF-Tools schnell zugreifen zu können."
+   },
+   "pdfOwnershipExploreOptionsTitle": {
+      "message": "Alle PDF-Dateien in Acrobat öffnen"
+   },
+   "pdfOwnershipPromptCancel": {
+      "message": "Jetzt nicht"
+   },
+   "pdfOwnershipPromptContent": {
+      "message": "Wenn Adobe Acrobat als Standard-Viewer festlegst, lässt sich in Chrome mehr mit PDFs machen."
+   },
+   "pdfOwnershipPromptContent2": {
+      "message": "Lege Acrobat als Standard-PDF-Viewer fest, um mit PDF-Dateien direkt in Google Chrome zu arbeiten. Du kannst kommentieren, ausfüllen, signieren und Tools zur Konvertierung und Komprimierung ausprobieren."
+   },
+   "pdfOwnershipPromptContentEdge": {
+      "message": "Wenn du Adobe Acrobat als Standard-PDF-Viewer festlegst, kannst du in Microsoft Edge mehr mit PDFs schaffen."
+   },
+   "pdfOwnershipPromptDeny": {
+      "message": "Nein, danke"
+   },
+   "pdfOwnershipPromptOk": {
+      "message": "Jetzt festlegen"
+   },
+   "pdfOwnershipPromptOkFullscreen": {
+      "message": "Jetzt ausprobieren"
+   },
+   "pdfToWordContextMenu": {
+      "message": "PDF in Word konvertieren"
+   },
+   "pdfToolsDropdownContextMenu": {
+      "message": "PDF-Tools"
+   },
+   "pdfToolsFteTooltipButton": {
+      "message": "Schließen"
+   },
+   "pdfToolsFteTooltipDescription": {
+      "message": "Öffne PDF-Dateien direkt in Gmail und probiere mit Adobe Acrobat Werkzeuge wie Bearbeiten, Kommentieren, Konvertieren und E-Signatur aus."
+   },
+   "pdfToolsFteTooltipTitle": {
+      "message": "Vielfalt an PDF-Werkzeugen entdecken"
+   },
+   "popupNoConnection": {
+      "message": "Keine Verbindung"
+   },
+   "popupOfflineMessage": {
+      "message": "Bitte wende dich an deine*n Administrator*in, um die Verbindung wieder herzustellen."
+   },
+   "preferenceAIMarkerWebpagesDescription": {
+      "message": "Die Option „PDF-Datei zusammenfassen“ immer anzeigen, wenn du den Mauszeiger über PDF-Dateien auf Webseiten bewegst."
+   },
+   "preferenceAIMarkerWebpagesTitle": {
+      "message": "Option „PDF-Datei zusammenfassen“ einblenden"
+   },
+   "preferenceAcrobatIntegrationsDescription": {
+      "message": "Acrobat als Standard-PDF-Viewer für unterstützte Browser-Integrationen wie Gmail, Google Drive und mehr festlegen."
+   },
+   "preferenceAcrobatIntegrationsTitle": {
+      "message": "Acrobat-Integrationen zulassen"
+   },
+   "preferenceAdobeExpressDescription": {
+      "message": "Bearbeite Bilder mit Adobe Express aus der Adobe Acrobat-Erweiterung."
+   },
+   "preferenceAdobeExpressTitle": {
+      "message": "Adobe Express in Acrobat aktivieren"
+   },
+   "preferenceAdobeInternalConnectedAppDescription": {
+      "message": "Wähle die verbundene Anwendung aus, die die Funktionen der Erweiterung erhalten soll. Diese Einstellung simuliert nur die Ansicht, die Funktionalität kann daher eingeschränkt sein."
+   },
+   "preferenceAdobeInternalConnectedAppTitle": {
+      "message": "Verbundene Anwendung"
+   },
+   "preferenceAdobeInternalEnvironmentDescription": {
+      "message": "Wähle die Zielumgebung für die Erweiterung aus."
+   },
+   "preferenceAdobeInternalEnvironmentTitle": {
+      "message": "Entwicklungsumgebung"
+   },
+   "preferenceAdobeInternalGenAIClusterDescription": {
+      "message": "Wähle das Zielcluster für Dienste mit generativer KI aus."
+   },
+   "preferenceAdobeInternalGenAIClusterTitle": {
+      "message": "Cluster für generative KI"
+   },
+   "preferenceAdobeInternalTabLabel": {
+      "message": "Adobe-intern"
+   },
+   "preferenceAssistantWebPageBadgeText": {
+      "message": "Beta"
+   },
+   "preferenceAssistantWebPageContent": {
+      "message": "Erhalte schnelle Zusammenfassungen und wichtige Erkenntnisse zu Webseiten mit dem KI-Assistenten."
+   },
+   "preferenceAssistantWebPageTitle": {
+      "message": "KI-Assistent für Webseiten"
+   },
+   "preferenceAutoOpenConvertedPDFDescription": {
+      "message": "Eine PDF-Datei, die du zuvor mithilfe der Acrobat-Erweiterung aus einer Webseite konvertiert hast, danach automatisch in Acrobat öffnen."
+   },
+   "preferenceBrowserDefaultViewershipDescription": {
+      "message": "Lege Acrobat als deinen Standard-Viewer fest, um PDF-Dateien von Weblinks, Gmail und Google Drive aus zu öffnen."
+   },
+   "preferenceBrowserDefaultViewershipDescriptionEdge": {
+      "message": "Lege Acrobat als deinen Standard-Viewer fest, um PDF-Dateien von Weblinks aus zu öffnen."
+   },
+   "preferenceBrowserDefaultViewershipTitle": {
+      "message": "PDF-Dateien in Acrobat von deinem Browser aus öffnen"
+   },
+   "preferenceConnectedAppsTabLabel": {
+      "message": "Verbundene Apps"
+   },
+   "preferenceDisplayThemeDescription": {
+      "message": "Dunkel- oder Hellmodus auswählen."
+   },
+   "preferenceDisplayThemeTitle": {
+      "message": "Anzeigedesign festlegen"
+   },
+   "preferenceEmbeddedPDFsTitle": {
+      "message": "Eingebettete PDF-Dateien"
+   },
+   "preferenceErrorBoundaryRetry": {
+      "message": "Erneut versuchen"
+   },
+   "preferenceErrorBoundaryTitle": {
+      "message": "Ein Fehler ist aufgetreten"
+   },
+   "preferenceGeneralTabLabel": {
+      "message": "Allgemein"
+   },
+   "preferenceGenerativeAITabLabel": {
+      "message": "Generative KI"
+   },
+   "preferenceGoogleSearchToolsDescription": {
+      "message": "Acrobat erlauben, dir PDF-Werkzeuge zu empfehlen, welche du innerhalb deines Browsers nutzen kannst. Die Empfehlungen basieren auf deinen Suchergebnissen, die nicht mit Adobe geteilt werden."
+   },
+   "preferenceGoogleSearchToolsTitle": {
+      "message": "Acrobat-Werkzeuge mit den Suchergebnissen von Google anzeigen"
+   },
+   "preferenceGroupAccordionTitle": {
+      "message": "Erweiterte Einstellungen"
+   },
+   "preferenceHideFabDomainListTitle": {
+      "message": "Websites, auf denen der KI-Assistent deaktiviert ist"
+   },
+   "preferenceLanguageDescription": {
+      "message": "Wähle deine bevorzugte Sprache aus."
+   },
+   "preferenceLanguageTitle": {
+      "message": "Sprache festlegen"
+   },
+   "preferenceLinkedInTitle": {
+      "message": "LinkedIn"
+   },
+   "preferenceOfflineModeDescription": {
+      "message": "Überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
+   },
+   "preferenceOfflineModeTitle": {
+      "message": "Zurzeit nicht verfügbar"
+   },
+   "preferenceOnlinePDFsTitle": {
+      "message": "Online-PDF-Dateien"
+   },
+   "preferenceOpenLocalFilesDescription": {
+      "message": "Diese Option wird durch den Chrome-Browser verwaltet. Aktiviere die Option „Zugriff auf Datei-URLs zulassen“, um PDF-Dateien in Acrobat zu öffnen."
+   },
+   "preferenceOpenLocalFilesTitle": {
+      "message": "Lokale Dateien in Acrobat öffnen"
+   },
+   "preferenceOpenLocalFilesTurnOffButtonLabel": {
+      "message": "Deaktivieren"
+   },
+   "preferenceOpenLocalFilesTurnOnButtonLabel": {
+      "message": "Einschalten"
+   },
+   "preferenceOptinDescription": {
+      "message": "Adobe Informationen über deine Nutzung der Erweiterung senden, um die Produktfunktionen zu verbessern."
+   },
+   "preferenceOptinLearnMore": {
+      "message": "Weitere Infos"
+   },
+   "preferenceOutlookTitle": {
+      "message": "Outlook"
+   },
+   "preferencePrivacyTabLabel": {
+      "message": "Datenschutz"
+   },
+   "preferenceSaveLocationDescription": {
+      "message": "Deine Dateien im Cloud-Speicherplatz von Adobe oder auf deinem Computer speichern oder alternativ jedes Mal nach dem Speicherort fragen."
+   },
+   "preferenceSaveLocationTitle": {
+      "message": "Dateispeicherort festlegen"
+   },
+   "preferenceShowAIAssistantButtonDescription": {
+      "message": "Die Schaltfläche für den KI-Assistenten immer am Rand des Browser-Fensters anzeigen."
+   },
+   "preferenceShowAIAssistantButtonTitle": {
+      "message": "Schaltfläche „KI-Assistent“ anzeigen"
+   },
+   "preferenceShowFeatureGuidanceDescription": {
+      "message": "Der Acrobat-Erweiterung erlauben, dir Tipps zu Updates, Funktionen und mehr zu geben."
+   },
+   "preferenceShowFeatureGuidanceTitle": {
+      "message": "Tipps zu Funktionen anzeigen"
+   },
+   "preferenceShowLessText": {
+      "message": "Weniger anzeigen"
+   },
+   "preferenceShowMoreText": {
+      "message": "Mehr anzeigen"
+   },
+   "preferenceShowNotificationsDescription": {
+      "message": "Der Acrobat-Erweiterung erlauben, dir Benachrichtigungen zu Updates, Funktionen und mehr zu geben."
+   },
+   "preferenceShowNotificationsTitle": {
+      "message": "Benachrichtigungen anzeigen"
+   },
+   "preferenceShowOpenInAcrobatShortcutCheckboxGroupFooter": {
+      "message": "Die Acrobat-Verknüpfung erscheint nicht, wenn du Acrobat für diese Anwendung bereits als deinen Standard-Viewer festgelegt hast."
+   },
+   "preferenceShowOpenInAcrobatShortcutCheckboxGroupFooterLinkText": {
+      "message": "als deinen Standard-Viewer festlegen"
+   },
+   "preferenceShowOpenInAcrobatShortcutDescription": {
+      "message": "Fügt eine Verknüpfung hinzu, um PDF-Dateien aus Gmail, Google Drive und mehr in Acrobat zu öffnen."
+   },
+   "preferenceShowOpenInAcrobatShortcutTitle": {
+      "message": "Verknüpfung „In Acrobat öffnen“ in anderen Anwendungen anzeigen"
+   },
+   "preferenceSummarizeBannerAlt": {
+      "message": "Banner für die Funktion „KI-Zusammenfassung“"
+   },
+   "preferenceTurnOnAIFeaturesDescription": {
+      "message": "Erlauben, dass deine Dateien für die Nutzung der generativen KI‑Funktionen in der Cloud verarbeitet werden. Hinweis: Wenn du diese Funktion deaktivierst, wird die Verarbeitung deiner Datei in der Cloud verhindert und die generativen KI-Funktionen somit deaktiviert. Du kannst sie jederzeit wieder aktivieren."
+   },
+   "preferenceTurnOnAIFeaturesTitle": {
+      "message": "Funktionen der generativen KI in Acrobat aktivieren"
+   },
+   "preferenceWebpageConversionDescription": {
+      "message": "Aktualisiere die Einstellungen für das Speichern von Webseiten als PDF-Dateien, inklusive Ränder, Schriftarten und weitere Layoutoptionen."
+   },
+   "preferenceWebpageConversionTitle": {
+      "message": "Einstellungen für die Webseitenkonvertierung anpassen"
+   },
+   "preferenceWhatsNewAutoOpenTitle": {
+      "message": "Automatisches Öffnen für Updates aktivieren"
+   },
+   "preferences": {
+      "message": "Voreinstellungen"
+   },
+   "productAcrobat": {
+      "message": "Acrobat"
+   },
+   "productNoApp": {
+      "message": "Keine App"
+   },
+   "productReader": {
+      "message": "Reader"
+   },
+   "refreshButtonInFailToast": {
+      "message": "Aktualisieren"
+   },
+   "removeBackgroundImageContextMenu": {
+      "message": "Hintergrund entfernen"
+   },
+   "removeObjectImageContextMenu": {
+      "message": "Objekt entfernen"
+   },
+   "saveLocationOp1": {
+      "message": "Jedes Mal fragen"
+   },
+   "saveLocationOp2": {
+      "message": "Cloud-Speicherplatz von Adobe"
+   },
+   "saveLocationOp3": {
+      "message": "Arbeitsplatz"
+   },
+   "saveLocationPreferenceDescription": {
+      "message": "Speicherort für deine Dateien festlegen"
+   },
+   "saveLocationPreferenceTitle": {
+      "message": "Datei-Speicherort"
+   },
+   "selectFileButton": {
+      "message": "Datei auswählen"
+   },
+   "sessionExpiredDescription": {
+      "message": "Lade die Datei hoch und versuche es erneut."
+   },
+   "sessionExpiredDocumentTitle": {
+      "message": "Sitzung abgelaufen"
+   },
+   "sessionExpiredTitle": {
+      "message": "Die Sitzung ist abgelaufen."
+   },
+   "sessionExpiredToastText": {
+      "message": "Die Sitzung ist abgelaufen. Bitte aktualisiere die Seite und versuche es noch einmal."
+   },
+   "sharepointPreferenceMessage": {
+      "message": "Auschecken von SharePoint-Dateien in Acrobat zulassen."
+   },
+   "sidepanelLoaderText": {
+      "message": "Schnelle Zusammenfassungen und wichtige Erkenntnisse mit dem KI-Assistenten von Acrobat erhalten"
+   },
+   "sidepanelLocationPreferenceButtonText": {
+      "message": "In den Browsereinstellungen ändern"
+   },
+   "sidepanelLocationPreferenceDescription": {
+      "message": "Platziere den Seitenbereich auf der linken oder rechten Seite des Browser-Fensters. Der Seitenbereich ist nur in Google Chrome 11.4 oder höher verfügbar."
+   },
+   "sidepanelLocationPreferenceTitle": {
+      "message": "Platzierung des Bedienfelds für den KI-Assistenten"
+   },
+   "stripTextOpenAcrobat": {
+      "message": "In Acrobat öffnen"
+   },
+   "stripTextOpenFillnSign": {
+      "message": "Ausfüllen und unterschreiben in Acrobat"
+   },
+   "successToastText": {
+      "message": "Heruntergeladene PDF-Dateien werden nun in Adobe Acrobat geöffnet"
+   },
+   "surfaceNameGdrive": {
+      "message": "Google Drive"
+   },
+   "surfaceNameGmail": {
+      "message": "Gmail"
+   },
+   "surfaceNameGoogleDocs": {
+      "message": "Google Docs"
+   },
+   "surfaceNameGoogleSheets": {
+      "message": "Google Tabellen"
+   },
+   "surfaceNameGoogleSlides": {
+      "message": "Google Präsentationen"
+   },
+   "tooltipTextDisabled": {
+      "message": "Der KI-Assistent ist für diese Webseite nicht verfügbar"
+   },
+   "tooltipTextEnabled": {
+      "message": "Schnelle Zusammenfassungen und wichtige Erkenntnisse mit dem KI-Assistenten erhalten"
+   },
+   "tooltipTextSubText": {
+      "message": "Powered by Adobe Acrobat"
+   },
+   "unsupportedFileTypeToastText": {
+      "message": "Dieser Dateityp wird nicht unterstützt. Du kannst versuchen, eine andere Datei zu bearbeiten."
+   },
+   "userLocale": {
+      "message": "Benutzersprache"
+   },
+   "web2pdfAddButtonText": {
+      "message": "Zu einer PDF hinzufügen..."
+   },
+   "web2pdfAlwaysShow": {
+      "message": "Automatisch für PDFs anzeigen"
+   },
+   "web2pdfAppendLinkContextMenu": {
+      "message": "Linkziel an vorhandene PDF-Datei anhängen"
+   },
+   "web2pdfAppendPageContextMenu": {
+      "message": "Webseite vorhandener PDF-Datei hinzufügen..."
+   },
+   "web2pdfBadVersion": {
+      "message": "Adobe Acrobat wird nicht von dieser Version von Chrome unterstützt. Es ist mindestens die Version $version$ erforderlich.",
+      "placeholders": {
+         "version": {
+            "content": "$1"
+         }
+      }
+   },
+   "web2pdfBadVersionEdge": {
+      "message": "Adobe Acrobat wird von dieser Version von Edge nicht unterstützt. Es ist mindestens die Version $version$ erforderlich.",
+      "placeholders": {
+         "version": {
+            "content": "$1"
+         }
+      }
+   },
+   "web2pdfClickToOpen": {
+      "message": "Klicke unten auf den Link zum Öffnen der PDF-Datei in Acrobat."
+   },
+   "web2pdfConvertButtonToolTip": {
+      "message": "Acrobat-Erweiterung – Schneller Zugriff auf all deine PDF-Tools."
+   },
+   "web2pdfConvertButtonToolTipERPReader": {
+      "message": "Die Acrobat Reader-Erweiterung ist momentan deaktiviert. Wende dich an deinen IT-Admin."
+   },
+   "web2pdfConvertButtonToolTipReader": {
+      "message": "PDF-Datei in Acrobat Reader öffnen"
+   },
+   "web2pdfConvertLinkContextMenu": {
+      "message": "Linkziel in Adobe PDF konvertieren"
+   },
+   "web2pdfConvertPageContextMenu": {
+      "message": "Webseite in Adobe PDF konvertieren..."
+   },
+   "web2pdfCopyText": {
+      "message": "In Acrobat kopieren"
+   },
+   "web2pdfDestinationText": {
+      "message": "Zielordner:"
+   },
+   "web2pdfDoneButtonText": {
+      "message": "Fertig"
+   },
+   "web2pdfExtnDescription": {
+      "message": "Verwende Acrobat im Browser, um PDF-Dateien anzuzeigen, zu konvertieren, zu komprimieren und zu unterzeichnen"
+   },
+   "web2pdfExtnDescriptionBeta": {
+      "message": "Verwende Acrobat im Browser, um PDF-Dateien anzuzeigen, zu konvertieren, zu komprimieren und zu unterzeichnen"
+   },
+   "web2pdfExtnDescriptionChrome": {
+      "message": "Mit den Adobe Acrobat-Tools für PDF-Dateien hast du mehr Funktionen in Google Chrome zur Verfügung. Mit den Tools kannst du anzeigen, ausfüllen, kommentieren, signieren, konvertieren und komprimieren."
+   },
+   "web2pdfExtnDescriptionEdge": {
+      "message": "Mit den Adobe Acrobat-Tools für PDF ist in Microsoft Edge mehr möglich – kommentieren, signieren, bearbeiten und konvertieren."
+   },
+   "web2pdfExtnName": {
+      "message": "Adobe Acrobat: Tools zum Bearbeiten, Konvertieren und Signieren von PDFs"
+   },
+   "web2pdfExtnNameBeta": {
+      "message": "Adobe Acrobat Beta"
+   },
+   "web2pdfExtnNameEdge": {
+      "message": "Adobe Acrobat: Tools zum Bearbeiten, Konvertieren und Signieren von PDFs"
+   },
+   "web2pdfExtnNameStage": {
+      "message": "Adobe Acrobat-Phase"
+   },
+   "web2pdfFileLockedError": {
+      "message": "Die Datei kann nicht gespeichert werden, weil sie von einem anderen Prozess verwendet wird."
+   },
+   "web2pdfFilename": {
+      "message": "Dateiname:"
+   },
+   "web2pdfFrictionlessToggleDescription": {
+      "message": "Die Adobe Acrobat-Erweiterung empfiehlt für deine Aufgabe hilfreiche PDF-Tools basierend auf dem, was du gesucht hast. Die Empfehlung erhältst auf dem Gerät. Suchen werden nicht an Adobe gesendet."
+   },
+   "web2pdfFrictionlessUrl": {
+      "message": "https://www.adobe.com/go/fl_chromeext_de"
+   },
+   "web2pdfFrictionlessUrlEdge": {
+      "message": "https://www.adobe.com/de/acrobat/online.html?x_api_client_id=edge_extension&x_api_client_location=trefoil&mv=other&mv2=edge_extension:trefoil&trackingid=HM85XB76"
+   },
+   "web2pdfHTMLJSError": {
+      "message": "Fehler bei der Verarbeitung der Webseite."
+   },
+   "web2pdfHTMLTooLarge": {
+      "message": "HTML-Inhalt ist zu groß für die Verarbeitung."
+   },
+   "web2pdfInfoHoverPopup": {
+      "message": "Die Adobe Acrobat-Erweiterung empfiehlt für deine Aufgabe hilfreiche PDF-Tools basierend auf dem, was du gesucht hast, und findet auf dem Gerät statt. Suchen werden nicht an Adobe gesendet. Klicke \u003Cspan class = \"tooltip-content-settings\">hier\u003C/span>, um diese Funktion zu deaktivieren."
+   },
+   "web2pdfLoaderTitle": {
+      "message": "Wird geladen..."
+   },
+   "web2pdfMissingMac": {
+      "message": "Adobe Acrobat für Chrom ist für Mac derzeit nicht verfügbar."
+   },
+   "web2pdfMissingMacEdge": {
+      "message": "Adobe Acrobat für Microsoft Edge ist für Mac noch nicht verfügbar."
+   },
+   "web2pdfNoFoldersText": {
+      "message": "Du hast noch keine Ordner in deinem Acrobat DC-Speicher."
+   },
+   "web2pdfNoWritePermissionOnSelectedFile": {
+      "message": "Du verfügst nicht über Schreibberechtigungen für die ausgewählte Datei."
+   },
+   "web2pdfOpenButtonText": {
+      "message": "In Acrobat öffnen"
+   },
+   "web2pdfOpenButtonTextOlder": {
+      "message": "Adobe PDF herunterladen"
+   },
+   "web2pdfOpenButtonTextReader": {
+      "message": "In Acrobat Reader öffnen"
+   },
+   "web2pdfOpenConvertedPDFDescription": {
+      "message": "Öffne die konvertierte PDF-Datei automatisch in Acrobat, sobald die Konvertierung der Webseite in PDF abgeschlossen ist."
+   },
+   "web2pdfOpenConvertedPDFTitle": {
+      "message": "Konvertierte PDF-Dateien automatisch in Acrobat öffnen"
+   },
+   "web2pdfOpenInDCButtonText": {
+      "message": "PDF in Acrobat öffnen"
+   },
+   "web2pdfOptOut": {
+      "message": "Um die Produktfunktionen zu verbessern, sendet diese Erweiterung Adobe Informationen über deine Nutzung."
+   },
+   "web2pdfOptOutDisabled": {
+      "message": "Deine Nutzungsdaten werden nicht freigegeben."
+   },
+   "web2pdfOptions": {
+      "message": "Optionen"
+   },
+   "web2pdfOptionsTitle": {
+      "message": "Adobe Acrobat-Voreinstellungen"
+   },
+   "web2pdfPDFOpenFailed": {
+      "message": "PDF konnte nicht geöffnet werden"
+   },
+   "web2pdfPDFOpenFailedv2": {
+      "message": "Konnte nicht geöffnet werden"
+   },
+   "web2pdfPDFOpened": {
+      "message": "PDF geöffnet"
+   },
+   "web2pdfPDFOpening": {
+      "message": "PDF wird geöffnet"
+   },
+   "web2pdfPreferencesButtonText": {
+      "message": "Einstellungen…"
+   },
+   "web2pdfPreferencesNewText": {
+      "message": "Konvertierungseinstellungen..."
+   },
+   "web2pdfPrivacy": {
+      "message": "Info über Adobe Acrobat"
+   },
+   "web2pdfReplaceWarning": {
+      "message": "existiert bereits.\n Ersetzen?"
+   },
+   "web2pdfSave": {
+      "message": "Speichern"
+   },
+   "web2pdfSaveButton": {
+      "message": "Voreinstellungen speichern"
+   },
+   "web2pdfShowPDFTools": {
+      "message": "Google-Suchergebnisse anzeigen"
+   },
+   "web2pdfShowPDFViewerOption": {
+      "message": "Acrobat als Standard-PDF-Viewer verwenden"
+   },
+   "web2pdfShowPersistentOpen": {
+      "message": "„In Acrobat geöffnet“ anzeigen"
+   },
+   "web2pdfShowPersistentOpenAlways": {
+      "message": "Immer „In Acrobat geöffnet“ anzeigen"
+   },
+   "web2pdfShowPersistentOpenDescription": {
+      "message": "Option zum Öffnen von PDF in Acrobat jedes Mal anzeigen."
+   },
+   "web2pdfStatusCancelled": {
+      "message": "Konversion abgebrochen"
+   },
+   "web2pdfStatusComplete": {
+      "message": "Konversion erfolgreich"
+   },
+   "web2pdfStatusDownloading": {
+      "message": "Download für Konvertierung..."
+   },
+   "web2pdfStatusDownloadingPDF": {
+      "message": "PDF wird heruntergeladen"
+   },
+   "web2pdfStatusFailure": {
+      "message": "Konvertierungsfehler"
+   },
+   "web2pdfStatusInProgress": {
+      "message": "Konvertierung läuft…"
+   },
+   "web2pdfStatusUnknownFailure": {
+      "message": "Unbekannter Fehler"
+   },
+   "web2pdfStatusWaiting": {
+      "message": "Warten auf Konvertierung…"
+   },
+   "web2pdfTitle": {
+      "message": "Adobe Acrobat"
+   },
+   "web2pdfUnsupportedAcrobatVersion": {
+      "message": "Es konnte keine unterstützte Acrobat-Version gefunden werden. Installiere eine \u003Ca target='_blank' href='https://acrobat.adobe.com/de/de/free-trial-download.html?trackingid=29NMCS7T&mv=other'>kostenlose 7-tägige Testversion\u003C/a>."
+   },
+   "web2pdfUntitledFileName": {
+      "message": "Unbenannt"
+   },
+   "webpagePDFConversion": {
+      "message": "Einstellungen zum Speichern von Webseiten im PDF-Format"
+   },
+   "webpagePDFConversionDescription": {
+      "message": "Beim Speichern von Webseiten als PDF-Dateien kannst du Seitenränder, Schriftarten und andere Layout-Einstellungen ändern."
+   },
+   "whatsNewAutoOpenDescription": {
+      "message": "Erlaube Acrobat, automatisch eine Webseite zu öffnen, wenn neue Updates verfügbar sind."
+   },
+   "whatsNewAutoOpenTitle": {
+      "message": "Automatisches Öffnen für Update-Ankündigungen aktivieren"
+   }
+}

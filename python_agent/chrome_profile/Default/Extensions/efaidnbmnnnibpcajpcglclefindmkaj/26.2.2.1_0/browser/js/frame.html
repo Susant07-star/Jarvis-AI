@@ -1,0 +1,65 @@
+<!--
+/*************************************************************************
+* ADOBE CONFIDENTIAL
+* ___________________
+*
+*  Copyright 2024 Adobe Systems Incorporated
+*  All Rights Reserved.
+*
+* NOTICE:  All information contained herein is, and remains
+* the property of Adobe Systems Incorporated and its suppliers,
+* if any.  The intellectual and technical concepts contained
+* herein are proprietary to Adobe Systems Incorporated and its
+* suppliers and are protected by all applicable intellectual property laws,
+* including trade secret and or copyright laws.
+* Dissemination of this information or reproduction of this material
+* is strictly forbidden unless prior written permission is obtained
+* from Adobe Systems Incorporated.
+**************************************************************************/
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link href="../css/popup.css" type="text/css" rel="stylesheet" />
+    <script src="../../libs/jquery-3.1.1.min.js"></script>
+    <script type="module" src="./frame.js"></script>
+    <script src="./ch-settings.js"></script>
+</head>
+
+<body>
+    <div class="acrobatMainDiv">
+        <div class="status-dialog">
+            <div class="action-available">
+                <div class="translate action-available-click" id="web2pdfTitle"></div>
+                <div class="tooltip-button">
+                    <input type="button" class="settings-dialog" />
+                    <span class="tooltip translate" id="web2pdfOptionsTitle"></span>
+                </div>
+                <input type="button" class="close-dialog" />
+            </div>
+            <div class="progress-area hidden">
+                <div class="convert-status hidden">
+                    <div class="convert-status-icon"></div>
+                    <div class="convert-status-title"></div>
+                </div>
+                <div class="convert-title"></div>
+                <div class="convert"></div>
+            </div>
+            <div class="settings">
+                <input type="button" class="acro-option html hidden do-acro-prefs translate" id="web2pdfPreferencesNewText" value="Preferences..." />
+            </div>
+            <div class="frictionless-host hidden">
+                <div class="frictionless-error hidden">
+                    <div class="error-title"></div>
+                    <p class="error-details"></p>
+                </div>
+                <div class="frictionless-loader hidden" data-loading-title='Loading...'></div>
+                <div class="frictionless-container"></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

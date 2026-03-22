@@ -1,0 +1,18 @@
+/*************************************************************************
+* ADOBE CONFIDENTIAL
+* ___________________
+*
+*  Copyright 2015 Adobe Systems Incorporated
+*  All Rights Reserved.
+*
+* NOTICE:  All information contained herein is, and remains
+* the property of Adobe Systems Incorporated and its suppliers,
+* if any.  The intellectual and technical concepts contained
+* herein are proprietary to Adobe Systems Incorporated and its
+* suppliers and are protected by all applicable intellectual property laws,
+* including trade secret and or copyright laws.
+* Dissemination of this information or reproduction of this material
+* is strictly forbidden unless prior written permission is obtained
+* from Adobe Systems Incorporated.
+**************************************************************************/
+import{EVAR_KEYS as e,LOGGING_URI as t,CACHE_PURGE_SCHEME as s}from"../sw_modules/constant.js";import{dcLocalStorage as o}from"./local-storage.js";import{allowedLogs as n}from"../sw_modules/splunkAllowedLogs.js";import{util as r}from"../sw_modules/util.js";import{getActiveExperimentAnalyticsString as i}from"./experimentUtils.js";import a from"./splunkAllowedEvents.js";import{floodgate as l}from"../sw_modules/floodgate.js";function c(e){let t={};return e&&Object.entries(e).forEach(([e,s])=>{"object"==typeof s?t={...t,...c(s)}:t[e]=s}),t}function g(){return o.getItem("deferredLogs").map(t=>{const s=function(t){const s={...t};return Object.entries(e).forEach(([e,t])=>{Object.prototype.hasOwnProperty.call(s,e)&&(s[t]=s[e],delete s[e])}),s}(t.message);return c({...t,message:s})})}async function m(e){if(function(e){const t=o.getItem("blockedLogs");return t?.includes(e)}(e.message))return!1;if(o.getItem("disableLogWhitelisting")){if("analytics"===e.context){return!(!await l.hasFlag("dc-cv-enable-analytics-logging",s.NO_CALL)||!a.isEventAllowed(e.message))}return!0}const t=o.getItem("allowedLogIndex");return n[e.message]<=t}async function d(e,...t){const s=o.getItem("splunkLoggingEnable");if(!t.length||!t[0]||!1===s||!await m(t[0]))return;const n=t[0];if(n.context||(n.context="logger"),"undefined"!=typeof window&&window?.location&&!n.source)try{const e=new URLSearchParams(window.location.search).get("acrobatPromotionSource");e&&(n.source=e)}catch(e){}!function(e){const t=o.getItem("deferredLogs")||[];t.push(e),o.setItem("deferredLogs",t)}({message:n,level:e,sessionId:o.getItem("sessionId"),variants:i(),anonUserUUID:o.getItem("anonUserUUID")})}const u=new class{constructor(){this.flushInterval=1e4,this.SERVER_PATH="/system/log",this.SERVER_CONTENT_TYPE='application/vnd.adobe.dc+json; profile="/schemas/system_log_parameters_v1.json"',this.loggingUri=t.prod,this.enableConsole=!1,setTimeout(()=>{const e=o.getItem("installSource"),s=o.getItem("env");"development"===e?(this.loggingUri=t.stage,this.enableConsole=!1):s&&t[s]&&(this.loggingUri=t[s])},250)}registerLogInterval(e){e?this.interval||(this.interval=setInterval(()=>{(o.getItem("deferredLogs")||[]).length>0&&this.flushLogs()},this.flushInterval)):(o.removeItem("deferredLogs"),clearInterval(this.interval))}flushLogs(){const e={headers:{"Content-Type":this.SERVER_CONTENT_TYPE.replace("/schemas/",`${this.loggingUri}/schemas/`),"x-request-id":r.uuid(),"x-api-app-info":"dc-acrobat-extension","x-api-client-id":`dc-acrobat-extension:${chrome.runtime.id}`}},t=g();this.enableConsole?console.log(t):fetch(this.loggingUri+this.SERVER_PATH,{method:"POST",headers:e.headers,body:JSON.stringify(t)}).catch(e=>console.log(e)),o.setItem("deferredLogs",[])}debug(...e){d("debug",...e)}info(...e){d("info",...e)}warn(...e){d("warn",...e)}error(...e){d("error",...e)}};export{u as loggingApi};
