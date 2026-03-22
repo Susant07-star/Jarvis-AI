@@ -3,7 +3,8 @@ import { Message } from '../components/jarvis/ChatWindow';
 export async function sendChatMessage(
   message: string, 
   history: Message[] = [],
-  onChunk?: (chunk: string) => void
+  onChunk?: (chunk: string) => void,
+  signal?: AbortSignal
 ): Promise<{ reply: string, command?: any }> {
   try {
     const res = await fetch('/api/chat', {
@@ -12,7 +13,8 @@ export async function sendChatMessage(
       body: JSON.stringify({ 
         message,
         history: history.slice(-5).map(m => ({ role: m.role, content: m.content }))
-      })
+      }),
+      signal
     });
     
     if (!res.ok) {

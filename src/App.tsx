@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { VoiceVisualizer } from './components/jarvis/VoiceVisualizer';
 import { ChatWindow, Message } from './components/jarvis/ChatWindow';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
@@ -19,20 +19,40 @@ export default function App() {
   ]);
   const [appState, setAppState] = useState<AppState>('idle');
   const [lastTranscript, setLastTranscript] = useState('');
+  const abortControllerRef = useRef<AbortController | null>(null);
   
-  const { isListening, transcript, startListening, stopListening, hasRecognition, error } = useSpeechRecognition();
+  const { isListening, transcript, interimTranscript, startListening, stopListening, resetTranscript, hasRecognition, error } = useSpeechRecognition();
 
   useEffect(() => {
     if (isListening) {
       setAppState('listening');
-      tts.stop(); // Interrupt Jarvis if user starts speaking
     } else if (appState === 'listening') {
       setAppState('idle');
     }
   }, [isListening]);
 
+  // Interrupt TTS if user starts speaking
+  useEffect(() => {
+    if (interimTranscript) {
+      tts.stop();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    }
+  }, [interimTranscript]);
+
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
+    
+    // Stop TTS if user speaks
+    tts.stop();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    const newController = new AbortController();
+    abortControllerRef.current = newController;
     
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -68,7 +88,9 @@ export default function App() {
       };
       setMessages(prev => [...prev, jarvisMsg]);
       setAppState('speaking');
-      tts.speak(commandResponse, () => setAppState('idle'));
+      tts.speak(commandResponse, () => {
+        setAppState(isListening ? 'listening' : 'idle');
+      });
       return;
     }
     
@@ -101,7 +123,7 @@ export default function App() {
           spokenText += sentence;
           tts.speak(sentence);
         }
-      });
+      }, newController.signal);
 
       // If it was a JSON response (like a command), accumulatedText will be empty
       if (!accumulatedText && reply) {
@@ -109,18 +131,24 @@ export default function App() {
           msg.id === jarvisMsgId ? { ...msg, content: reply } : msg
         ));
         setAppState('speaking');
-        tts.speak(reply, () => setAppState('idle'));
-      } else {
+        tts.speak(reply, () => {
+          setAppState(isListening ? 'listening' : 'idle');
+        });
+      } else if (!newController.signal.aborted) {
         // Speak any remaining text from stream
         const remainingText = accumulatedText.substring(spokenText.length).trim();
         if (remainingText) {
-          tts.speak(remainingText, () => setAppState('idle'));
+          tts.speak(remainingText, () => {
+            setAppState(isListening ? 'listening' : 'idle');
+          });
         } else {
-          tts.speak('', () => setAppState('idle'));
+          tts.speak('', () => {
+            setAppState(isListening ? 'listening' : 'idle');
+          });
         }
       }
 
-      if (command) {
+      if (command && !newController.signal.aborted) {
         // Handle backend commands
         if (command.action === 'open_app') {
           if (command.target.toLowerCase() === 'youtube') window.open('https://www.youtube.com', '_blank');
@@ -134,6 +162,10 @@ export default function App() {
       }
       
     } catch (err: any) {
+      if (err.name === 'AbortError' || newController.signal.aborted) {
+        setAppState(isListening ? 'listening' : 'idle');
+        return;
+      }
       console.error(err);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
@@ -141,17 +173,17 @@ export default function App() {
         content: `Error: ${err.message || 'Unable to connect to main servers.'}`,
         timestamp: new Date()
       }]);
-      setAppState('idle');
+      setAppState(isListening ? 'listening' : 'idle');
     }
-  }, [messages]);
+  }, [messages, isListening]);
 
-  // Auto-send transcript when listening stops and we have a new transcript
+  // Auto-send transcript when we have a new final transcript
   useEffect(() => {
-    if (!isListening && transcript && transcript !== lastTranscript && transcript !== 'Processing audio...') {
-      setLastTranscript(transcript);
+    if (transcript && transcript !== '...' && transcript !== 'Processing audio...') {
       handleSendMessage(transcript);
+      resetTranscript();
     }
-  }, [isListening, transcript, lastTranscript, handleSendMessage]);
+  }, [transcript, handleSendMessage, resetTranscript]);
 
   return (
     <div className="min-h-screen flex flex-col p-4 md:p-8">
@@ -188,7 +220,7 @@ export default function App() {
         {/* Left Panel - Voice Control */}
         <div className="flex flex-col items-center justify-center space-y-8 lg:col-span-1">
           <VoiceVisualizer 
-            isListening={isListening} 
+            appState={appState} 
             onToggle={isListening ? stopListening : startListening} 
             disabled={!hasRecognition}
           />
@@ -200,6 +232,12 @@ export default function App() {
               {appState === 'speaking' && <span className="text-cyan-400 font-mono text-sm">Speaking...</span>}
               {appState === 'idle' && <span className="text-cyan-600/60 font-mono text-sm">Awaiting input</span>}
             </div>
+
+            {interimTranscript && (
+              <p className="text-cyan-300/80 font-mono text-sm italic mt-2">
+                "{interimTranscript}"
+              </p>
+            )}
 
             {!hasRecognition && (
               <p className="text-red-400 text-sm font-mono mt-4 border border-red-500/30 bg-red-950/30 p-2 rounded">
