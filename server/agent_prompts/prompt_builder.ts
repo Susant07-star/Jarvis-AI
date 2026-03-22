@@ -30,8 +30,12 @@
 
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from 'url';
 
 // ─── PATHS ────────────────────────────────────────────────────────────────────
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const MODULES_DIR = path.join(__dirname, "modules");
 const AGENTS_DIR = path.join(__dirname, "agents");
