@@ -1,3 +1,6 @@
-2026/03/23-00:18:48.310 4bcc Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/03/23-00:18:48.311 4bcc Recovering log #4
-2026/03/23-00:18:48.316 4bcc Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000004.log 
+2026/03/24-22:21:19.191 3158 Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/24-22:21:19.193 3158 Recovering log #36
+2026/03/24-22:21:19.207 3158 Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000036.log 
+2026/03/24-22:26:15.026 3158 Level-0 table #41: started
+2026/03/24-22:26:15.088 3158 Level-0 table #41: 2025344 bytes OK
+2026/03/24-22:26:15.091 3158 Delete type=0 #36

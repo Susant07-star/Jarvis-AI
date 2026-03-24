@@ -1,0 +1,18 @@
+{
+  "task_id": "449b3427-3408-4c71-b78b-491bc1a077e0",
+  "site": "unknown",
+  "goal": "[chat] skip 50 seconds",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "media_control",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "media_control",
+  "timestamp": "2026-03-23T13:51:19.486Z",
+  "updated_at": "2026-03-23T13:51:19.488Z",
+  "memory_snapshot": {},
+  "errors": []
+}

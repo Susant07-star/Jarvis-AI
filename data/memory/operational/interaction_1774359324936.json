@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Mic check, mic check, Jarvis, can you hear me?",
+    "jarvisResponse": "Loud and clear. YouTube's already open, by the way. We were in the middle of searching for Physicswala.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:35:24.936Z"
+  },
+  "updatedAt": "2026-03-24T13:35:24.939Z",
+  "encrypted": false
+}

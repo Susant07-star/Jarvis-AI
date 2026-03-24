@@ -1,0 +1,18 @@
+{
+  "task_id": "02b47d34-7e8f-45d6-a08e-f3846c524450",
+  "site": "unknown",
+  "goal": "[chat] Go to the previous tab where we were watching",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "go_back",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:53:21.238Z",
+  "updated_at": "2026-03-23T13:53:21.238Z",
+  "memory_snapshot": {},
+  "errors": []
+}

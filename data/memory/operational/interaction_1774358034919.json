@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Can you hear me, Darvis?",
+    "jarvisResponse": "It's JARVIS, by the way. And yes, I can understand you just fine.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:13:54.919Z"
+  },
+  "updatedAt": "2026-03-24T13:13:54.920Z",
+  "encrypted": false
+}

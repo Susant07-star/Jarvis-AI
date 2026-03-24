@@ -16,8 +16,8 @@ export const jarvisTools = [
             items: {
               type: "object",
               properties: {
-                type: { type: "string", enum: ["open_tab", "search_site", "media_control", "scroll", "fill_form"] },
-                url: { type: "string", description: "URL for open_tab" },
+                type: { type: "string", enum: ["open_tab", "new_tab", "go_back", "skip_ad", "search_site", "media_control", "scroll", "fill_form"] },
+                url: { type: "string", description: "URL for open_tab or new_tab" },
                 query: { type: "string", description: "Search query for search_site" },
                 site: { type: "string", description: "Website name for search_site (e.g., 'youtube', 'google')" },
                 target_tab: { type: "string", description: "Optional. The name of the site/tab to target (e.g., 'youtube', 'google'). If omitted, the system will try to infer it." },

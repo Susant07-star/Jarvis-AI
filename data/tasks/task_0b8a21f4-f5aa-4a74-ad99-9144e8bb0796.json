@@ -1,0 +1,18 @@
+{
+  "task_id": "0b8a21f4-f5aa-4a74-ad99-9144e8bb0796",
+  "site": "unknown",
+  "goal": "[chat] open gmail",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "new_tab",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "new_tab",
+  "timestamp": "2026-03-23T14:01:13.904Z",
+  "updated_at": "2026-03-23T14:01:13.906Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "can you see in which page we are not",
+    "jarvisResponse": "We're currently on the YouTube page, but I can take a closer look. Let me analyze the page to see what's on screen.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T11:47:15.457Z"
+  },
+  "updatedAt": "2026-03-24T11:47:15.457Z",
+  "encrypted": false
+}

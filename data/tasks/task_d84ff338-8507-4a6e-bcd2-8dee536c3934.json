@@ -1,0 +1,23 @@
+{
+  "task_id": "d84ff338-8507-4a6e-bcd2-8dee536c3934",
+  "site": "unknown",
+  "goal": "[voice] It's looking up.",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "type",
+  "timestamp": "2026-03-24T16:41:07.276Z",
+  "updated_at": "2026-03-24T16:41:07.286Z",
+  "memory_snapshot": {},
+  "errors": []
+}

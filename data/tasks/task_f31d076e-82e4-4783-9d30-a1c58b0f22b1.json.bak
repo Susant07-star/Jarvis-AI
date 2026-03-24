@@ -1,0 +1,23 @@
+{
+  "task_id": "f31d076e-82e4-4783-9d30-a1c58b0f22b1",
+  "site": "unknown",
+  "goal": "[chat] add gmail xyz.com",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-24T12:47:27.461Z",
+  "updated_at": "2026-03-24T12:47:27.466Z",
+  "memory_snapshot": {},
+  "errors": []
+}

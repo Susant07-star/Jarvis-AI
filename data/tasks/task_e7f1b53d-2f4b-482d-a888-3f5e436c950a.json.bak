@@ -1,0 +1,23 @@
+{
+  "task_id": "e7f1b53d-2f4b-482d-a888-3f5e436c950a",
+  "site": "unknown",
+  "goal": "[voice] you know just scroll down two times then I will tell you to click on a new video that is on the YouTube, just scroll down first",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "scroll",
+  "timestamp": "2026-03-24T13:46:23.149Z",
+  "updated_at": "2026-03-24T13:46:23.154Z",
+  "memory_snapshot": {},
+  "errors": []
+}

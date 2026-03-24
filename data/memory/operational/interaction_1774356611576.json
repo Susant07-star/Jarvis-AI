@@ -1,0 +1,27 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search for physics wallah",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 4
+      },
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "physics wallah"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:50:11.576Z"
+  },
+  "updatedAt": "2026-03-24T12:50:11.577Z",
+  "encrypted": false
+}

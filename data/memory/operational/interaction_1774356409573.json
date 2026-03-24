@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "enter mobile no.25698563",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 1,
+        "text": "25698563"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:46:49.573Z"
+  },
+  "updatedAt": "2026-03-24T12:46:49.573Z",
+  "encrypted": false
+}

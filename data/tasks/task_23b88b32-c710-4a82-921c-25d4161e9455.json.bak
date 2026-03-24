@@ -1,0 +1,33 @@
+{
+  "task_id": "23b88b32-c710-4a82-921c-25d4161e9455",
+  "site": "unknown",
+  "goal": "[chat] open pw vidyapeeth live tour video",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "click",
+  "timestamp": "2026-03-24T12:53:00.039Z",
+  "updated_at": "2026-03-24T12:53:00.052Z",
+  "memory_snapshot": {},
+  "errors": []
+}

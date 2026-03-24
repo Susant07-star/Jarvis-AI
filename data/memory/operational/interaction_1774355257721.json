@@ -1,0 +1,23 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open hdhub4u",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 5,
+        "text": "hdhub4u"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 9
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:27:37.721Z"
+  },
+  "updatedAt": "2026-03-24T12:27:37.721Z",
+  "encrypted": false
+}

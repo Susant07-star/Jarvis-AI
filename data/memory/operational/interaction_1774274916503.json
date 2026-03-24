@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search ramu",
+    "jarvisResponse": "Searching Gmail for ramu.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "query": "ramu",
+        "site": "gmail",
+        "target_tab": "Gmail",
+        "type": "search_site"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:08:36.503Z"
+  },
+  "updatedAt": "2026-03-23T14:08:36.503Z",
+  "encrypted": false
+}

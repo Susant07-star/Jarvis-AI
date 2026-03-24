@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hi",
+    "jarvisResponse": "Need a break or want to find something new on YouTube?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:49:49.443Z"
+  },
+  "updatedAt": "2026-03-23T13:49:49.443Z",
+  "encrypted": false
+}

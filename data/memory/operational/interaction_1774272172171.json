@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "what leave all that yrr",
+    "jarvisResponse": "Going back to the previous page.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "target_tab": "",
+        "type": "go_back"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:22:52.171Z"
+  },
+  "updatedAt": "2026-03-23T13:22:52.171Z",
+  "encrypted": false
+}

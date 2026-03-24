@@ -1,0 +1,18 @@
+{
+  "task_id": "a9f1ed09-83ef-456a-9640-10a5c18c83b6",
+  "site": "unknown",
+  "goal": "[chat] open the first link",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "click",
+  "timestamp": "2026-03-24T12:27:47.652Z",
+  "updated_at": "2026-03-24T12:27:47.656Z",
+  "memory_snapshot": {},
+  "errors": []
+}

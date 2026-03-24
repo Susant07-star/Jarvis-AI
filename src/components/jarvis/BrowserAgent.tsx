@@ -3,18 +3,19 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Terminal, CheckCircle, CircleDashed, ArrowRight, XCircle } from 'lucide-react';
 
 export interface BrowserCommand {
-  type: 'open_tab' | 'search_site' | 'media_control' | 'scroll' | 'fill_form';
+  type: string;
+  action?: string;
   url?: string;
   query?: string;
   site?: string;
   target_tab?: string;
   force_new_tab?: boolean;
-  action?: 'play' | 'pause' | 'skip_forward' | 'skip_backward' | 'seek';
   seconds?: number;
   direction?: 'up' | 'down';
   amount?: number;
   field?: string;
   value?: string;
+  action_type?: string; 
 }
 
 export function BrowserAgent() {
@@ -77,17 +78,23 @@ export function BrowserAgent() {
     // This frontend component only provides the visual terminal HUD experience.
   };
 
-  const formatCommandType = (type: string) => {
-    return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const formatCommandType = (typeOrAction?: string) => {
+    if (!typeOrAction) return 'Unknown Command';
+    return typeOrAction.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
   const formatCommandDetails = (cmd: BrowserCommand) => {
-    switch (cmd.type) {
-      case 'open_tab': return cmd.url;
-      case 'search_site': return `Search '${cmd.query}' on ${cmd.site}`;
+    const cmdType = cmd.type || cmd.action || '';
+    switch (cmdType) {
+      case 'open_tab': 
+      case 'open_url': return cmd.url;
+      case 'search_site': 
+      case 'youtube_search': return `Search '${cmd.query}' on ${cmd.site || 'YouTube'}`;
       case 'media_control': return `${cmd.action} ${cmd.seconds ? `(${cmd.seconds}s)` : ''}`;
       case 'scroll': return `Scroll ${cmd.direction} ${cmd.amount}px`;
-      case 'fill_form': return `Fill '${cmd.field}' with '${cmd.value}'`;
+      case 'fill_form': 
+      case 'type': return `Type text`;
+      case 'click': return `Click element`;
       default: return '';
     }
   };
@@ -124,7 +131,7 @@ export function BrowserAgent() {
                   )}
                 </div>
                 <div>
-                  <div className="font-medium">{formatCommandType(cmd.type)}</div>
+                  <div className="font-medium">{formatCommandType(cmd.type || cmd.action)}</div>
                   <div className="text-xs opacity-70 mt-0.5">{formatCommandDetails(cmd)}</div>
                 </div>
               </div>

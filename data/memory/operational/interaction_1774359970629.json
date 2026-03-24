@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hey, can you hear me now ?",
+    "jarvisResponse": "Loud and clear. Now, what would you like to search for on YouTube?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:46:10.629Z"
+  },
+  "updatedAt": "2026-03-24T13:46:10.629Z",
+  "encrypted": false
+}

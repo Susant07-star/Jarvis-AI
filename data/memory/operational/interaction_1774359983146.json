@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "you know just scroll down two times then I will tell you to click on a new video that is on the YouTube, just scroll down first",
+    "jarvisResponse": "I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "scroll",
+        "direction": "down"
+      },
+      {
+        "action": "scroll",
+        "direction": "down"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:46:23.146Z"
+  },
+  "updatedAt": "2026-03-24T13:46:23.146Z",
+  "encrypted": false
+}

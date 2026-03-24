@@ -1,0 +1,18 @@
+{
+  "task_id": "7124344a-4d51-4129-b6cf-58d67293f2ba",
+  "site": "unknown",
+  "goal": "[voice] Hope you are... Okay, you are just listening, right? So, just open YouTube.",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T14:37:26.869Z",
+  "updated_at": "2026-03-24T14:37:26.869Z",
+  "memory_snapshot": {},
+  "errors": []
+}

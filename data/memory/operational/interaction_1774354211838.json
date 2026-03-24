@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "What's up?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:10:11.838Z"
+  },
+  "updatedAt": "2026-03-24T12:10:11.838Z",
+  "encrypted": false
+}

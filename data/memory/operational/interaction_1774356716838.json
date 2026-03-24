@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "scroll down 2 times more",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "scroll",
+        "direction": "down",
+        "amount": 2
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:51:56.838Z"
+  },
+  "updatedAt": "2026-03-24T12:51:56.838Z",
+  "encrypted": false
+}

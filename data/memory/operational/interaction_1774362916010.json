@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Oh my god, are you kidding me?",
+    "jarvisResponse": "Not kidding.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:35:16.009Z"
+  },
+  "updatedAt": "2026-03-24T14:35:16.010Z",
+  "encrypted": false
+}

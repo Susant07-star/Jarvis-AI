@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open gmail",
+    "jarvisResponse": "Let me open Gmail again in a new tab.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:06:07.134Z"
+  },
+  "updatedAt": "2026-03-23T14:06:07.134Z",
+  "encrypted": false
+}

@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search ai agents",
+    "jarvisResponse": "Right away, searching YouTube for AI agents.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "query": "ai agents",
+        "site": "youtube",
+        "type": "search_site"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:50:15.113Z"
+  },
+  "updatedAt": "2026-03-23T13:50:15.113Z",
+  "encrypted": false
+}

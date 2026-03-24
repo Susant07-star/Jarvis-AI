@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "click compose",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "click",
+        "jarvis_id": 13
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:01:28.310Z"
+  },
+  "updatedAt": "2026-03-23T14:01:28.310Z",
+  "encrypted": false
+}

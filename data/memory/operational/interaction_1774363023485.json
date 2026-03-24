@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hey, Zabbis.",
+    "jarvisResponse": "JARVIS.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:37:03.485Z"
+  },
+  "updatedAt": "2026-03-24T14:37:03.485Z",
+  "encrypted": false
+}

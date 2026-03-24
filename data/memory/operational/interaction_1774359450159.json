@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Thank you.",
+    "jarvisResponse": "You're welcome. Feel free to continue whenever you're ready.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:37:30.159Z"
+  },
+  "updatedAt": "2026-03-24T13:37:30.159Z",
+  "encrypted": false
+}

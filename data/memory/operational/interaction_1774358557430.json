@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "one more thing I want to ask you. Hello, Mike Jake.",
+    "jarvisResponse": "I think there's been a mix-up. You're talking to JARVIS, not Mike Jake. What's on your mind?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:22:37.430Z"
+  },
+  "updatedAt": "2026-03-24T13:22:37.430Z",
+  "encrypted": false
+}

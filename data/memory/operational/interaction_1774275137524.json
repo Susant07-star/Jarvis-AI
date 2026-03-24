@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "scroll more",
+    "jarvisResponse": "Scrolling down further.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "amount": 500,
+        "direction": "down",
+        "type": "scroll"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:12:17.524Z"
+  },
+  "updatedAt": "2026-03-23T14:12:17.524Z",
+  "encrypted": false
+}

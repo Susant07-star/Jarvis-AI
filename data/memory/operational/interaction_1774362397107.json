@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "do you know about wtf",
+    "jarvisResponse": "WTF defined. Waiting for context.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:26:37.107Z"
+  },
+  "updatedAt": "2026-03-24T14:26:37.107Z",
+  "encrypted": false
+}

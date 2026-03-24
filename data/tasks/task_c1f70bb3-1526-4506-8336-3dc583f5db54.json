@@ -1,0 +1,18 @@
+{
+  "task_id": "c1f70bb3-1526-4506-8336-3dc583f5db54",
+  "site": "unknown",
+  "goal": "[chat] pause",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "media_control",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "media_control",
+  "timestamp": "2026-03-23T13:56:49.555Z",
+  "updated_at": "2026-03-23T13:56:49.556Z",
+  "memory_snapshot": {},
+  "errors": []
+}

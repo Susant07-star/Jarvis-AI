@@ -1,0 +1,28 @@
+{
+  "task_id": "1239e544-068c-4e89-9a54-852dd7f58d1b",
+  "site": "unknown",
+  "goal": "[chat] this is wrong url. First search",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "open_tab",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "type",
+  "timestamp": "2026-03-24T12:10:45.746Z",
+  "updated_at": "2026-03-24T12:10:45.770Z",
+  "memory_snapshot": {},
+  "errors": []
+}

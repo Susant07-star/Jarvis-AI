@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "play nadaniyaa song",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "youtube_search",
+        "query": "nadaniyaa song"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:59:59.639Z"
+  },
+  "updatedAt": "2026-03-24T14:59:59.640Z",
+  "encrypted": false
+}

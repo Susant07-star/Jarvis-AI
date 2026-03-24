@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Why are we giving so, you know,",
+    "jarvisResponse": "Waiting for instruction.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:29:47.958Z"
+  },
+  "updatedAt": "2026-03-24T14:29:47.958Z",
+  "encrypted": false
+}

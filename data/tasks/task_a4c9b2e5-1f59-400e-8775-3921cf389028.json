@@ -1,0 +1,18 @@
+{
+  "task_id": "a4c9b2e5-1f59-400e-8775-3921cf389028",
+  "site": "unknown",
+  "goal": "[chat] open youutbe yrr",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "youtube_search",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "youtube_search",
+  "timestamp": "2026-03-24T11:30:48.367Z",
+  "updated_at": "2026-03-24T11:30:48.370Z",
+  "memory_snapshot": {},
+  "errors": []
+}

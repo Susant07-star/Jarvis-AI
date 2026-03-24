@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube",
+    "jarvisResponse": "Right away, opening YouTube in the current tab.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "site": "youtube",
+        "type": "open_tab"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:49:56.916Z"
+  },
+  "updatedAt": "2026-03-23T13:49:56.916Z",
+  "encrypted": false
+}

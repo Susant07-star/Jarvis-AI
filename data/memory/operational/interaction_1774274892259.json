@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "go to all mails tab",
+    "jarvisResponse": "Going to the All Mails tab on Gmail.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "target_tab": "Gmail",
+        "type": "open_tab",
+        "url": "https://mail.google.com/mail/u/0/#inbox"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:08:12.259Z"
+  },
+  "updatedAt": "2026-03-23T14:08:12.259Z",
+  "encrypted": false
+}

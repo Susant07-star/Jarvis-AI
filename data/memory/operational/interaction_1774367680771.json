@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Wow, can you hear me now? I'm just trying to talk to you. Wow.",
+    "jarvisResponse": "No need to test my auditory capabilities, my friend. I'm all ears, or rather, all text. I'm here to engage in a most stimulating conversation, so please, do tell me what's on your mind. The \"wow\" suggests a sense of excitement or wonder – do share, what's behind it?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T15:54:40.771Z"
+  },
+  "updatedAt": "2026-03-24T15:54:40.771Z",
+  "encrypted": false
+}

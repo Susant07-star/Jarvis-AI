@@ -1,0 +1,33 @@
+{
+  "task_id": "454237cb-7161-41de-a60f-1c88d44803ae",
+  "site": "wikipedia",
+  "goal": "Search for AI on Wikipedia",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "universal_type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "press",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "press",
+  "timestamp": "2026-03-23T12:59:25.121Z",
+  "updated_at": "2026-03-23T12:59:44.144Z",
+  "memory_snapshot": {},
+  "errors": []
+}

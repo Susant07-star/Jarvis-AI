@@ -1,0 +1,18 @@
+{
+  "task_id": "7837ff01-a150-424e-b1ec-8e0e57202c05",
+  "site": "unknown",
+  "goal": "[chat] go up a bit",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "scroll",
+  "timestamp": "2026-03-24T11:49:45.127Z",
+  "updated_at": "2026-03-24T11:49:45.132Z",
+  "memory_snapshot": {},
+  "errors": []
+}

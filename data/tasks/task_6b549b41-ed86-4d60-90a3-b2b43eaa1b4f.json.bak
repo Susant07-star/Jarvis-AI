@@ -1,0 +1,18 @@
+{
+  "task_id": "6b549b41-ed86-4d60-90a3-b2b43eaa1b4f",
+  "site": "unknown",
+  "goal": "[chat] search ramu",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "search_site",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T14:08:36.506Z",
+  "updated_at": "2026-03-23T14:08:36.506Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube",
+    "jarvisResponse": "Right away, opening YouTube.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "site": "youtube",
+        "type": "open_tab",
+        "url": "https://www.youtube.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T09:17:09.340Z"
+  },
+  "updatedAt": "2026-03-24T09:17:09.340Z",
+  "encrypted": false
+}

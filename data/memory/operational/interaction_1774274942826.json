@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "play physics wallah highest views motivaton video",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "click",
+        "jarvis_id": 39
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:09:02.826Z"
+  },
+  "updatedAt": "2026-03-23T14:09:02.826Z",
+  "encrypted": false
+}

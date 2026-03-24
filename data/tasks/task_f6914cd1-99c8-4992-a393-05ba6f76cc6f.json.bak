@@ -1,0 +1,18 @@
+{
+  "task_id": "f6914cd1-99c8-4992-a393-05ba6f76cc6f",
+  "site": "unknown",
+  "goal": "[chat] few ore",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:50:34.359Z",
+  "updated_at": "2026-03-23T13:50:34.359Z",
+  "memory_snapshot": {},
+  "errors": []
+}

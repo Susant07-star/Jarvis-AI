@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "like the video",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "click",
+        "jarvis_id": 23
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:12:44.519Z"
+  },
+  "updatedAt": "2026-03-23T14:12:44.519Z",
+  "encrypted": false
+}

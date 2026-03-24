@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the apoorwa kshitiz singh account",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 10
+      },
+      {
+        "action": "click",
+        "jarvis_id": 23
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T11:50:01.917Z"
+  },
+  "updatedAt": "2026-03-24T11:50:01.917Z",
+  "encrypted": false
+}

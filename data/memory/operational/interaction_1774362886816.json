@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "So now I really...",
+    "jarvisResponse": "Proceed.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:34:46.816Z"
+  },
+  "updatedAt": "2026-03-24T14:34:46.816Z",
+  "encrypted": false
+}

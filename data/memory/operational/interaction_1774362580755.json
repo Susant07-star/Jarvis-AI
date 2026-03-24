@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "So hi, it's Arvis. I mean, you can hear me now.",
+    "jarvisResponse": "Acknowledged.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:29:40.755Z"
+  },
+  "updatedAt": "2026-03-24T14:29:40.758Z",
+  "encrypted": false
+}

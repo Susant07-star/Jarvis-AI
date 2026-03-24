@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Jarvis, can you hear me?",
+    "jarvisResponse": "I'm all ears, as it were. Your voice is crystal clear. How may I assist you today?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T16:35:41.209Z"
+  },
+  "updatedAt": "2026-03-24T16:35:41.210Z",
+  "encrypted": false
+}

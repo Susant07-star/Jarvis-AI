@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "skip ad",
+    "jarvisResponse": "Right away, skipping the ad.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "type": "skip_ad"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:50:55.931Z"
+  },
+  "updatedAt": "2026-03-23T13:50:55.931Z",
+  "encrypted": false
+}

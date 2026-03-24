@@ -1,0 +1,18 @@
+{
+  "task_id": "9ba6c854-9e25-4395-9905-fe92f3a02a28",
+  "site": "unknown",
+  "goal": "[chat] what leave all that yrr",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "go_back",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:22:52.174Z",
+  "updated_at": "2026-03-23T13:22:52.174Z",
+  "memory_snapshot": {},
+  "errors": []
+}

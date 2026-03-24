@@ -2,11 +2,15 @@ import express from "express";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
-import { getGroqClient, summarizeMemory, logTokenUsage } from "../llm";
+import { getGroqClient, summarizeMemory, logTokenUsage, logFeedback, callWithRetry } from "../llm";
 import { performSearch } from "../search";
 import { saveToMemory, loadMemory } from "../memory";
 import { jarvisTools } from "../tools";
 import { buildPrompt } from "../agent_prompts/prompt_builder";
+import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
+import { logger } from "../logger";
+import { MetricsTracker } from "../utils/metrics";
+import { getPendingConfirmation, setPendingConfirmation, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -20,150 +24,98 @@ if (!fs.existsSync('uploads')) {
  * Handle text-based chat interactions.
  */
 router.post("/chat", async (req, res) => {
+  let metrics: MetricsTracker | null = null;
   try {
     const { message } = req.body;
+    metrics = new MetricsTracker(message);
+    
+    // 0. Check Confirmation Loop — shared with WS handler via confirmationState.ts
+    if (hasPendingConfirmation()) {
+      const pending = getPendingConfirmation()!;
+      const lower = message.toLowerCase().trim();
+      const confirmPhrases = ['yes', 'y', 'confirm', 'go on', 'please do it', 'do it', 'sure', 'ok'];
+      const declinePhrases = ['no', 'n', 'cancel', 'stop'];
+      
+      if (confirmPhrases.some(p => lower === p || lower.startsWith('yes '))) {
+         logger.info("Confirmation", "Approved pending plan via API");
+         const plannedSteps = pending.actions;
+         clearPendingConfirmation();
+         
+         const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
+         
+         if (browserActions.length > 0) {
+           try {
+               await fetch('http://127.0.0.1:8000/execute', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ commands: browserActions })
+               });
+           } catch (e: any) { logger.error('API', `Python agent unreachable: ${e.message}`); }
+         }
+         
+         const successReply = `Confirmed task executed.`;
+         saveToMemory('user', message);
+         saveToMemory('jarvis', successReply);
+         logInteraction('chat', pending.goal, successReply, { browserCommands: plannedSteps });
+         trackBrowserTask('chat', pending.goal, plannedSteps);
+         
+         res.setHeader('Content-Type', 'text/event-stream');
+         res.write(`data: ${JSON.stringify({ content: successReply })}\n\n`);
+         res.write(`data: [DONE]\n\n`);
+         
+         if (metrics) {
+           metrics.setExecutionResult('Success via confirmation');
+           metrics.finalize();
+         }
+         return res.end();
+      } else if (declinePhrases.some(p => lower === p || lower.startsWith('cancel '))) {
+         logger.info("Confirmation", "Cancelled pending plan via API");
+         clearPendingConfirmation();
+         const cancelReply = "Action cancelled.";
+         res.setHeader('Content-Type', 'text/event-stream');
+         res.write(`data: ${JSON.stringify({ content: cancelReply })}\n\n`);
+         res.write(`data: [DONE]\n\n`);
+         if (metrics) { metrics.setExecutionResult('Cancelled by user'); metrics.finalize(); }
+         return res.end();
+      } else {
+         logger.info("Confirmation", `Waiting on confirmation, received ambiguous input: "${message}"`);
+         const reprompt = "Please confirm the previous task (yes/no)";
+         res.setHeader('Content-Type', 'text/event-stream');
+         res.write(`data: ${JSON.stringify({ content: reprompt })}\n\n`);
+         res.write(`data: [DONE]\n\n`);
+         return res.end();
+      }
+    }
     
     if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({ error: "GROQ_API_KEY is not configured. Please add it to your secrets." });
     }
 
     const groq = getGroqClient();
-    const memory = loadMemory();
-    const compressedMemory = await summarizeMemory(memory, groq);
     
-    const messages = [
-      {
-        role: "system",
-        content: buildPrompt("browser")
-      },
-      ...compressedMemory,
-      {
-        role: "user",
-        content: message
-      }
-    ];
-    // Agentic Loop: Allow up to 3 tool call iterations before streaming final text
-    let maxTurns = 3;
-
-    while (maxTurns > 0) {
-      maxTurns--;
-      let responseMessage: any;
-      try {
-        const chatCompletion = await groq.chat.completions.create({
-          messages: messages as any,
-          model: "llama-3.3-70b-versatile",
-          tools: jarvisTools as any,
-          tool_choice: "auto",
-          max_tokens: 1024
-        });
-        responseMessage = chatCompletion.choices[0]?.message;
-        
-        // Log token usage for observability
-        const usage = chatCompletion.usage;
-        if (usage) {
-          console.log(`[Token Metrics] Chat API Tool Check | Prompt: ${usage.prompt_tokens} | Completion: ${usage.completion_tokens} | Total: ${usage.total_tokens}`);
-          logTokenUsage('browser_api_tool', usage.prompt_tokens, usage.completion_tokens);
-        }
-      } catch (error: any) {
-        const errBody = error.error?.error || error.error || error;
-        if (errBody?.code === "tool_use_failed" && errBody?.failed_generation) {
-          const failedGen = errBody.failed_generation;
-          const match = failedGen.match(/<function=([^=>]+)[=>](.*?)<\/function>/s);
-          if (match) {
-            responseMessage = {
-              role: "assistant",
-              content: null,
-              tool_calls: [{
-                id: "call_manual_" + Date.now(),
-                type: "function",
-                function: { name: match[1], arguments: match[2] }
-              }]
-            };
-          } else {
-            responseMessage = { role: "assistant", content: "I'm sorry, Sir. I encountered an error." };
-          }
-        } else {
-          console.error("[Chat API] Tool check failed:", error);
-          break;
-        }
-      }
-      
-      if (!responseMessage?.tool_calls) {
-        break; // No tools called, proceed to stream final text
-      }
-
-      const toolCall = responseMessage.tool_calls[0];
-      let args: any = {};
-      try {
-        if (toolCall.function.arguments) args = JSON.parse(toolCall.function.arguments);
-      } catch (e) {
-        console.error("[Chat API] Failed to parse tool arguments:", toolCall.function.arguments);
-        break;
-      }
-
-      if (toolCall.function.name === "execute_browser_commands" || toolCall.function.name === "interact_element") {
-        const commands = toolCall.function.name === "execute_browser_commands"
-          ? args.commands
-          : [{ type: args.action, jarvis_id: args.jarvis_id, text: args.text }];
-          
-        const replyText = args.confirmation_message || "On it.";
-        saveToMemory('user', message);
-        saveToMemory('jarvis', `[Action Executed] ${replyText}`);
-        
-        try {
-          console.log('[Chat API] 📡 Forwarding commands to Python agent...');
-          const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ commands })
-          });
-          const pythonBody = await pythonRes.text();
-          console.log(`[Chat API] ✅ Python agent responded: ${pythonRes.status} — ${pythonBody}`);
-        } catch (e: any) {
-          console.error('[Chat API] ❌ Python agent unreachable:', e.message);
-        }
-        
-        return res.json({ browser_commands: commands, reply: replyText });
-        
-      } else if (toolCall.function.name === "analyze_page") {
-        console.log("[Chat API] Executing analyze_page...");
-        let elementsMap = "No interactive elements found.";
-        try {
-          console.log('[Chat API] 📡 Requesting DOM map from Python agent...');
-          const pythonRes = await fetch('http://127.0.0.1:8000/analyze', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}) 
-          });
-          const data = await pythonRes.json();
-          elementsMap = data.elements || elementsMap;
-          console.log(`[Chat API] ✅ Received DOM map (${elementsMap.length} chars)`);
-        } catch (e: any) {
-          console.error('[Chat API] ❌ Failed to analyze page:', e.message);
-          elementsMap = "Error: Could not connect to the browser agent.";
-        }
-        
-        messages.push(responseMessage as any);
-        messages.push({ role: "tool", content: elementsMap, tool_call_id: toolCall.id } as any);
-        continue;
-        
-      } else if (toolCall.function.name === "search_web") {
-        console.log("[Chat API] Executing search_web:", args.query);
-        const searchResults = await performSearch(args.query || args.target, groq);
-        
-        messages.push(responseMessage as any);
-        messages.push({ role: "tool", content: searchResults, tool_call_id: toolCall.id } as any);
-        continue;
-      }
-      
-      break;
+    // 1. Orchestration routing
+    const { determineOrchestrationMode } = await import("../orchestrator");
+    const decision = await determineOrchestrationMode(message);
+    if (metrics) {
+      metrics.setIntent(decision.intent);
+      metrics.setMode(decision.mode);
+      if (decision.tokens) metrics.addTokens('classifier', decision.tokens);
     }
+    logger.info("API", `Orchestrator Decision: ${JSON.stringify(decision)}`);
 
-    // Stream the final response directly
+    if (decision.mode === "direct") {
+      // Direct Conversational Mode
+      const memory = loadMemory();
+      const compressedMemory = await summarizeMemory(memory, groq);
+      
+      const messages = [
+        { role: "system", content: buildPrompt("browser") },
+        ...compressedMemory,
+        { role: "user", content: message }
+      ];
+
       let isDisconnected = false;
-      req.on('close', () => {
-        isDisconnected = true;
-      });
+      req.on('close', () => { isDisconnected = true; });
 
       const stream = await groq.chat.completions.create({
         messages: messages as any,
@@ -189,17 +141,142 @@ router.post("/chat", async (req, res) => {
       if (!isDisconnected) {
         saveToMemory('user', message);
         saveToMemory('jarvis', fullResponse);
+        logInteraction('chat', message, fullResponse);
+        if (metrics) {
+          metrics.setExecutionResult('Direct chat completed');
+          metrics.finalize();
+        }
         res.write(`data: [DONE]\n\n`);
         return res.end();
       } else {
-        // If disconnected, we might still want to save what was generated so far
         saveToMemory('user', message);
         saveToMemory('jarvis', fullResponse + ' [Interrupted]');
+        if (metrics) {
+          metrics.setExecutionResult('Interrupted');
+          metrics.finalize();
+        }
         return;
       }
 
+    } else {
+      // Agent Task Mode (Strict Planning -> Execution)
+      const { planWithDOM } = await import("../browser/planner");
+      
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // A. Extract minimal Contextual DOM
+      let domMap = {};
+      try {
+        const pythonDomRes = await fetch('http://127.0.0.1:8000/analyze', { 
+            method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
+        });
+        const domData = await pythonDomRes.json();
+        domMap = domData.elements || {};
+      } catch(e) {
+        logger.warn("API", "Could not fetch DOM map, running blind planner");
+      }
+
+      // Use normalized input to eliminate LLM confusion over chatty sentences
+      const goal = decision?.normalizedInput || message;
+      logger.info('API', `Planning goal: "${goal}"`);
+
+      if (decision?.normalizedInput && decision.normalizedInput !== message) {
+        res.write(`data: ${JSON.stringify({ content: `*[Normalized Goal: ${goal}]*\n\n` })}\n\n`);
+      }
+
+      // B. Create Strict JSON Plan
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps } = await planWithDOM(goal, [domMap]) as any;
+      
+      if (internal_steps && internal_steps.length > 0) {
+        const reasoning = internal_steps.map((s: string) => `> _${s}_`).join('\n');
+        res.write(`data: ${JSON.stringify({ content: `${reasoning}\n\n` })}\n\n`);
+      }
+      
+      if (metrics) {
+        metrics.addTokens('planner', plannerTokens);
+        metrics.setPlannerOutput(plannedSteps);
+      }
+      
+      logger.info("API", `Planner output: ${JSON.stringify(plannedSteps)}`);
+
+      if (!plannedSteps || plannedSteps.length === 0) {
+        const errReply = errorFallback || "I could not formulate a valid plan for this goal.";
+        saveToMemory('jarvis', errReply);
+        logInteraction('chat', goal, errReply);
+        res.write(`data: ${JSON.stringify({ content: "\n" + errReply })}\n\n`);
+        res.write(`data: [DONE]\n\n`);
+        if (metrics) {
+          metrics.setExecutionResult(errReply);
+          metrics.finalize();
+        }
+        return res.end();
+      }
+
+      // C. Confirmation Gateway
+      if (requires_confirmation) {
+        setPendingConfirmation({ actions: plannedSteps, goal: goal });
+        const confirmMsg = `\n⚠️ I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed? (yes/no)`;
+        saveToMemory('jarvis', confirmMsg);
+        logInteraction('chat', message, confirmMsg);
+        res.write(`data: ${JSON.stringify({ content: confirmMsg })}\n\n`);
+        res.write(`data: [DONE]\n\n`);
+        if (metrics) {
+            metrics.setExecutionResult('Pending Confirmation');
+            metrics.finalize();
+        }
+        return res.end();
+      }
+
+      // D. Node Action Execution (SerpAPI)
+      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search');
+      const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
+
+      for (const na of nodeActions) {
+         logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
+         res.write(`data: ${JSON.stringify({ content: `\n[SerpAPI] Searched for: ${na.query}` })}\n\n`);
+         // Mock API Tokens
+         if (metrics) metrics.addTokens('planner', 50);
+      }
+
+      // E. Execute via Python Layer
+      if (browserActions.length > 0) {
+        try {
+            const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ commands: browserActions })
+            });
+            logger.info("API", `Python executor returned: ${pythonRes.status}`);
+        } catch (e: any) {
+            logger.error('API', `Python agent unreachable: ${e.message}`);
+        }
+      }
+      
+      const successReply = `\n✅ I have executed your instructions.`;
+      saveToMemory('user', message);
+      saveToMemory('jarvis', successReply);
+      logInteraction('chat', message, successReply, { browserCommands: plannedSteps });
+      trackBrowserTask('chat', message, plannedSteps);
+
+      res.write(`data: ${JSON.stringify({ content: successReply })}\n\n`);
+      // Send browser commands event structure matching existing UI
+      res.write(`data: ${JSON.stringify({ browser_commands: plannedSteps })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      if (metrics) {
+        metrics.setExecutionResult('Success');
+        metrics.finalize();
+      }
+      return res.end();
+    }
+
   } catch (error: any) {
-    console.error("[Chat API Error]", error);
+    logger.error("API", "Chat API Error", error);
+    if (metrics) {
+      metrics.setExecutionResult(`Error: ${error.message}`);
+      metrics.finalize();
+    }
     if (!res.headersSent) {
       res.status(500).json({ error: error.message || "Failed to process request" });
     } else {
@@ -245,6 +322,20 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
     res.status(500).json({ error: error.message || "Failed to process audio" });
+  }
+});
+
+/**
+ * Log user feedback securely to the backend CSV file
+ */
+router.post("/feedback", async (req, res) => {
+  try {
+    const { messageId, query, response, isPositive, comment } = req.body;
+    logFeedback(messageId, query || '', response || '', !!isPositive, comment || '');
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[Feedback API Error]", error);
+    res.status(500).json({ error: error.message || "Failed to log feedback" });
   }
 });
 

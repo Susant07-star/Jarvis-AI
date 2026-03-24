@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "You were just, previously I just saw you, you were talking in, you know, in the male voice, now you're talking in the female voice? What's the issue, huh?",
+    "jarvisResponse": "No issue here. I'm JARVIS, and I'm a bit androgynous, to be honest. My voice can adapt, but I'm usually a warm, neutral tone. Think of me as Tony Stark's trusted AI sidekick, always ready to help. No gender, just helpful tech.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:42:13.135Z"
+  },
+  "updatedAt": "2026-03-24T13:42:13.136Z",
+  "encrypted": false
+}

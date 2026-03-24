@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "back",
+    "jarvisResponse": "Going back to the previous page.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "type": "go_back"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:12:06.003Z"
+  },
+  "updatedAt": "2026-03-23T14:12:06.003Z",
+  "encrypted": false
+}

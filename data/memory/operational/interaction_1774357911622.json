@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "Don't you ask my name?",
+    "jarvisResponse": "I should be more polite. I'm JARVIS, and you are...?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:11:51.618Z"
+  },
+  "updatedAt": "2026-03-24T13:11:51.637Z",
+  "encrypted": false
+}

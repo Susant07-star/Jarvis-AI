@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open gmail",
+    "jarvisResponse": "Right away, opening Gmail in the current tab.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "force_new_tab": false,
+        "type": "open_tab",
+        "url": "https://gmail.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:06:18.349Z"
+  },
+  "updatedAt": "2026-03-23T14:06:18.349Z",
+  "encrypted": false
+}

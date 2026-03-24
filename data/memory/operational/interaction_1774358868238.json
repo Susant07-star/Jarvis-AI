@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "What's up?",
+    "jarvisResponse": "YouTube's open. Now, let me scroll down for you. Scrolling... done. What's next? You wanted to search for Physicswala, right?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:27:48.238Z"
+  },
+  "updatedAt": "2026-03-24T13:27:48.238Z",
+  "encrypted": false
+}

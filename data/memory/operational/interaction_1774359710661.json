@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hi, now I think you can hear me. Chavez, can you hear me? Loud and clear.",
+    "jarvisResponse": "I can hear you loud and clear. No need to shout, by the way. What's on your mind?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:41:50.661Z"
+  },
+  "updatedAt": "2026-03-24T13:41:50.661Z",
+  "encrypted": false
+}

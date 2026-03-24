@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hey, I'm telling you to open YouTube dude.",
+    "jarvisResponse": "I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_url",
+        "url": "https://www.youtube.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:27:31.061Z"
+  },
+  "updatedAt": "2026-03-24T13:27:31.061Z",
+  "encrypted": false
+}

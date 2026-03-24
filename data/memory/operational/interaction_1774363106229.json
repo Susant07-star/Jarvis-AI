@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Can you hear me now? Z-z-z-z-z-z-zarus?",
+    "jarvisResponse": "JARVIS. YouTube is open.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:38:26.229Z"
+  },
+  "updatedAt": "2026-03-24T14:38:26.229Z",
+  "encrypted": false
+}

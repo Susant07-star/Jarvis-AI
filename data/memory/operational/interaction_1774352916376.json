@@ -1,0 +1,27 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the first video tai chup mai chup...",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 4
+      },
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "tai chup mai chup"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T11:48:36.376Z"
+  },
+  "updatedAt": "2026-03-24T11:48:36.376Z",
+  "encrypted": false
+}

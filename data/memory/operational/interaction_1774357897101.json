@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "What is your name?",
+    "jarvisResponse": "I'm JARVIS, Tony Stark's AI assistant. Nice to chat with you.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:11:37.101Z"
+  },
+  "updatedAt": "2026-03-24T13:11:37.101Z",
+  "encrypted": false
+}

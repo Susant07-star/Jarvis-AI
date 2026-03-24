@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the first link",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 1
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:27:47.647Z"
+  },
+  "updatedAt": "2026-03-24T12:27:47.647Z",
+  "encrypted": false
+}

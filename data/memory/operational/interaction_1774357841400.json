@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "no",
+    "jarvisResponse": "Just YouTube on the screen then. Want to search for something or play a video?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:10:41.400Z"
+  },
+  "updatedAt": "2026-03-24T13:10:41.401Z",
+  "encrypted": false
+}

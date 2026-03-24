@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open 16hr study motivational video",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "click",
+        "jarvis_id": 70
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:12:33.549Z"
+  },
+  "updatedAt": "2026-03-23T14:12:33.549Z",
+  "encrypted": false
+}

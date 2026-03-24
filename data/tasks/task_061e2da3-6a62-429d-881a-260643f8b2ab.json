@@ -1,0 +1,18 @@
+{
+  "task_id": "061e2da3-6a62-429d-881a-260643f8b2ab",
+  "site": "unknown",
+  "goal": "[voice] Hey, I'm telling you to open YouTube dude.",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-24T13:27:31.064Z",
+  "updated_at": "2026-03-24T13:27:31.070Z",
+  "memory_snapshot": {},
+  "errors": []
+}

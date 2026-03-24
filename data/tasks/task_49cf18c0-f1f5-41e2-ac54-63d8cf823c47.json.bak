@@ -1,0 +1,18 @@
+{
+  "task_id": "49cf18c0-f1f5-41e2-ac54-63d8cf823c47",
+  "site": "unknown",
+  "goal": "[chat] first sign up",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T15:06:01.694Z",
+  "updated_at": "2026-03-24T15:06:01.694Z",
+  "memory_snapshot": {},
+  "errors": []
+}

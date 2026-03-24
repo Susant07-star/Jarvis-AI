@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open daraz in new tab",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 21
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:02:24.041Z"
+  },
+  "updatedAt": "2026-03-24T12:02:24.042Z",
+  "encrypted": false
+}

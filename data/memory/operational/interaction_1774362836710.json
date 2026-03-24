@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Now I think you can understand, you can hear me, right?",
+    "jarvisResponse": "Affirmative. Listening.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:33:56.710Z"
+  },
+  "updatedAt": "2026-03-24T14:33:56.711Z",
+  "encrypted": false
+}

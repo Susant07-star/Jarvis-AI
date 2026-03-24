@@ -1,0 +1,27 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open darz",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 4
+      },
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "darz"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:01:24.868Z"
+  },
+  "updatedAt": "2026-03-24T12:01:24.868Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "b5ea852b-570e-487c-a45d-65336c7d77de",
+  "site": "unknown",
+  "goal": "[chat] hi",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "search_site",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T09:15:29.271Z",
+  "updated_at": "2026-03-24T09:15:29.271Z",
+  "memory_snapshot": {},
+  "errors": []
+}

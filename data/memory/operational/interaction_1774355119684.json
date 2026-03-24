@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "How can I help you find the right link for HDHub4u? Should I search for it?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:25:19.683Z"
+  },
+  "updatedAt": "2026-03-24T12:25:19.684Z",
+  "encrypted": false
+}

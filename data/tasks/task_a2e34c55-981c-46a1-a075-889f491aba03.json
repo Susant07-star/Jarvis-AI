@@ -1,0 +1,18 @@
+{
+  "task_id": "a2e34c55-981c-46a1-a075-889f491aba03",
+  "site": "unknown",
+  "goal": "[chat] search ai agents",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "search_site",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "search_site",
+  "timestamp": "2026-03-23T13:50:15.114Z",
+  "updated_at": "2026-03-23T13:50:15.116Z",
+  "memory_snapshot": {},
+  "errors": []
+}

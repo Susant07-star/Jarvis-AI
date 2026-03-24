@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "add subject test mail by Jarvis",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "type",
+        "jarvis_id": 5,
+        "text": "test mail by Jarvis"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:07:42.710Z"
+  },
+  "updatedAt": "2026-03-23T14:07:42.710Z",
+  "encrypted": false
+}

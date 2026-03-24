@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_url",
+        "url": "https://www.youtube.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T15:18:47.239Z"
+  },
+  "updatedAt": "2026-03-24T15:18:47.239Z",
+  "encrypted": false
+}

@@ -1,0 +1,28 @@
+{
+  "task_id": "90d134ea-87cc-4f7c-839b-e7fc686be64c",
+  "site": "unknown",
+  "goal": "[chat] open darz",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "click",
+  "timestamp": "2026-03-24T12:01:24.873Z",
+  "updated_at": "2026-03-24T12:01:24.884Z",
+  "memory_snapshot": {},
+  "errors": []
+}

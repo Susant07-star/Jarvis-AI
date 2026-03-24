@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "click on log in",
+    "jarvisResponse": "I found a \"LOGIN\" link at the top of the page. I'll click on it for you.\n\n<function=interact_element jarvis_id=\"[2]\" action=\"click\"></function>",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T09:25:16.711Z"
+  },
+  "updatedAt": "2026-03-24T09:25:16.711Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "4ae8d1be-8706-4158-bb42-1a83c8c0bef0",
+  "site": "unknown",
+  "goal": "[chat] click next",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T15:06:19.387Z",
+  "updated_at": "2026-03-24T15:06:19.388Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -8,3 +8,9 @@ coverage/
 !.env.example
 session_memory.json
 logs/
+chrome_profile/
+python_agent/chrome_profile/
+.venv/
+__pycache__/
+*.pyc
+browser-data/

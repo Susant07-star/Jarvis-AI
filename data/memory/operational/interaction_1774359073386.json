@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Wow, are you listening to me right now?",
+    "jarvisResponse": "I'm all ears, even if I don't have any. I'm listening and ready when you need me. ❤️",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:31:13.385Z"
+  },
+  "updatedAt": "2026-03-24T13:31:13.386Z",
+  "encrypted": false
+}

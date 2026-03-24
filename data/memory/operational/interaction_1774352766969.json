@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "What's on your mind? Want to do something on Daraz or switch to YouTube?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T11:46:06.969Z"
+  },
+  "updatedAt": "2026-03-24T11:46:06.969Z",
+  "encrypted": false
+}

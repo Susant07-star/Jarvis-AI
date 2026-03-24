@@ -1,0 +1,18 @@
+{
+  "task_id": "aec1fb88-de7d-4b0b-82bf-f683457c690e",
+  "site": "unknown",
+  "goal": "[chat] open description",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "new_tab",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "new_tab",
+  "timestamp": "2026-03-23T13:52:03.307Z",
+  "updated_at": "2026-03-23T13:52:03.312Z",
+  "memory_snapshot": {},
+  "errors": []
+}

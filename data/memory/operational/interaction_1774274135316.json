@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open rsp's masterplan.. video",
+    "jarvisResponse": "Right away, Sir. Searching YouTube for RSP's Masterplan.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "query": "RSP's Masterplan",
+        "site": "youtube",
+        "type": "search_site"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:55:35.316Z"
+  },
+  "updatedAt": "2026-03-23T13:55:35.316Z",
+  "encrypted": false
+}

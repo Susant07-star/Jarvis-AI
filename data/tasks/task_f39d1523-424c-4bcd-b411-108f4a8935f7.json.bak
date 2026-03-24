@@ -1,0 +1,18 @@
+{
+  "task_id": "f39d1523-424c-4bcd-b411-108f4a8935f7",
+  "site": "unknown",
+  "goal": "[chat] scroll down 2 times more",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T12:51:56.842Z",
+  "updated_at": "2026-03-24T12:51:56.842Z",
+  "memory_snapshot": {},
+  "errors": []
+}

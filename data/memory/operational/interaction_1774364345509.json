@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "YouTube is already open, my friend. What can I help you with next? Want to search for something or open a specific video? Perhaps that Claude master class you were interested in earlier?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:59:05.509Z"
+  },
+  "updatedAt": "2026-03-24T14:59:05.509Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "887df33a-f990-4f39-85ae-f502d0e219f1",
+  "site": "unknown",
+  "goal": "[chat] add subject test mail by Jarvis",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "type",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T14:07:42.712Z",
+  "updated_at": "2026-03-23T14:07:42.712Z",
+  "memory_snapshot": {},
+  "errors": []
+}

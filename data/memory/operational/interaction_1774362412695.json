@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "ma nepali ma bolum?",
+    "jarvisResponse": "Analyzing page. \n\nExecuting. \n\nTranslating: \"Will I speak in Nepali?\" \nResponding: Affirmative. बोल्न सक्छु।",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:26:52.695Z"
+  },
+  "updatedAt": "2026-03-24T14:26:52.695Z",
+  "encrypted": false
+}

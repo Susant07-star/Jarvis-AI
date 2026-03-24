@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "now write bhandarinishan557@gmail.com on the to: section",
+    "jarvisResponse": "On it.",
+    "toolCalls": [
+      "interact_element"
+    ],
+    "browserCommands": [
+      {
+        "type": "type",
+        "jarvis_id": 1,
+        "text": "bhandarinishan557@gmail.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:07:14.194Z"
+  },
+  "updatedAt": "2026-03-23T14:07:14.194Z",
+  "encrypted": false
+}

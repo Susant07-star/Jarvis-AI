@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "where is sign in or login button?",
+    "jarvisResponse": "Going to Daraz Nepal website to find the sign in button.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "force_new_tab": true,
+        "type": "open_tab",
+        "url": "https://www.daraz.com.np/"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T09:22:59.739Z"
+  },
+  "updatedAt": "2026-03-24T09:22:59.739Z",
+  "encrypted": false
+}

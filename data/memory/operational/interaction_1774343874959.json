@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "scroll down",
+    "jarvisResponse": "Right away, scrolling down.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "direction": "down",
+        "type": "scroll"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T09:17:54.959Z"
+  },
+  "updatedAt": "2026-03-24T09:17:54.960Z",
+  "encrypted": false
+}

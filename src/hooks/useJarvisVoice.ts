@@ -7,7 +7,18 @@ declare global {
   }
 }
 
+/**
+ * useJarvisVoice — Clean voice pipeline hook.
+ *
+ * Architecture:
+ *   1. AudioWorklet captures raw PCM and streams it to the backend via WebSocket.
+ *   2. Browser SpeechRecognition provides local transcript display.
+ *   3. On isFinal from SpeechRecognition, we debounce 1.2s then send speech_end.
+ *   4. Backend runs Whisper STT on the accumulated audio buffer and responds.
+ *   5. A processing lock prevents stray recognition events from aborting the backend.
+ */
 export function useJarvisVoice() {
+  // ── UI State ──
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -15,336 +26,269 @@ export function useJarvisVoice() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [llmResponse, setLlmResponse] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const isListeningRef = useRef(false);
 
+  // ── Refs ──
   const wsRef = useRef<WebSocket | null>(null);
+  const isListeningRef = useRef(false);
+  const lockedRef = useRef(false);          // Processing lock
+  const speechStartSentRef = useRef(false); // Have we told backend "speech_start"?
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Audio capture
   const audioContextRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  
-  // Playback queue
-  const playbackContextRef = useRef<AudioContext | null>(null);
-  const audioQueueRef = useRef<AudioBuffer[]>([]);
-  const isPlayingRef = useRef(false);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
   const recognitionRef = useRef<any>(null);
 
+  // TTS playback
+  const playbackCtxRef = useRef<AudioContext | null>(null);
+  const queueRef = useRef<AudioBuffer[]>([]);
+  const playingRef = useRef(false);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // ── Helpers ──
+
   const stopSpeaking = useCallback(() => {
-    audioQueueRef.current = [];
+    queueRef.current = [];
+    playingRef.current = false;
     setIsSpeaking(false);
-    isPlayingRef.current = false;
-    if (currentSourceRef.current) {
-      try {
-        currentSourceRef.current.stop();
-      } catch (e) {
-        // Ignore if already stopped
-      }
-      currentSourceRef.current = null;
+    if (sourceRef.current) {
+      try { sourceRef.current.stop(); } catch {}
+      sourceRef.current = null;
     }
   }, []);
 
-  const connectWebSocket = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log('Connected to J.A.R.V.I.S. WebSocket');
-    };
-    
-    ws.onmessage = async (event) => {
-      if (typeof event.data === 'string') {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'interim') {
-            setInterimTranscript(data.text);
-          } else if (data.type === 'final') {
-            setTranscript(data.text);
-            setInterimTranscript('');
-          } else if (data.type === 'processing') {
-            setIsProcessing(true);
-          } else if (data.type === 'llm_start') {
-            setLlmResponse('');
-          } else if (data.type === 'llm_chunk') {
-            setLlmResponse(prev => prev + data.text);
-          } else if (data.type === 'browser_commands') {
-            window.dispatchEvent(new CustomEvent('jarvis_browser_commands', { detail: data.commands }));
-          } else if (data.type === 'done') {
-            setIsProcessing(false);
-          } else if (data.type === 'interrupted') {
-            console.log('Backend signaled interruption');
-            stopSpeaking();
-            setIsProcessing(false);
-          } else if (data.type === 'error') {
-            setError(data.message);
-            setIsProcessing(false);
-            setIsSpeaking(false);
-          }
-        } catch (e) {
-          console.error('Failed to parse WS message:', e);
-        }
-      } else if (event.data instanceof Blob) {
-        // Handle incoming TTS audio buffer
-        const arrayBuffer = await event.data.arrayBuffer();
-        if (!playbackContextRef.current) {
-          playbackContextRef.current = new AudioContext();
-        }
-        
-        try {
-          const audioBuffer = await playbackContextRef.current.decodeAudioData(arrayBuffer);
-          audioQueueRef.current.push(audioBuffer);
-          playNextInQueue();
-        } catch (e) {
-          console.error('Failed to decode audio chunk:', e);
-        }
-      }
-    };
-    
-    ws.onclose = () => {
-      console.log('WebSocket disconnected, attempting reconnect...');
-      setTimeout(connectWebSocket, 2000);
-    };
-    
-    ws.onerror = (e) => {
-      console.error('WebSocket error:', e);
-    };
-    
-    wsRef.current = ws;
-  }, [stopSpeaking]);
-
-  const playNextInQueue = useCallback(() => {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) {
-      if (audioQueueRef.current.length === 0 && !isPlayingRef.current) {
-        setIsSpeaking(false);
-      }
+  const playNext = useCallback(() => {
+    if (playingRef.current || queueRef.current.length === 0) {
+      if (queueRef.current.length === 0 && !playingRef.current) setIsSpeaking(false);
       return;
     }
-    if (!playbackContextRef.current) return;
-    
-    isPlayingRef.current = true;
+    if (!playbackCtxRef.current) return;
+    playingRef.current = true;
     setIsSpeaking(true);
-    const buffer = audioQueueRef.current.shift()!;
-    const source = playbackContextRef.current.createBufferSource();
-    source.buffer = buffer;
-    source.connect(playbackContextRef.current.destination);
-    currentSourceRef.current = source;
-    
-    source.onended = () => {
-      isPlayingRef.current = false;
-      currentSourceRef.current = null;
-      playNextInQueue();
-    };
-    
-    source.start();
+    const buf = queueRef.current.shift()!;
+    const src = playbackCtxRef.current.createBufferSource();
+    src.buffer = buf;
+    src.connect(playbackCtxRef.current.destination);
+    sourceRef.current = src;
+    src.onended = () => { playingRef.current = false; sourceRef.current = null; playNext(); };
+    src.start();
   }, []);
 
-  useEffect(() => {
-    connectWebSocket();
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+  /** Send speech_start JSON to backend (once per utterance). */
+  const sendSpeechStart = useCallback(() => {
+    if (lockedRef.current || speechStartSentRef.current) return;
+    stopSpeaking();
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'speech_start' }));
+      speechStartSentRef.current = true;
+    }
+  }, [stopSpeaking]);
+
+  /** Debounced: send speech_end after 1.2s of silence. */
+  const scheduleSpeechEnd = useCallback(() => {
+    if (lockedRef.current) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN && speechStartSentRef.current) {
+        console.log('[Voice] Sending speech_end');
+        wsRef.current.send(JSON.stringify({ type: 'speech_end' }));
+        speechStartSentRef.current = false;
+        lockedRef.current = true;   // LOCK — block all speech events until backend responds
+        setIsProcessing(true);
       }
-      if (playbackContextRef.current) {
-        playbackContextRef.current.close();
+      debounceRef.current = null;
+    }, 2000);
+  }, []);
+
+  /** Cancel pending debounce (user is still talking). */
+  const cancelSpeechEnd = useCallback(() => {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+  }, []);
+
+  /** Unlock after backend finishes. */
+  const unlock = useCallback(() => {
+    lockedRef.current = false;
+    setIsProcessing(false);
+  }, []);
+
+  // ── WebSocket ──
+
+  const connectWs = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+
+    ws.onopen = () => console.log('[Voice] WS connected');
+
+    ws.onmessage = async (ev) => {
+      if (typeof ev.data === 'string') {
+        try {
+          const d = JSON.parse(ev.data);
+          switch (d.type) {
+            case 'interim':          setInterimTranscript(d.text); break;
+            case 'final':            setTranscript(d.text); setInterimTranscript(''); break;
+            case 'processing':       setIsProcessing(true); break;
+            case 'llm_start':        setLlmResponse(''); break;
+            case 'llm_chunk':        setLlmResponse(p => p + d.text); break;
+            case 'browser_commands': window.dispatchEvent(new CustomEvent('jarvis_browser_commands', { detail: d.commands })); break;
+            case 'done':             unlock(); break;
+            case 'interrupted':      stopSpeaking(); unlock(); break;
+            case 'error':            setError(d.message); unlock(); setIsSpeaking(false); break;
+          }
+        } catch {}
+      } else if (ev.data instanceof Blob) {
+        // TTS audio chunk
+        const ab = await ev.data.arrayBuffer();
+        if (!playbackCtxRef.current) playbackCtxRef.current = new AudioContext();
+        try {
+          const audioBuf = await playbackCtxRef.current.decodeAudioData(ab);
+          queueRef.current.push(audioBuf);
+          playNext();
+        } catch {}
       }
     };
-  }, [connectWebSocket]);
+
+    ws.onclose = () => { console.log('[Voice] WS closed, reconnecting…'); setTimeout(connectWs, 2000); };
+    ws.onerror = (e) => console.error('[Voice] WS error', e);
+    wsRef.current = ws;
+  }, [stopSpeaking, playNext, unlock]);
+
+  useEffect(() => {
+    connectWs();
+    return () => { wsRef.current?.close(); playbackCtxRef.current?.close(); };
+  }, [connectWs]);
+
+  // ── Start Listening ──
 
   const startListening = useCallback(async () => {
     try {
-      setError(null);
-      setTranscript('');
-      setInterimTranscript('');
-      setIsProcessing(false);
-      stopSpeaking(); // Stop any ongoing TTS when user starts listening
+      setError(null); setTranscript(''); setInterimTranscript(''); setIsProcessing(false);
+      lockedRef.current = false;
+      speechStartSentRef.current = false;
+      stopSpeaking();
+
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Mic not supported');
+
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Microphone API is not supported in this browser.');
-      }
+      const initSpeechRecognition = () => {
+        if (!SR || !isListeningRef.current) {
+          console.warn('[Voice] SR unavailable or not listening. SR:', !!SR, 'Listening:', isListeningRef.current);
+          return;
+        }
 
-      // Initialize SpeechRecognition for interim transcripts
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        console.log('[Voice] Initializing new SpeechRecognition instance');
+        try {
+          const rec = new SR();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = 'en-US';
 
-        recognition.onresult = (event: any) => {
-          let interim = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              // We rely on backend Whisper for final transcript, but we can show it here temporarily
-              interim += event.results[i][0].transcript;
-            } else {
-              interim += event.results[i][0].transcript;
+          let isReconSrvRunning = false;
+          rec.onstart = () => { 
+            console.log('[Voice] SpeechRecognition onstart fired');
+            isReconSrvRunning = true; 
+          };
+          
+          rec.onresult = (ev: any) => {
+            if (lockedRef.current) return;
+            let interim = '';
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+              interim += ev.results[i][0].transcript;
             }
-          }
-          if (interim.trim()) {
-            setInterimTranscript(interim);
-          }
-        };
+            if (interim.trim()) {
+              if (!speechStartSentRef.current) sendSpeechStart();
+              setInterimTranscript(interim);
+            }
+            scheduleSpeechEnd();
+          };
 
-        recognition.onerror = (event: any) => {
-          if (event.error === 'aborted' || event.error === 'network' || event.error === 'no-speech') {
-            // Ignore expected errors from SpeechRecognition when used alongside getUserMedia or when aborted
-            return;
-          }
-          console.error('Speech recognition error:', event.error);
-        };
+          rec.onerror = (ev: any) => {
+            console.error(`[Voice] Recognition error: ${ev.error} (message: ${ev.message || 'none'})`);
+            if (['aborted', 'network', 'no-speech'].includes(ev.error)) return;
+          };
 
-        recognition.onend = () => {
-          // Auto-restart recognition if we are still supposed to be listening
-          if (isListeningRef.current) {
-            try { recognition.start(); } catch(e) {}
-          }
-        };
+          rec.onend = () => { 
+            console.log('[Voice] SpeechRecognition onend fired');
+            isReconSrvRunning = false;
+            recognitionRef.current = null;
+            if (isListeningRef.current) {
+              console.log('[Voice] Reinitializing after onend');
+              setTimeout(initSpeechRecognition, 300); 
+            } 
+          };
 
-        recognition.start();
-        recognitionRef.current = recognition;
-      }
+          rec.start();
+          console.log('[Voice] rec.start() called');
+          recognitionRef.current = rec;
+        } catch (e) {
+          console.error('[Voice] Failed to init SpeechRecognition', e);
+          if (isListeningRef.current) setTimeout(initSpeechRecognition, 1000);
+        }
+      };
 
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: { 
-          sampleRate: 16000, 
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true
-        } 
+      // CRITICAL FIX: Set the listener flag to true BEFORE initializing the engine!
+      isListeningRef.current = true;
+      initSpeechRecognition();
+
+      // 2. Raw PCM capture → streams to backend via WS
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
       });
       streamRef.current = stream;
 
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      audioContextRef.current = audioContext;
-      
-      await audioContext.audioWorklet.addModule('/audio-processor.js');
-      
-      const source = audioContext.createMediaStreamSource(stream);
-      const workletNode = new AudioWorkletNode(audioContext, 'audio-processor');
-      workletNodeRef.current = workletNode;
-      
-      // Silence detection
-      const analyser = audioContext.createAnalyser();
-      analyser.minDecibels = -60;
-      analyser.smoothingTimeConstant = 0.8;
-      source.connect(analyser);
-      
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      let silenceStart = Date.now();
-      let hasSpoken = false;
-      const SILENCE_THRESHOLD = 2000;
-      
-      const checkSilence = () => {
-        if (!isListeningRef.current) return;
-        analyser.getByteFrequencyData(dataArray);
-        const sum = dataArray.reduce((a, b) => a + b, 0);
-        const average = sum / dataArray.length;
-        
-        if (average > 10) { // Speech detected
-          if (!hasSpoken) {
-            // User started speaking, interrupt TTS if playing
-            stopSpeaking();
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'speech_start' }));
-            }
-          }
-          hasSpoken = true;
-          silenceStart = Date.now();
-        } else {
-          const timeSilent = Date.now() - silenceStart;
-          if (hasSpoken && timeSilent > SILENCE_THRESHOLD) {
-            // Silence detected after speech -> trigger backend processing
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'speech_end' }));
-            }
-            hasSpoken = false;
-            silenceStart = Date.now();
-            
-            // Restart SpeechRecognition to clear its interim buffer
-            if (recognitionRef.current) {
-               try { recognitionRef.current.stop(); } catch(e){}
-            }
-          }
-        }
-        requestAnimationFrame(checkSilence);
+      const ctx = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = ctx;
+      await ctx.audioWorklet.addModule('/audio-processor.js');
+
+      const src = ctx.createMediaStreamSource(stream);
+      const worklet = new AudioWorkletNode(ctx, 'audio-processor');
+      workletNodeRef.current = worklet;
+
+      worklet.port.onmessage = (e) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(e.data);
       };
 
-      workletNode.port.onmessage = (event) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          // Send raw PCM Int16 buffer continuously
-          wsRef.current.send(event.data);
-        }
-      };
+      src.connect(worklet);
+      worklet.connect(ctx.destination);
 
-      source.connect(workletNode);
-      workletNode.connect(audioContext.destination); // Required for worklet to process
-      
       setIsListening(true);
-      isListeningRef.current = true;
-      
-      // Start silence check loop
-      requestAnimationFrame(checkSilence);
-      
     } catch (err: any) {
-      console.error('Microphone error:', err);
+      console.error('[Voice] Mic error:', err);
       setError('Microphone access denied or unavailable.');
       setIsListening(false);
       isListeningRef.current = false;
-      setInterimTranscript('');
     }
-  }, [stopSpeaking]);
+  }, [stopSpeaking, sendSpeechStart, scheduleSpeechEnd, cancelSpeechEnd]);
+
+  // ── Stop Listening ──
 
   const stopListening = useCallback(() => {
-    if (isListeningRef.current) {
-      setIsListening(false);
-      isListeningRef.current = false;
-      
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'speech_end' }));
-      }
+    if (!isListeningRef.current) return;
+    setIsListening(false);
+    isListeningRef.current = false;
 
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          // ignore
-        }
-        recognitionRef.current = null;
-      }
-      if (workletNodeRef.current) {
-        workletNodeRef.current.disconnect();
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      setInterimTranscript('');
+    // Flush: send speech_end immediately if we have unsent audio
+    cancelSpeechEnd();
+    if (wsRef.current?.readyState === WebSocket.OPEN && speechStartSentRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'speech_end' }));
+      speechStartSentRef.current = false;
     }
-  }, [isListening]);
 
-  const resetTranscript = useCallback(() => {
-    setTranscript('');
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
+    workletNodeRef.current?.disconnect();
+    audioContextRef.current?.close();
+    streamRef.current?.getTracks().forEach(t => t.stop());
     setInterimTranscript('');
-  }, []);
+  }, [cancelSpeechEnd]);
+
+  const resetTranscript = useCallback(() => { setTranscript(''); setInterimTranscript(''); }, []);
 
   return {
-    isListening,
-    isProcessing,
-    isSpeaking,
-    transcript,
-    interimTranscript,
-    llmResponse,
-    startListening,
-    stopListening,
-    stopSpeaking,
-    resetTranscript,
-    hasRecognition: true,
-    error
+    isListening, isProcessing, isSpeaking,
+    transcript, interimTranscript, llmResponse,
+    startListening, stopListening, stopSpeaking, resetTranscript,
+    hasRecognition: true, error
   };
 }

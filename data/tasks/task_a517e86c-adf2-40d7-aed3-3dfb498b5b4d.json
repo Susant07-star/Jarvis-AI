@@ -1,0 +1,18 @@
+{
+  "task_id": "a517e86c-adf2-40d7-aed3-3dfb498b5b4d",
+  "site": "unknown",
+  "goal": "[chat] play next video on the playlist",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "media_control",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "media_control",
+  "timestamp": "2026-03-23T14:11:48.712Z",
+  "updated_at": "2026-03-23T14:11:48.717Z",
+  "memory_snapshot": {},
+  "errors": []
+}

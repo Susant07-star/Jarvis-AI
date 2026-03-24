@@ -1,0 +1,18 @@
+{
+  "task_id": "1820d1bf-76d1-42a1-bf94-59cbbe8ca84f",
+  "site": "unknown",
+  "goal": "[chat] open new tab",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "open_tab",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T12:45:57.824Z",
+  "updated_at": "2026-03-24T12:45:57.824Z",
+  "memory_snapshot": {},
+  "errors": []
+}

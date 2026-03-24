@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "No, no, just leave it. No need to search physics water now. Just leave it, okay?",
+    "jarvisResponse": "I could not formulate a valid plan for this goal.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:35:51.279Z"
+  },
+  "updatedAt": "2026-03-24T13:35:51.279Z",
+  "encrypted": false
+}

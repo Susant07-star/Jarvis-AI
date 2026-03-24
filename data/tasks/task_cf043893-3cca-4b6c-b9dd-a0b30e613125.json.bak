@@ -1,0 +1,18 @@
+{
+  "task_id": "cf043893-3cca-4b6c-b9dd-a0b30e613125",
+  "site": "unknown",
+  "goal": "[chat] open rsp's masterplan.. video",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "search_site",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:55:35.317Z",
+  "updated_at": "2026-03-23T13:55:35.317Z",
+  "memory_snapshot": {},
+  "errors": []
+}

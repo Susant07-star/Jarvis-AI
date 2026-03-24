@@ -1,0 +1,18 @@
+{
+  "task_id": "0b91c304-08f2-44fe-9fda-498007050dbd",
+  "site": "unknown",
+  "goal": "[chat] more",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T14:12:20.947Z",
+  "updated_at": "2026-03-23T14:12:20.947Z",
+  "memory_snapshot": {},
+  "errors": []
+}

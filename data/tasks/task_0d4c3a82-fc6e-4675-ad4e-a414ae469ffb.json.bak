@@ -1,0 +1,18 @@
+{
+  "task_id": "0d4c3a82-fc6e-4675-ad4e-a414ae469ffb",
+  "site": "unknown",
+  "goal": "[chat] scroll more",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T12:52:11.898Z",
+  "updated_at": "2026-03-24T12:52:11.898Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,23 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "It's looking up.",
+    "jarvisResponse": "I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 6
+      },
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "look up"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T16:41:07.270Z"
+  },
+  "updatedAt": "2026-03-24T16:41:07.270Z",
+  "encrypted": false
+}

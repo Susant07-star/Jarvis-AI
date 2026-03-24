@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "skip 50 seconds",
+    "jarvisResponse": "Skipping 50 seconds in the video.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "action": "seek",
+        "seconds": 50,
+        "type": "media_control"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:51:19.484Z"
+  },
+  "updatedAt": "2026-03-23T13:51:19.484Z",
+  "encrypted": false
+}

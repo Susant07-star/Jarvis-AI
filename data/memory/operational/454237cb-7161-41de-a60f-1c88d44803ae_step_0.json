@@ -1,0 +1,11 @@
+{
+  "data": {
+    "action": {
+      "action": "open_url",
+      "url": "https://en.wikipedia.org"
+    },
+    "status": "completed",
+    "timestamp": "2026-03-23T12:59:29.343Z"
+  },
+  "updatedAt": "2026-03-23T12:59:29.344Z"
+}

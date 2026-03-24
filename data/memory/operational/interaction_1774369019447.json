@@ -1,0 +1,17 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "stop",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "close_browser"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T16:16:59.447Z"
+  },
+  "updatedAt": "2026-03-24T16:16:59.447Z",
+  "encrypted": false
+}

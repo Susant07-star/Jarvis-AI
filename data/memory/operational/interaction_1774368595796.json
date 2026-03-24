@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "go on do it",
+    "jarvisResponse": "I could not formulate a valid plan for this goal.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T16:09:55.796Z"
+  },
+  "updatedAt": "2026-03-24T16:09:55.797Z",
+  "encrypted": false
+}

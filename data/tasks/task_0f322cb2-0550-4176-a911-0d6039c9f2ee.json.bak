@@ -1,0 +1,18 @@
+{
+  "task_id": "0f322cb2-0550-4176-a911-0d6039c9f2ee",
+  "site": "unknown",
+  "goal": "[chat] where is sign in or login button?",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "open_tab",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T09:22:59.741Z",
+  "updated_at": "2026-03-24T09:22:59.741Z",
+  "memory_snapshot": {},
+  "errors": []
+}

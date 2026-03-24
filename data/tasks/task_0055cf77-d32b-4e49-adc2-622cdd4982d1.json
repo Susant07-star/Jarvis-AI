@@ -1,0 +1,18 @@
+{
+  "task_id": "0055cf77-d32b-4e49-adc2-622cdd4982d1",
+  "site": "unknown",
+  "goal": "[chat] open dotmovies",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-24T12:26:49.159Z",
+  "updated_at": "2026-03-24T12:26:49.175Z",
+  "memory_snapshot": {},
+  "errors": []
+}

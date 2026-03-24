@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "close other tabs",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": "tab-close-button"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:30:50.132Z"
+  },
+  "updatedAt": "2026-03-24T12:30:50.132Z",
+  "encrypted": false
+}

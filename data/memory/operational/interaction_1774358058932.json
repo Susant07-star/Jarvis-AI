@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Okay, nice, lovely. So, I just want to make sure that are you able to do any the stops that I will tell to you to do something like as whatever it is. So, if I told you to do something like something as whatever it is, can you do that for me?",
+    "jarvisResponse": "I think I get what you're saying. You want to know if I can follow your instructions and perform tasks as you ask. The answer is yes, I can definitely try to help you out. What's the first thing you'd like me to do?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:14:18.932Z"
+  },
+  "updatedAt": "2026-03-24T13:14:18.932Z",
+  "encrypted": false
+}

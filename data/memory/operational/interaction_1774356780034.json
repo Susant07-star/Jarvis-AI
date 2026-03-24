@@ -1,0 +1,31 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open pw vidyapeeth live tour video",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 4
+      },
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "pw vidyapeeth live tour"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 6
+      },
+      {
+        "action": "click",
+        "jarvis_id": 33
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:53:00.034Z"
+  },
+  "updatedAt": "2026-03-24T12:53:00.034Z",
+  "encrypted": false
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "yes tell me",
+    "jarvisResponse": "We've got a search bar at the top, and it looks like our previous search for \"16hr study motivational video\" is still active. There are a bunch of video results below, but I don't see any specific titles that stand out. Want me to read out some of the video titles for you?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T11:47:28.677Z"
+  },
+  "updatedAt": "2026-03-24T11:47:28.677Z",
+  "encrypted": false
+}

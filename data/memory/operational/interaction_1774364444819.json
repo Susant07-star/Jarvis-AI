@@ -1,0 +1,26 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "close the browser",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 10
+      },
+      {
+        "action": "click",
+        "jarvis_id": 28
+      },
+      {
+        "action": "click",
+        "jarvis_id": 30
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T15:00:44.819Z"
+  },
+  "updatedAt": "2026-03-24T15:00:44.819Z",
+  "encrypted": false
+}

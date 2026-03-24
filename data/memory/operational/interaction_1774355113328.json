@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "You wanted to open HDHub4u, but the URL didn't work out. Want me to search for the correct one?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T12:25:13.328Z"
+  },
+  "updatedAt": "2026-03-24T12:25:13.328Z",
+  "encrypted": false
+}

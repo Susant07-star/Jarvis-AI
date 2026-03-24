@@ -1,0 +1,18 @@
+{
+  "task_id": "c94cdb06-cc8e-4ebd-bf2c-80316ba29208",
+  "site": "unknown",
+  "goal": "[chat] go to next tab",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "new_tab",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:54:50.820Z",
+  "updated_at": "2026-03-23T13:54:50.820Z",
+  "memory_snapshot": {},
+  "errors": []
+}

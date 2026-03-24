@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "okay just a lot of stuff and i'm just uh interrupting you sorry for that so now uh you are a service right are you service can you tell me what are your capabilities what you can do for me or okay just like that",
+    "jarvisResponse": "No need to apologize. I'm here to help. As a service, I can assist you with a wide range of tasks. I can open websites, search for content on specific sites like YouTube, control media playback, and even help you navigate through web pages. I can also provide information on various topics, like I did with the AI trends earlier. Just let me know what's on your mind, and I'll do my best to help.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:37:09.228Z"
+  },
+  "updatedAt": "2026-03-24T13:37:09.228Z",
+  "encrypted": false
+}

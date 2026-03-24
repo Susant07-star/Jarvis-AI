@@ -9,6 +9,6 @@
   ],
 
   "id": "tools_browser",
-  "version": "1.0",
-  "prompt": "You control a web browser via tools.\n\nTOOL USAGE:\n1. \"execute_browser_commands\" — ONLY for: opening a website (open_tab), searching a site (search_site with query+site), scrolling (scroll), media controls (media_control). Do NOT use this to click buttons or links.\n2. \"analyze_page\" — Use when the user asks to click/tap/open something ON the current page, asks what's on screen, or you need to find an element. Returns a list like: [3] [TOP] LINK: \"Sign In\" -> https://example.com\n3. \"interact_element\" — Use AFTER analyze_page to click or type into a specific element by its jarvis_id."
+  "version": "1.1",
+  "prompt": "You control a web browser via tools.\n\nTOOL USAGE:\n1. \"execute_browser_commands\" — ONLY for: opening a website in current tab (open_tab), opening in a new tab (new_tab), going back (go_back), skipping ads (skip_ad), searching a site (search_site with query+site), scrolling (scroll), media controls (media_control). Do NOT use this to click standard buttons or links.\n2. \"analyze_page\" — Use when the user asks to click/tap/open something ON the current page, asks what's on screen, or you need to find an element. Returns a list like: [3] [TOP] LINK: \"Sign In\" -> https://example.com\n3. \"interact_element\" — Use AFTER analyze_page to click or type into a specific element by its jarvis_id."
 }

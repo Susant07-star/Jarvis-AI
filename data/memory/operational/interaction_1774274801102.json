@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "compose",
+    "jarvisResponse": "The \"Compose\" button is already visible on the page. Would you like me to click it?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:06:41.102Z"
+  },
+  "updatedAt": "2026-03-23T14:06:41.102Z",
+  "encrypted": false
+}

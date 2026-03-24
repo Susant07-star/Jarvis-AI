@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "close other tab",
+    "jarvisResponse": "Right away, closing other tab.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "type": "go_back"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T09:19:06.414Z"
+  },
+  "updatedAt": "2026-03-24T09:19:06.414Z",
+  "encrypted": false
+}

@@ -1,0 +1,28 @@
+{
+  "task_id": "c4e06638-2e1f-494d-ba49-d705611be693",
+  "site": "unknown",
+  "goal": "[chat] search for physics wallah",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "type",
+  "timestamp": "2026-03-24T12:50:11.580Z",
+  "updated_at": "2026-03-24T12:50:11.592Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hello, mic check. Mic check.",
+    "jarvisResponse": "All good here, mic's working perfectly. What's next?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:26:41.579Z"
+  },
+  "updatedAt": "2026-03-24T13:26:41.579Z",
+  "encrypted": false
+}

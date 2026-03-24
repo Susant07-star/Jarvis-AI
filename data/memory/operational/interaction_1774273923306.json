@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open description",
+    "jarvisResponse": "Right away, Sir. Opening the video description in a new tab.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "force_new_tab": true,
+        "type": "new_tab",
+        "url": "https://www.youtube.com/watch?v=(video_id)#description"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:52:03.306Z"
+  },
+  "updatedAt": "2026-03-23T13:52:03.306Z",
+  "encrypted": false
+}

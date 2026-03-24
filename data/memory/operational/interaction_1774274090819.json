@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "go to next tab",
+    "jarvisResponse": "Right away, Sir. Going to the next tab.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "target_tab": "previous",
+        "type": "new_tab"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:54:50.818Z"
+  },
+  "updatedAt": "2026-03-23T13:54:50.819Z",
+  "encrypted": false
+}

@@ -1,0 +1,19 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "Go to the previous tab where we were watching",
+    "jarvisResponse": "Going back to the video tab",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "type": "go_back"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T13:53:21.237Z"
+  },
+  "updatedAt": "2026-03-23T13:53:21.237Z",
+  "encrypted": false
+}

@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "pause",
+    "jarvisResponse": "Pausing the video.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "action": "pause",
+        "type": "media_control"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:12:03.232Z"
+  },
+  "updatedAt": "2026-03-23T14:12:03.232Z",
+  "encrypted": false
+}

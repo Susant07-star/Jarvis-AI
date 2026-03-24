@@ -1,0 +1,18 @@
+{
+  "task_id": "f0f259bf-9805-495a-ba60-e8dd39954d68",
+  "site": "unknown",
+  "goal": "[chat] open youutbe",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-24T11:57:35.769Z",
+  "updated_at": "2026-03-24T11:57:35.769Z",
+  "memory_snapshot": {},
+  "errors": []
+}

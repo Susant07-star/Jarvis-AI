@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Okay, so I want to tell you that there was something you know that I want to tell you but there was nothing that I want to tell you. What do you understand from this?",
+    "jarvisResponse": "Nothing. Literally.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T14:35:05.463Z"
+  },
+  "updatedAt": "2026-03-24T14:35:05.463Z",
+  "encrypted": false
+}

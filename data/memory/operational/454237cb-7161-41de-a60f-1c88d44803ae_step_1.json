@@ -1,0 +1,14 @@
+{
+  "data": {
+    "action": {
+      "action": "universal_type",
+      "selectorStrategy": "placeholder",
+      "selectorValue": "Search Wikipedia",
+      "text": "Artificial intelligence",
+      "name": "Search Input"
+    },
+    "status": "completed",
+    "timestamp": "2026-03-23T12:59:38.774Z"
+  },
+  "updatedAt": "2026-03-23T12:59:38.774Z"
+}

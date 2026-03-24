@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "I told you to search physics wallah motivational video and play the highest views shown videos",
+    "jarvisResponse": "Searching YouTube for Physics Wallah motivational videos, then playing the one with the most views.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "action": "search",
+        "type": "search_site",
+        "site": "youtube",
+        "query": "physics wallah motivational video"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:10:11.942Z"
+  },
+  "updatedAt": "2026-03-23T14:10:11.942Z",
+  "encrypted": false
+}

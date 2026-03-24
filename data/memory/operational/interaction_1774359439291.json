@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "wait wait I just want to okay wait wait I just",
+    "jarvisResponse": "Take your time, I'm listening. What's on your mind?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:37:19.291Z"
+  },
+  "updatedAt": "2026-03-24T13:37:19.291Z",
+  "encrypted": false
+}

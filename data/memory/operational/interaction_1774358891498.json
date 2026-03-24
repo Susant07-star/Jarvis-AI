@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "No, yeah, be quiet. Just be quiet. I want peace. Can you sing a song for me?",
+    "jarvisResponse": "I'll keep it quiet then. How about a little tune? \"Hush little algorithm, don't you cry...\"",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:28:11.498Z"
+  },
+  "updatedAt": "2026-03-24T13:28:11.498Z",
+  "encrypted": false
+}

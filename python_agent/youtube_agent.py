@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import List, Optional
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
@@ -25,15 +25,17 @@ app = FastAPI(title="JARVIS YouTube Agent")
 
 # Global variables
 driver = None
+last_extracted_elements = []
 
 class BrowserCommand(BaseModel):
-    type: str # 'open_tab' | 'search_site' | 'media_control' | 'scroll' | 'analyze_page' | 'click' | 'type' | 'wait'
+    type: str # 'open_tab' | 'search_site' | 'media_control' | 'scroll' | 'analyze_page' | 'click' | 'type' | 'wait' | 'youtube_like' | 'youtube_subscribe' | 'youtube_comment' | 'type_secure'
     url: Optional[str] = None
     query: Optional[str] = None
     site: Optional[str] = None
     target_tab: Optional[str] = None
     force_new_tab: Optional[bool] = False
-    action: Optional[str] = None # 'play' | 'pause' | 'skip_forward' | 'skip_backward' | 'seek'
+    action: Optional[str] = None # 'play' | 'pause' | 'skip_forward' | 'skip_backward' | 'seek' (legacy)
+    command: Optional[str] = None # 'play' | 'pause' | 'skip_forward' | 'skip_backward' (new standard to avoid JSON key collision)
     seconds: Optional[float] = None
     direction: Optional[str] = None # 'up' | 'down'
     amount: Optional[float] = None
@@ -43,66 +45,80 @@ class BrowserCommand(BaseModel):
 class CommandRequest(BaseModel):
     commands: List[BrowserCommand]
 
-def init_driver():
-    global driver
-    if driver is None:
-        logger.info("Initializing Selenium WebDriver (undetected-chromedriver)...")
-        options = uc.ChromeOptions()
-        # Use a dedicated profile for JARVIS so login persists
-        profile_dir = os.path.join(os.getcwd(), "chrome_profile")
-        options.add_argument(f"--user-data-dir={profile_dir}")
-        options.add_argument("--profile-directory=Default")
-        
-        # Optimize for automation/media
-        options.add_argument('--autoplay-policy=no-user-gesture-required')
-        
-        try:
-            driver = uc.Chrome(options=options, use_subprocess=True)
-            # Prevent infinite hanging on slow websites
-            driver.set_page_load_timeout(30)
-            logger.info("WebDriver initialized successfully.")
-        except Exception as e:
-            logger.error(f"Failed to initialize WebDriver: {e}")
-            raise e
+def is_driver_alive(d) -> bool:
+    """Checks if the WebDriver session is still valid."""
+    try:
+        _ = d.title  # Will throw if session is dead
+        return True
+    except Exception:
+        return False
 
-@app.on_event("startup")
-async def startup_event():
-    # Run initialization in a thread block since it's blocking
-    await asyncio.to_thread(init_driver)
+def _create_driver():
+    """Internal: boots a fresh undetected-chromedriver instance."""
+    logger.info("[Browser] Initializing new WebDriver session...")
+    options = uc.ChromeOptions()
+    profile_dir = os.path.join(os.getcwd(), "chrome_profile")
+    options.add_argument(f"--user-data-dir={profile_dir}")
+    options.add_argument("--profile-directory=Default")
+    options.add_argument('--autoplay-policy=no-user-gesture-required')
+    new_driver = uc.Chrome(options=options, use_subprocess=True)
+    new_driver.set_page_load_timeout(30)
+    logger.info("[Browser] WebDriver session started successfully.")
+    return new_driver
+
+def get_driver():
+    """Lazy factory: returns live driver, auto-recovering from dead sessions."""
+    global driver
+    if driver is None or not is_driver_alive(driver):
+        if driver is not None:
+            logger.warning("[Browser] Dead session detected. Restarting WebDriver...")
+            try: driver.quit()
+            except: pass
+            driver = None
+        driver = _create_driver()
+    return driver
 
 @app.on_event("shutdown")
 def shutdown_event():
     global driver
     if driver is not None:
-        logger.info("Shutting down WebDriver...")
-        try:
-            driver.quit()
-        except:
-            pass
+        logger.info("[Browser] Shutting down WebDriver...")
+        try: driver.quit()
+        except: pass
         driver = None
 
 def get_tab_by_name(target_name: Optional[str]) -> Optional[str]:
     """Finds a window handle based on matching title or URL to target_name"""
-    if not driver or not target_name:
+    d = get_driver()
+    if not d or not target_name:
         return None
         
-    current = driver.current_window_handle
-    for handle in driver.window_handles:
-        driver.switch_to.window(handle)
-        title = driver.title.lower()
-        url = driver.current_url.lower()
+    current = d.current_window_handle
+    for handle in d.window_handles:
+        d.switch_to.window(handle)
+        title = d.title.lower()
+        url = d.current_url.lower()
         target = target_name.lower()
         if target in title or target in url:
              return handle
-    driver.switch_to.window(current)
+    d.switch_to.window(current)
     return None
 
 def execute_single_command(cmd: BrowserCommand):
     global driver
-    if not driver:
-        raise Exception("WebDriver not initialized")
-        
     logger.info(f"Executing command: {cmd.type} - {cmd.model_dump_json()}")
+    
+    # close_browser: graceful session teardown
+    if cmd.type == "close_browser":
+        if driver is not None:
+            try: driver.quit()
+            except: pass
+            driver = None
+        logger.info('{"action": "close_browser", "success": true, "details": "Session terminated"}')
+        return
+    
+    # Ensure a live session exists (lazy init + auto-recovery)
+    d = get_driver()
     
     # Simple tab resolution logic
     target_name = cmd.target_tab or cmd.site
@@ -131,15 +147,39 @@ def execute_single_command(cmd: BrowserCommand):
             
         handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
         if handle:
-            driver.switch_to.window(handle)
-            driver.get(url)
+            d.switch_to.window(handle)
+            d.get(url)
         else:
             # Open new tab
-            if len(driver.window_handles) == 1 and driver.current_url == "data:,":
-                 driver.get(url)
+            if len(d.window_handles) == 1 and d.current_url == "data:,":
+                 d.get(url)
             else:
-                 driver.switch_to.new_window('tab')
-                 driver.get(url)
+                 d.switch_to.new_window('tab')
+                 d.get(url)
+                 
+    elif cmd.type == "new_tab":
+        url = cmd.url
+        d.switch_to.new_window('tab')
+        if url:
+            d.get(url)
+            
+    elif cmd.type == "go_back":
+        d.back()
+        logger.info("Executing browser back navigation")
+        
+    elif cmd.type == "skip_ad":
+        # Broad script to try and click standard YouTube and generic ad skip buttons
+        script = """
+            const adBtn = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern');
+            if (adBtn) {
+                adBtn.click();
+                return true;
+            }
+            return false;
+        """
+        d.execute_script(script)
+        logger.info("Attempted to skip ad")
+        
                  
     elif cmd.type == "search_site":
         if not cmd.query:
@@ -157,22 +197,22 @@ def execute_single_command(cmd: BrowserCommand):
             
         handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
         if handle:
-            driver.switch_to.window(handle)
-            driver.get(url)
+            d.switch_to.window(handle)
+            d.get(url)
         else:
             # New tab
-            if len(driver.window_handles) == 1 and driver.current_url == "data:,":
-                 driver.get(url)
+            if len(d.window_handles) == 1 and d.current_url == "data:,":
+                 d.get(url)
             else:
-                 driver.switch_to.new_window('tab')
-                 driver.get(url)
+                 d.switch_to.new_window('tab')
+                 d.get(url)
                  
             if "youtube" in target:
                 try:
-                    WebDriverWait(driver, 5).until(
+                    WebDriverWait(d, 5).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "ytd-video-renderer a#video-title"))
                     )
-                    driver.execute_script("document.querySelector('ytd-video-renderer a#video-title').click();")
+                    d.execute_script("document.querySelector('ytd-video-renderer a#video-title').click();")
                 except Exception as e:
                     logger.warning(f"Failed to auto-play first video: {e}")
                     
@@ -181,15 +221,16 @@ def execute_single_command(cmd: BrowserCommand):
         if target_name:
             handle = get_tab_by_name(target_name)
             if handle:
-                driver.switch_to.window(handle)
+                d.switch_to.window(handle)
                 
         # Inject Javascript to control the standard HTML5 video player
         js_code = ""
-        action = cmd.action
+        # Accept 'command' (new standard) OR 'action' (legacy fallback) to avoid JSON key collisions
+        action = cmd.command or cmd.action
         
         # Ensure we have a video element first
         check_js = "return document.querySelector('video') !== null"
-        if not driver.execute_script(check_js):
+        if not d.execute_script(check_js):
             logger.warning("No video element found on current page for media_control")
             return
             
@@ -208,39 +249,37 @@ def execute_single_command(cmd: BrowserCommand):
                 js_code = f"document.querySelector('video').currentTime = {cmd.seconds};"
             
         if js_code:
-            driver.execute_script(js_code)
+            d.execute_script(js_code)
             
     elif cmd.type == "scroll":
         if target_name:
             handle = get_tab_by_name(target_name)
             if handle:
-                driver.switch_to.window(handle)
+                d.switch_to.window(handle)
                 
         amount = cmd.amount or 500
         if cmd.direction == "up":
             amount = -amount
             
-        driver.execute_script(f"window.scrollBy(0, {amount});")
+        d.execute_script(f"window.scrollBy(0, {amount});")
         
     elif cmd.type == "click":
         if cmd.jarvis_id is not None:
-            script = f"""
-                const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
-                if (el) {{
-                    el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
-                    // Slight delay to allow scrolling
-                    setTimeout(() => el.click(), 300);
-                    return true;
-                }}
-                return false;
-            """
-            result = driver.execute_script(script)
-            if not result:
-                raise Exception(f"Element with jarvis_id {cmd.jarvis_id} not found yet")
+            # Smart element matching from globally cached DOM
+            target_info = {"id": cmd.jarvis_id}
+            for el in last_extracted_elements:
+                if el.get("id") == cmd.jarvis_id:
+                    target_info = el
+                    break
+                    
+            res = safe_click(target_info)
+            if not res["success"]:
+                raise Exception(f"Failed to click element: {res['details']}")
     elif cmd.type == "type":
         if cmd.jarvis_id is not None and cmd.text is not None:
             # Escape double quotes and backslashes in text for JS
-            safe_text = cmd.text.replace('\\', '\\\\').replace('"', '\\"')
+            text_val = str(cmd.text)
+            safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
             script = f"""
                 const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
                 if (el) {{
@@ -254,9 +293,75 @@ def execute_single_command(cmd: BrowserCommand):
                 }}
                 return false;
             """
-            result = driver.execute_script(script)
+            result = d.execute_script(script)
             if not result:
                 raise Exception(f"Element with jarvis_id {cmd.jarvis_id} not found yet")
+                
+    elif cmd.type == "type_secure":
+        if cmd.jarvis_id is not None and cmd.text is not None:
+            # Resolves from Environment Variables for Security Mock
+            text_val = str(cmd.text)
+            deciphered = os.environ.get(text_val, text_val)
+            safe_text = str(deciphered).replace('\\', '\\\\').replace('"', '\\"')
+            script = f"""
+                const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
+                if (el) {{
+                    el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                    el.focus();
+                    el.value = "{safe_text}";
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    return true;
+                }}
+                return false;
+            """
+            result = d.execute_script(script)
+            logger.info(f"Executed type_secure successfully (plaintext masked)")
+            if not result:
+                raise Exception(f"Element with jarvis_id {cmd.jarvis_id} not found yet")
+                
+    elif cmd.type == "youtube_like":
+        script = """
+        const btn = document.querySelector('ytd-menu-renderer .yt-spec-button-shape-next--tonal');
+        if (btn) { btn.click(); return true; } return false;
+        """
+        d.execute_script(script)
+        logger.info("Executed youtube_like")
+        
+    elif cmd.type == "youtube_subscribe":
+        script = """
+        const btn = document.querySelector('ytd-subscribe-button-renderer button');
+        if (btn) { btn.click(); return true; } return false;
+        """
+        d.execute_script(script)
+        logger.info("Executed youtube_subscribe")
+        
+    elif cmd.type == "youtube_comment":
+        if cmd.text is not None:
+            text_val = str(cmd.text)
+            safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
+            script = f"""
+            const box = document.querySelector('ytd-comment-simplebox-renderer #placeholder-area');
+            if (box) {{
+                box.click();
+                setTimeout(() => {{
+                    const input = document.querySelector('#contenteditable-root');
+                    if (input) {{
+                         input.innerText = "{safe_text}";
+                         input.dispatchEvent(new Event('input', {{bubbles:true}}));
+                         setTimeout(() => {{
+                             const submit = document.querySelector('#submit-button');
+                             if (submit) submit.click();
+                         }}, 500);
+                    }}
+                }}, 500);
+                return true;
+            }}
+            return false;
+            """
+            d.execute_script(script)
+            logger.info("Executed youtube_comment")
+            
     elif cmd.type == "wait":
         sec = cmd.seconds or 2
         import time
@@ -279,73 +384,244 @@ def process_commands(commands: List[BrowserCommand]):
                     logger.error(f"Error executing command {cmd.type}: {e}")
                     break
 @app.post("/execute")
-async def execute_commands(req: CommandRequest, background_tasks: BackgroundTasks):
+async def execute_commands(req: Request, background_tasks: BackgroundTasks):
     """
     Receives commands and processes them. To avoid blocking the J.A.R.V.I.S LLM
     event loop, we run them as a background task.
+    
+    IMPORTANT: Normalizes Planner's 'action' field to Python's 'type' field.
+    Also maps Planner action names (open_url) to Python action names (open_tab).
     """
-    if driver is None:
-         raise HTTPException(status_code=503, detail="WebDriver not ready")
+    # Accept request and let get_driver() handle lazy init on first command
+    body = await req.json()
+    raw_commands = body.get("commands", [])
+    
+    # Action name translation map: Planner → Python Agent
+    ACTION_MAP = {
+        "open_url": "open_tab",
+        "click": "click",
+        "type": "type",
+        "type_secure": "type_secure",
+        "scroll": "scroll",
+        "press": "press",
+        "youtube_search": "search_site",
+        "youtube_click_video": "search_site",
+        "youtube_like": "youtube_like",
+        "youtube_subscribe": "youtube_subscribe",
+        "youtube_comment": "youtube_comment",
+        "open_tab": "open_tab",
+        "switch_tab": "switch_tab",
+        "close_tab": "close_tab",
+        "analyze_page": "analyze_page",
+        "media_control": "media_control",
+        "skip_ad": "skip_ad",
+        "go_back": "go_back",
+        "wait": "wait",
+        "close_browser": "close_browser",
+    }
+    
+    normalized = []
+    for raw in raw_commands:
+        # Normalize: use 'action' field if 'type' is missing
+        action_key = raw.get("type") or raw.get("action") or ""
+        # Map to known Python type
+        python_type = ACTION_MAP.get(action_key, action_key)
+        
+        cmd_dict = {
+            "type": python_type,
+            "url": raw.get("url"),
+            "query": raw.get("query"),
+            "site": raw.get("site"),
+            "target_tab": raw.get("target_tab"),
+            "force_new_tab": raw.get("force_new_tab", False),
+            "action": raw.get("action_param") or raw.get("media_action"),
+            "seconds": raw.get("seconds"),
+            "direction": raw.get("direction"),
+            "amount": raw.get("amount"),
+            "jarvis_id": raw.get("jarvis_id"),
+            "text": raw.get("text"),
+        }
+        
+        # For youtube_search, set site=youtube and query from 'query'
+        if action_key == "youtube_search":
+            cmd_dict["site"] = "youtube"
+            cmd_dict["query"] = raw.get("query", "")
+            
+        try:
+            normalized.append(BrowserCommand(**cmd_dict))
+        except Exception as e:
+            logger.error(f"Failed to normalize command {raw}: {e}")
+    
+    if not normalized:
+        raise HTTPException(status_code=422, detail="No valid commands after normalization")
     
     # THIS WAS THE BUG — commands were accepted but never executed!
-    background_tasks.add_task(process_commands, req.commands)
+    background_tasks.add_task(process_commands, normalized)
          
-    return {"status": "accepted", "message": f"Processing {len(req.commands)} commands in background."}
+    return {"status": "accepted", "message": f"Processing {len(normalized)} commands in background."}
+
+
+from selenium.webdriver.common.action_chains import ActionChains
+import time
+import json
+
+def safe_click(element_info: dict):
+    d = get_driver()
+    if not d:
+        return {"success": False, "action": "click", "target": element_info.get("text"), "details": "Driver not available"}
+        
+    jarvis_id = element_info.get('id')
+    selector = element_info.get('selector')
+    xpath = element_info.get('xpath')
+    text = element_info.get('text')
+    
+    target_name = text or str(jarvis_id)
+    old_url = d.current_url
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            el = None
+            if jarvis_id:
+                try: el = d.find_element(By.CSS_SELECTOR, f'[jarvis_id="{jarvis_id}"]')
+                except: pass
+            if not el and selector:
+                try: el = d.find_element(By.CSS_SELECTOR, selector)
+                except: pass
+            if not el and xpath:
+                try: el = d.find_element(By.XPATH, xpath)
+                except: pass
+            if not el and text:
+                try: el = d.find_element(By.XPATH, f"//*[contains(text(), '{text}')]")
+                except: pass
+                    
+            if not el:
+                logger.warning(f"Attempt {attempt+1}: Element {target_name} not found by any locator")
+                time.sleep(1)
+                continue
+                
+            d.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", el)
+            time.sleep(0.5)
+            
+            methods = ['normal', 'js', 'action_chains']
+            clicked = False
+            used_method = ""
+            
+            for method in methods:
+                try:
+                    if method == 'normal':
+                        el.click()
+                    elif method == 'js':
+                        d.execute_script("arguments[0].click();", el)
+                    elif method == 'action_chains':
+                        ActionChains(d).move_to_element(el).click().perform()
+                    
+                    clicked = True
+                    used_method = method
+                    break
+                except Exception as click_err:
+                    continue
+                    
+            if not clicked:
+                logger.warning(f"Attempt {attempt+1}: All click methods failed for {target_name}")
+                time.sleep(1)
+                continue
+                
+            time.sleep(1.5)
+            new_url = d.current_url
+            
+            is_element_gone = False
+            try:
+                if jarvis_id:
+                    el_check = d.find_element(By.CSS_SELECTOR, f'[jarvis_id="{jarvis_id}"]')
+                    is_element_gone = not el_check.is_displayed()
+                else:
+                    is_element_gone = True
+            except:
+                is_element_gone = True
+                
+            if new_url != old_url or is_element_gone:
+                result = {"success": True, "action": "click", "target": target_name, "details": f"Success via {used_method} click (Attempt {attempt+1})"}
+                logger.info(f"ACTION RESULT: {json.dumps(result)}")
+                return result
+            else:
+                logger.warning(f"Attempt {attempt+1}: Click executed but DOM/URL state unchanged")
+                
+        except Exception as e:
+            logger.warning(f"Attempt {attempt+1}: Safe click error: {e}")
+            time.sleep(1)
+            
+    result = {"success": False, "action": "click", "target": target_name, "details": "Exhausted all retries"}
+    logger.info(f"ACTION RESULT: {json.dumps(result)}")
+    return result
 
 DOM_EXTRACTOR_JS = """
 function getInteractiveElements() {
-    let elements = [];
+    let result = { elements: [] };
     let idCounter = 1;
-    const viewportHeight = window.innerHeight;
     
-    // Selectors for interactive elements
-    const selectors = 'a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])';
+    const selectors = 'a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"]), h1, h2, p';
     const nodes = document.querySelectorAll(selectors);
     
+    function getXPath(element) {
+        if (element.id !== '') return 'id("' + element.id + '")';
+        if (element === document.body) return element.tagName;
+        let ix = 0;
+        let siblings = element.parentNode ? element.parentNode.childNodes : [];
+        for (let i = 0; i < siblings.length; i++) {
+            let sibling = siblings[i];
+            if (sibling === element) return getXPath(element.parentNode) + '/' + element.tagName + '[' + (ix + 1) + ']';
+            if (sibling.nodeType === 1 && sibling.tagName === element.tagName) ix++;
+        }
+    }
+    
+    function getCSSSelector(el) {
+        if (el.tagName.toLowerCase() == "html") return "html";
+        let str = el.tagName.toLowerCase();
+        str += (el.id != "") ? "#" + el.id : "";
+        if (el.className && typeof el.className === 'string') {
+            let classes = el.className.trim().split(/\s+/);
+            for (let i = 0; i < classes.length; i++) {
+                if (classes[i]) str += "." + classes[i];
+            }
+        }
+        return str;
+    }
+
     nodes.forEach(node => {
-        // Check if visible
         const rect = node.getBoundingClientRect();
-        const isVisible = rect.width > 0 && rect.height > 0 && window.getComputedStyle(node).visibility !== 'hidden' && window.getComputedStyle(node).display !== 'none';
+        const isVisible = rect.width > 0 && rect.height > 0 && 
+                          window.getComputedStyle(node).visibility !== 'hidden' && 
+                          window.getComputedStyle(node).display !== 'none';
         
-        // Skip hidden inputs
         if (node.tagName.toLowerCase() === 'input' && node.type === 'hidden') return;
         
         if (isVisible) {
             node.setAttribute('jarvis_id', idCounter);
             
             let text = node.innerText || node.value || node.getAttribute('aria-label') || node.getAttribute('placeholder') || node.getAttribute('title') || '';
-            text = text.trim().substring(0, 120).replace(/\\n/g, ' ');
+            text = text.trim().substring(0, 80).replace(/\\n/g, ' ');
             
-            // Determine element type
             let type = node.tagName.toLowerCase();
-            if (type === 'a') type = 'LINK';
-            else if (type === 'button' || node.getAttribute('role') === 'button') type = 'BUTTON';
-            else if (type === 'input') type = 'INPUT[' + (node.type || 'text') + ']';
-            else if (type === 'select') type = 'SELECT';
-            else if (type === 'textarea') type = 'TEXTAREA';
-            else type = type.toUpperCase();
+            let role = node.getAttribute('role') || type;
+            let selector = getCSSSelector(node);
+            let xpath = getXPath(node);
             
-            // Get href for links
-            let href = '';
-            if (node.tagName.toLowerCase() === 'a' && node.href) {
-                href = ' -> ' + node.href.substring(0, 80);
-            }
-            
-            // Position hint (top/middle/bottom of viewport)
-            let pos = '';
-            if (rect.top < viewportHeight * 0.33) pos = '[TOP]';
-            else if (rect.top < viewportHeight * 0.66) pos = '[MID]';
-            else pos = '[BOT]';
-            
-            // Only add if it has identifiable text or is an input
-            if (text || type.includes('INPUT') || type === 'SELECT' || type === 'TEXTAREA') {
-                elements.push('[' + idCounter + '] ' + pos + ' ' + type + ': "' + text + '"' + href);
+            if (text || ['input', 'select', 'textarea'].includes(type) || ['button', 'link'].includes(role) || type === 'button' || type === 'a') {
+                result.elements.push({
+                    id: idCounter,
+                    text: text,
+                    role: role,
+                    selector: selector,
+                    xpath: xpath
+                });
                 idCounter++;
             }
         }
     });
-    
-    return elements.slice(0, 80).join('\\n');
+
+    result.elements = result.elements.slice(0, 100);
+    return JSON.stringify(result);
 }
 return getInteractiveElements();
 """
@@ -357,30 +633,44 @@ class AnalyzeRequest(BaseModel):
 async def analyze_page(req: AnalyzeRequest):
     """
     Scans the current page and returns a numbered list of interactive elements.
+    Lazy-initializes the browser if not already running.
     """
-    global driver
-    if driver is None:
-         raise HTTPException(status_code=503, detail="WebDriver not ready")
-         
     try:
+        d = get_driver() # lazy init: spins up browser on first analyze call
+        
         if req.target_tab:
             handle = get_tab_by_name(req.target_tab)
             if handle:
-                driver.switch_to.window(handle)
+                d.switch_to.window(handle)
                 
         # Wait for page to be mostly loaded
-        driver.execute_script("return document.readyState") == "complete"
+        d.execute_script("return document.readyState") == "complete"
         
-        result_text = driver.execute_script(DOM_EXTRACTOR_JS)
+        result_text = d.execute_script(DOM_EXTRACTOR_JS)
         
         if not result_text:
-            return {"status": "success", "elements": "No interactive elements found on the screen."}
+            return {"status": "success", "elements": {"status": "empty", "message": "No interactive elements found."}}
             
-        current_url = driver.current_url
-        current_title = driver.title
-        
-        map_response = f"Current URL: {current_url}\\nPage Title: {current_title}\\n\\nVisible Interactive Elements:\\n{result_text}"
-        return {"status": "success", "elements": map_response}
+        import json
+        try:
+            parsed_elements = json.loads(result_text)
+            global last_extracted_elements
+            last_extracted_elements = parsed_elements.get("elements", [])
+            
+            # STRIP HEAVY DATA TO SAVE LLM TOKENS
+            # We keep selector/xpath in last_extracted_elements for safe_click, 
+            # but don't send them back to Node/Groq.
+            llm_payload = []
+            for el in last_extracted_elements:
+                llm_payload.append({
+                    "id": el.get("id"),
+                    "text": el.get("text"),
+                    "role": el.get("role")
+                })
+                
+            return {"status": "success", "url": d.current_url, "title": d.title, "elements": llm_payload}
+        except:
+            return {"status": "success", "elements": {"error": "Failed to parse elements payload"}}
         
     except Exception as e:
         logger.error(f"Error analyzing page: {e}")

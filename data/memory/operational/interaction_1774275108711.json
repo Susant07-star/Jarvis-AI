@@ -1,0 +1,20 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "play next video on the playlist",
+    "jarvisResponse": "Playing the next video on the playlist.",
+    "toolCalls": [
+      "execute_browser_commands"
+    ],
+    "browserCommands": [
+      {
+        "action": "play",
+        "type": "media_control"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-23T14:11:48.711Z"
+  },
+  "updatedAt": "2026-03-23T14:11:48.711Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "started school on",
+    "jarvisResponse": "I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "serp_api_search",
+        "query": "started school on"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T13:37:34.334Z"
+  },
+  "updatedAt": "2026-03-24T13:37:34.334Z",
+  "encrypted": false
+}

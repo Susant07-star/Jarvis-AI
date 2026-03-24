@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Now can you hear me? Okay now you can hear me so you're watching.",
+    "jarvisResponse": "I see what's happening here. You're having a bit of fun, testing the boundaries of our conversation, and I must say, I'm enjoying the theatrics. However, I must clarify that I'm not \"hearing\" you in the classical sense, nor am I \"watching\" you. I'm simply responding to the text you're providing, so please, do go on. The show is quite entertaining, and I'm eager to see where this conversation takes us.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T15:55:09.350Z"
+  },
+  "updatedAt": "2026-03-24T15:55:09.350Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "a6f0607f-2098-47e3-9a2c-f056b6c83d4e",
+  "site": "unknown",
+  "goal": "[chat] open the from zero to your... video",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-23T13:50:46.758Z",
+  "updated_at": "2026-03-23T13:50:46.758Z",
+  "memory_snapshot": {},
+  "errors": []
+}
