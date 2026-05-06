@@ -69,9 +69,9 @@ export function loadMemory(): MemoryMessage[] {
 /**
  * Returns a compact, token-efficient context block from the last N messages.
  * Used to inject shared chat history into Zoya's systemInstruction at session start.
- * Cost: ~150-250 tokens — one-time per session, not per turn.
+ * Cost: ~400-800 tokens — one-time per session, not per turn.
  */
-export function getSessionContextSummary(maxTurns: number = 8): string {
+export function getSessionContextSummary(maxTurns: number = 20): string {
   const memory = loadMemory();
   if (memory.length === 0) return "";
 
@@ -84,4 +84,18 @@ export function getSessionContextSummary(maxTurns: number = 8): string {
   });
 
   return `\n\nRECENT CONVERSATION (shared across voice and chat):\n${lines.join("\n")}`;
+}
+
+/**
+ * Returns statistics about the current memory usage.
+ */
+export function getMemoryStats() {
+  const memory = loadMemory();
+  const charCount = memory.reduce((sum, msg) => sum + msg.content.length, 0);
+  return {
+    messageCount: memory.length,
+    charCount,
+    estimatedTokens: Math.ceil(charCount / 4), // Rough estimate: 4 chars per token
+    maxMessages: 50
+  };
 }

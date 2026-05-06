@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - **Feature — Emotion Badges**: Implemented a visual personality layer in the Chat Window. Every message from JARVIS/Zoya now features a color-coded badge (e.g., [SASSY], [HAPPY], [THOUGHTFUL]) that dynamically updates based on the AI's persona state.
 - **Feature — Real-time Voice Sync**: Voice conversations are now automatically mirrored to the server. Added `_syncMemory()` to `zoyaLiveService.ts` and `POST /api/memory/sync` to the backend, ensuring no voice turns are lost from the session memory.
 - **Feature — Comprehensive Token Metrics**: Implemented `MetricsTracker` across all primary routes. The system now logs granular token usage (classifier, planner, direct, dom, and voice) to `logs/token_detailed.json` for every turn, including Zoya voice commands.
+- **Feature — Neural Context HUD**: Added a real-time "Neural Context" indicator to the top navigation bar. It displays current session token usage out of a 32k high-performance limit, providing transparency into the AI's "memory load."
 - **Technical — Stable Message IDs**: Migrated from timestamp-based to `crypto.randomUUID()` IDs for all voice messages. Combined with a new `findIndex` logic in `useZoyaVoice.ts`, this allows for smooth, flicker-free streaming transcriptions where chunks update the same chat bubble in real-time.
 - **Voice già working**: `gemini-3.1-flash-live-preview` (Live WebSocket) remains the correct voice model name — untouched.
 

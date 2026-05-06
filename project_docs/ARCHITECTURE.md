@@ -67,7 +67,7 @@ Located in `python_agent/`. This is the "hands" and "eyes" of the system.
 ## 5. Cross-Modal Memory Sync
 To ensure J.A.R.V.I.S. maintains a single unified memory regardless of whether the user is typing or talking:
 - **Zoya → Server**: During a voice session, the `ZoyaLiveService` pushes transcribed turns to `/api/memory/sync` (fire-and-forget).
-- **Server → Zoya**: When a voice session starts, Zoya fetches a summary of recent chat history from `/api/session-context` and injects it into her system prompt.
+- **Server → Zoya**: When a voice session starts, Zoya fetches a summary of the **last 20 messages** from `/api/session-context` and injects it into her system prompt for immediate recall.
 - **Unified IDs**: Voice turns use `zoya-UUID` or `user-UUID` to track streaming chunks and prevent duplication in the Chat Window.
 - **Emotion Tracking**: Emotions (e.g., `[SASSY]`) are parsed from responses and displayed as visual badges in the UI, synchronized across both chat and voice modalities.
 
@@ -76,3 +76,13 @@ The system utilizes a structured metrics layer to track performance and cost:
 - **MetricsTracker**: A centralized utility in `server/utils/metrics.ts` that captures input, intent, orchestration mode, and token usage.
 - **Token Detailed Log**: All interactions append a JSON entry to `logs/token_detailed.json` containing specific counts for each pipeline stage (Classifier, Planner, Direct Chat, DOM analysis, and Voice Sync).
 - **Health Logs**: `logs/debug.log` captures system-wide errors and info events, managed by `rotate_logs.ps1` to prevent storage bloat.
+
+## 7. Neural Context & Memory Limits
+The system maintains a balance between "perfect recall" and "system performance":
+- **Short-Term Memory**: Capped at the last 50 messages in `session_memory.json` to ensure sub-second response times.
+- **Context HUD**: The frontend visualizes the current token load (estimated at 4 chars/token) against a 32,768 token "high-performance" threshold.
+- **Context HUD**: The frontend visualizes the current token load (estimated at 4 chars/token) against a 32,768 token "high-performance" threshold.
+- **Unified Sync**: Both the React Chat and Zoya Live Voice services contribute to the same memory file, ensuring a shared context across different modes of interaction.
+
+## 8. Future Roadmap
+- **Thought Process Dropdown (UI Transparency)**: A planned feature to add an expandable `<details>` accordion to chat bubbles when J.A.R.V.I.S./Zoya executes tasks. This will allow the user to click a dropdown arrow and view the AI's internal reasoning, intermediate search queries (Native Search), and DOM actions in real-time, matching the transparency of advanced AI tools.

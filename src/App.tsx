@@ -19,6 +19,25 @@ export default function App() {
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const abortControllerRef = useRef<AbortController | null>(null);
   const zoya = useZoyaVoice();
+  const [memoryStats, setMemoryStats] = useState({ messageCount: 0, estimatedTokens: 0, maxMessages: 50 });
+
+  // Refresh memory stats whenever messages change (with a slight delay to allow backend to save)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetch('/api/memory/stats')
+        .then(r => r.json())
+        .then(data => {
+          if (data && typeof data.estimatedTokens === 'number') {
+            setMemoryStats(data);
+          } else {
+            console.error("Invalid memory stats received:", data);
+          }
+        })
+        .catch(e => console.error("Failed to fetch memory stats", e));
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [messages]);
 
   // Sync messages from Zoya into ChatWindow
   useEffect(() => {
@@ -210,8 +229,34 @@ export default function App() {
               <Cpu className={`w-3.5 h-3.5 ${appState === 'processing' ? 'text-indigo-300 animate-pulse' : ''}`} />
               <span className="text-[9px] font-mono">CORE</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5" />
+            <div className="flex flex-col gap-1 w-32 group cursor-help" title="Standard Context Window: High-performance limit is 32k tokens.">
+              <div className="flex justify-between items-center text-[7px] font-mono tracking-tighter">
+                <span className="text-cyan-600 flex items-center gap-1">
+                  <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
+                  CTX_WINDOW [GEMINI_3.1]
+                </span>
+                <span className={memoryStats.estimatedTokens > 25000 ? "text-amber-500" : "text-cyan-400"}>
+                  {Math.round((memoryStats.estimatedTokens / 32768) * 100)}%
+                </span>
+              </div>
+              <div className="h-1 w-full bg-cyan-950 rounded-full overflow-hidden border border-cyan-900/20">
+                <div 
+                  className={`h-full transition-all duration-700 rounded-full ${
+                    memoryStats.estimatedTokens > 25000 ? 'bg-amber-500 jarvis-glow-amber' : 'bg-cyan-400 jarvis-glow'
+                  }`}
+                  style={{ width: `${Math.min(100, (memoryStats.estimatedTokens / 32768) * 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[7px] font-mono text-cyan-800 uppercase">
+                <span>LOAD: {memoryStats.estimatedTokens.toLocaleString()}T</span>
+                <span>MAX: 32K</span>
+              </div>
+            </div>
+
+            <div className="w-px h-6 bg-cyan-900/50 mx-1"></div>
+
+            <div className="flex items-center gap-1.5 group cursor-help" title={`Context Memory: ${memoryStats.messageCount}/${memoryStats.maxMessages} slots used`}>
+              <Database className={`w-3.5 h-3.5 ${memoryStats.messageCount > 40 ? 'text-amber-500 animate-pulse' : 'text-cyan-600'}`} />
               <span className="text-[9px] font-mono">MEM</span>
             </div>
             <div className="flex items-center gap-1.5">

@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { getGroqClient, summarizeMemory, logTokenUsage, logFeedback, callWithRetry } from "../llm";
 import { performSearch } from "../search";
-import { saveToMemory, loadMemory, getSessionContextSummary } from "../memory";
+import { saveToMemory, loadMemory, getSessionContextSummary, getMemoryStats } from "../memory";
 import { jarvisTools } from "../tools";
 import { buildPrompt } from "../agent_prompts/prompt_builder";
 import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
@@ -478,6 +478,14 @@ router.post("/memory/sync", (req, res) => {
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
+});
+
+/**
+ * GET /api/memory/stats
+ * Returns statistics about the current session memory.
+ */
+router.get("/memory/stats", (_req, res) => {
+  res.json(getMemoryStats());
 });
 
 /**
