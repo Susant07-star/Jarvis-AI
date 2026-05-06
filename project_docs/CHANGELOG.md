@@ -9,12 +9,10 @@ All notable changes to this project will be documented in this file.
 - **Dedicated Gemini Chat Provider**: Added `createGeminiChatProvider()` in `llmRouter.ts` that properly separates the system prompt and user message using Gemini's `systemInstruction` config field. This eliminates the "blob prompt" issue that caused confusing or empty responses.
 - **Separate Chat Cascade (`CHAT_PROVIDER_PRIORITY`)**: Chat traffic now routes through its own provider cascade (Gemini 3.1 Flash-Lite → Gemini 2.5 Flash → DeepSeek → Llama) instead of the shared planner cascade, optimized for conversational quality.
 - **Full Error Visibility**: Added `logger.warn` to every failed provider attempt in both `callPlannerWithCascade` and `callChatWithCascade`. Silent failures are now impossible — every cascade event is logged with the exact error message.
-- **Unified Memory Bridge (Chat ↔ Voice)**: Implemented a shared context system so Zoya (voice) and JARVIS (chat) share the same conversation memory:
-  - Added `getSessionContextSummary(n)` to `memory.ts` — reads the last N messages and formats them as a compact token-efficient block.
-  - Added `GET /api/session-context` endpoint in `api.ts` — exposes the shared memory to the frontend.
-  - Modified `zoyaLiveService.ts` `start()` to fetch `/api/session-context` before connecting and inject it into `systemInstruction`.
-  - Both Chat and Voice now use a **20-message (10-exchange) memory window** — synced and consistent across modalities.
-- **Voice already working**: `gemini-3.1-flash-live-preview` (Live WebSocket) remains the correct voice model name — untouched.
+- **Feature — Emotion Badges**: Implemented a visual personality layer in the Chat Window. Every message from JARVIS/Zoya now features a color-coded badge (e.g., [SASSY], [HAPPY], [THOUGHTFUL]) that dynamically updates based on the AI's persona state.
+- **Feature — Real-time Voice Sync**: Voice conversations are now automatically mirrored to the server. Added `_syncMemory()` to `zoyaLiveService.ts` and `POST /api/memory/sync` to the backend, ensuring no voice turns are lost from the session memory.
+- **Technical — Stable Message IDs**: Migrated from timestamp-based to `crypto.randomUUID()` IDs for all voice messages. Combined with a new `findIndex` logic in `useZoyaVoice.ts`, this allows for smooth, flicker-free streaming transcriptions where chunks update the same chat bubble in real-time.
+- **Voice già working**: `gemini-3.1-flash-live-preview` (Live WebSocket) remains the correct voice model name — untouched.
 
 ### [2026-05-06] J.A.R.V.I.S. Brain Upgrade & Self-Healing Reliability
 - **Brain Migration**: Migrated J.A.R.V.I.S. primary intelligence to **Gemini 3.1 Flash** (Tier 0) for Voice, Chat, and Browser Planning.

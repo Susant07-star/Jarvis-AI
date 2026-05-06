@@ -63,3 +63,10 @@ Located in `python_agent/`. This is the "hands" and "eyes" of the system.
 5.  **Execution Phase**: Node actions (e.g., `serp_api_search`) execute inline. Browser actions are forwarded to the Python Agent. **[PHASE 1 FIX]**: Sequential async loop executes all steps in the plan array with resume support, retry logic (3 attempts per step), and comprehensive error logging. Every step records a success/failure snapshot in `taskTracker.ts`. The `safe_click` pipeline handles retries and fallback methods transparently.
 6.  **Verification Phase**: **[PHASE 1 FIX]**: Each action validates result using URL change OR DOM state change to prevent false success logs.
 7.  **Output Phase**: Final success confirmation is returned to the Node backend, which uses TTS to respond back to the React UI asynchronously. **[PHASE 1 FIX]**: Enhanced logging with step-level markers (STEP START, STEP RESULT) and Python agent error visibility in Node logs.
+
+## 5. Cross-Modal Memory Sync
+To ensure J.A.R.V.I.S. maintains a single unified memory regardless of whether the user is typing or talking:
+- **Zoya → Server**: During a voice session, the `ZoyaLiveService` pushes transcribed turns to `/api/memory/sync` (fire-and-forget).
+- **Server → Zoya**: When a voice session starts, Zoya fetches a summary of recent chat history from `/api/session-context` and injects it into her system prompt.
+- **Unified IDs**: Voice turns use `zoya-UUID` or `user-UUID` to track streaming chunks and prevent duplication in the Chat Window.
+- **Emotion Tracking**: Emotions (e.g., `[SASSY]`) are parsed from responses and displayed as visual badges in the UI, synchronized across both chat and voice modalities.
