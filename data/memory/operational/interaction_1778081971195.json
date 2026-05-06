@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "tell me a joke",
+    "jarvisResponse": "Why did the physicist break up with the biologist? There was simply no chemistry. \n\nI trust that was sufficiently droll for your standards, Susant? Or shall I calibrate my humor subroutines for something a bit more... sophisticated?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T15:39:31.195Z"
+  },
+  "updatedAt": "2026-05-06T15:39:31.195Z",
+  "encrypted": false
+}

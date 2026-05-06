@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hi",
+    "jarvisResponse": "\nJARVIS: Hello again. I see our previous attempts to open YouTube were met with technical difficulties. Is there something specific you'd like to accomplish, or shall we try a different approach?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T14:26:51.886Z"
+  },
+  "updatedAt": "2026-05-06T14:26:51.887Z",
+  "encrypted": false
+}

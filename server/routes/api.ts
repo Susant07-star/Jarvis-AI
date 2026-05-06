@@ -4,13 +4,14 @@ import fs from "fs";
 import path from "path";
 import { getGroqClient, summarizeMemory, logTokenUsage, logFeedback, callWithRetry } from "../llm";
 import { performSearch } from "../search";
-import { saveToMemory, loadMemory } from "../memory";
+import { saveToMemory, loadMemory, getSessionContextSummary } from "../memory";
 import { jarvisTools } from "../tools";
 import { buildPrompt } from "../agent_prompts/prompt_builder";
 import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
 import { logger } from "../logger";
 import { MetricsTracker } from "../utils/metrics";
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
+import { callChatWithCascade } from "../llmRouter";
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -52,7 +53,7 @@ router.post("/zoya-execute", async (req, res) => {
       logger.warn("API", "Could not fetch DOM map for Zoya execute");
     }
 
-    const { actions: plannedSteps, errorFallback } = await planWithDOM(decision.normalizedInput || intent, [domMap]) as any;
+    const { actions: plannedSteps, errorFallback, model, provider } = await planWithDOM(decision.normalizedInput || intent, [domMap]) as any;
 
     if (!plannedSteps || plannedSteps.length === 0) {
       return res.json({ success: false, error: errorFallback || "Could not formulate a valid plan." });
@@ -91,7 +92,7 @@ router.post("/zoya-execute", async (req, res) => {
       }
     }
 
-    res.json({ success: true, result: "Browser actions executed successfully." });
+    res.json({ success: true, result: "Browser actions executed successfully.", metadata: { model, provider } });
 
   } catch (error: any) {
     logger.error("API", "Zoya Execute Error", error);
@@ -202,60 +203,38 @@ router.post("/chat", async (req, res) => {
     }
 
     if (decision.mode === "direct") {
-      // Direct Conversational Mode
+      // Direct Conversational Mode using Cascading Brains
       const memory = loadMemory();
-      const compressedMemory = await summarizeMemory(memory, groq);
       
-      const messages = [
-        { role: "system", content: buildPrompt("browser") },
-        ...compressedMemory,
-        { role: "user", content: message }
-      ];
-
-      let isDisconnected = false;
-      req.on('close', () => { isDisconnected = true; });
-
-      const stream = await groq.chat.completions.create({
-        messages: messages as any,
-        model: "llama-3.3-70b-versatile",
-        stream: true,
-        max_tokens: 1024
-      });
+      const systemPrompt = buildPrompt("browser");
+      const result = await callChatWithCascade(systemPrompt, message, memory);
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      let fullResponse = '';
-      for await (const chunk of stream) {
-        if (isDisconnected) break;
-        const content = chunk.choices[0]?.delta?.content || '';
-        if (content) {
-          fullResponse += content;
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
-        }
+      // Send model metadata first
+      res.write(`data: ${JSON.stringify({ metadata: { model: result.model, provider: result.provider } })}\n\n`);
+
+      // Since we got a full response from the cascade, we simulate a fast stream or just send it
+      const words = result.content.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        res.write(`data: ${JSON.stringify({ content: words[i] + (i === words.length - 1 ? "" : " ") })}\n\n`);
+        // Small delay to make it feel natural if the response is long
+        if (words.length > 50 && i % 5 === 0) await new Promise(r => setTimeout(r, 10));
       }
       
-      if (!isDisconnected) {
-        saveToMemory('user', message);
-        saveToMemory('jarvis', fullResponse);
-        logInteraction('chat', message, fullResponse);
-        if (metrics) {
-          metrics.setExecutionResult('Direct chat completed');
-          metrics.finalize();
-        }
-        res.write(`data: [DONE]\n\n`);
-        return res.end();
-      } else {
-        saveToMemory('user', message);
-        saveToMemory('jarvis', fullResponse + ' [Interrupted]');
-        if (metrics) {
-          metrics.setExecutionResult('Interrupted');
-          metrics.finalize();
-        }
-        return;
+      saveToMemory('user', message);
+      saveToMemory('jarvis', result.content);
+      logInteraction('chat', message, result.content);
+      
+      if (metrics) {
+        metrics.setExecutionResult(`Chat via ${result.model}`);
+        metrics.finalize();
       }
-
+      
+      res.write(`data: [DONE]\n\n`);
+      return res.end();
     } else {
       // Agent Task Mode (Strict Planning -> Execution)
       const { planWithDOM } = await import("../browser/planner");
@@ -285,8 +264,11 @@ router.post("/chat", async (req, res) => {
       }
 
       // B. Create Strict JSON Plan
-      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps } = await planWithDOM(goal, [domMap]) as any;
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithDOM(goal, [domMap]) as any;
       
+      // Send model metadata
+      res.write(`data: ${JSON.stringify({ metadata: { model, provider } })}\n\n`);
+
       if (internal_steps && internal_steps.length > 0) {
         const reasoning = internal_steps.map((s: string) => `> _${s}_`).join('\n');
         res.write(`data: ${JSON.stringify({ content: `${reasoning}\n\n` })}\n\n`);
@@ -458,6 +440,24 @@ router.get("/browser-status", async (_req, res) => {
 });
 
 /**
+ * POST /api/memory/sync
+ * Allows frontend services (like Zoya Voice) to sync messages back to the server memory.
+ */
+router.post("/memory/sync", (req, res) => {
+  try {
+    const { role, content } = req.body;
+    if (role && content) {
+      saveToMemory(role, content);
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Missing role or content" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Log user feedback securely to the backend CSV file
  */
 router.post("/feedback", async (req, res) => {
@@ -468,6 +468,20 @@ router.post("/feedback", async (req, res) => {
   } catch (error: any) {
     console.error("[Feedback API Error]", error);
     res.status(500).json({ error: error.message || "Failed to log feedback" });
+  }
+});
+
+/**
+ * GET /api/session-context
+ * Returns a compact, token-efficient summary of recent conversation history.
+ * Consumed by Zoya voice service at session start to inject shared memory.
+ */
+router.get("/session-context", (req, res) => {
+  try {
+    const context = getSessionContextSummary(20);
+    res.json({ context, hasPriorContext: context.length > 0 });
+  } catch (error: any) {
+    res.json({ context: "", hasPriorContext: false });
   }
 });
 

@@ -5,7 +5,7 @@ import { logger } from '../logger';
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
 // Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
 // Validates JSON output, retries ONCE on parse failure, logs raw output.
-async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; tokens: number }> {
+async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; tokens: number; model: string; provider: string }> {
     const MAX_ATTEMPTS = 2;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -34,7 +34,7 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
             }
 
             logger.info("Planner", `[Attempt ${attempt}] Valid plan (${parsed.steps.length} steps)`);
-            return { parsed, tokens };
+            return { parsed, tokens, model: result.model, provider: result.provider };
 
         } catch (validationError: any) {
             logger.error("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Bad JSON: ${validationError.message} | Raw snippet: "${rawOutput.slice(0, 300)}"`);
@@ -52,7 +52,7 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
 
 // ── createPlan (no DOM context — used before page is analyzed) ────────────────
 
-export async function createPlan(goal: string): Promise<{actions: BrowserAction[], tokens: number, requires_confirmation: boolean, internal_steps?: string[], errorFallback?: string}> {
+export async function createPlan(goal: string): Promise<{actions: BrowserAction[], tokens: number, requires_confirmation: boolean, internal_steps?: string[], errorFallback?: string, model?: string, provider?: string}> {
     const pastTask = tracker.getLastTaskForGoal(goal);
     let memoryContext = '';
     if (pastTask) {
@@ -100,12 +100,10 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
 User goal: "${goal}"`;
 
     try {
-        const { parsed, tokens } = await callPlannerLLM(systemPrompt);
-        const actions: BrowserAction[] = parsed.steps || [];
         const requires_confirmation = parsed.requires_confirmation || false;
         const internal_steps: string[] = parsed.internal_steps || [];
         logger.info("Planner", `createPlan done (${actions.length} steps, confirm: ${requires_confirmation})`);
-        return { actions, tokens, requires_confirmation, internal_steps };
+        return { actions, tokens, requires_confirmation, internal_steps, model, provider };
     } catch (e: any) {
         logger.error("Planner", `createPlan failed: ${e.message}`);
         logger.info("Planner", `ACTION RESULT: ${JSON.stringify({ success: false, action: "planner", target: null, details: `Planner failed: ${e.message}` })}`);
@@ -115,7 +113,7 @@ User goal: "${goal}"`;
 
 // ── planWithDOM (with DOM element context — used after page is analyzed) ──────
 
-export async function planWithDOM(goal: string, domElements: any[]): Promise<{actions: BrowserAction[], tokens: number, requires_confirmation: boolean, internal_steps?: string[], errorFallback?: string}> {
+export async function planWithDOM(goal: string, domElements: any[]): Promise<{actions: BrowserAction[], tokens: number, requires_confirmation: boolean, internal_steps?: string[], errorFallback?: string, model?: string, provider?: string}> {
     const pastTask = tracker.getLastTaskForGoal(goal);
     let memoryContext = '';
     if (pastTask) {
@@ -210,18 +208,18 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
 }`;
 
     try {
-        const { parsed, tokens } = await callPlannerLLM(systemPrompt);
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt);
         const actions: BrowserAction[] = parsed.steps || [];
         const requires_confirmation = parsed.requires_confirmation || false;
         const internal_steps: string[] = parsed.internal_steps || [];
         
         if (actions.length === 0) {
             logger.info("Planner", `ACTION RESULT: ${JSON.stringify({ success: false, action: "planner", target: null, details: "I couldn’t generate actionable steps. Please give a short, clear command." })}`);
-            return { actions: [], tokens: 0, requires_confirmation: false, internal_steps, errorFallback: "I couldn’t generate actionable steps. Please give a short, clear command." };
+            return { actions: [], tokens: 0, requires_confirmation: false, internal_steps, errorFallback: "I couldn’t generate actionable steps. Please give a short, clear command.", model, provider };
         }
         
         logger.info("Planner", `planWithDOM done (${actions.length} steps, confirm: ${requires_confirmation})`);
-        return { actions, tokens, requires_confirmation, internal_steps };
+        return { actions, tokens, requires_confirmation, internal_steps, model, provider };
     } catch (e: any) {
         logger.error("Planner", `planWithDOM failed: ${e.message}`);
         logger.info("Planner", `ACTION RESULT: ${JSON.stringify({ success: false, action: "planner", target: null, details: `Planner failed: ${e.message}` })}`);

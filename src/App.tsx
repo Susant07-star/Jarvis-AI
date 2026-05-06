@@ -22,19 +22,23 @@ export default function App() {
 
   // Sync messages from Zoya into ChatWindow
   useEffect(() => {
-    const zoyaMsgs = zoya.messages.map(m => ({
+    const voiceMessages: Message[] = zoya.messages.map(m => ({
       id: m.id,
       role: m.sender === "zoya" ? "jarvis" : "user",
       content: m.text,
       timestamp: new Date(),
       source: "voice",
-      model: m.sender === "zoya" ? zoya.activeModel.replace("-native-audio-dialog", "").replace("-live-001", "") : undefined
-    } as Message));
+      model: zoya.activeModel.replace("-native-audio-dialog", "").replace("-live-001", ""),
+      emotion: m.sender === "zoya" ? zoya.emotion : undefined
+    }));
     
     setMessages(prev => {
-      // Remove any existing voice messages to avoid duplicates on state refresh
-      const nonVoice = prev.filter(p => !p.id.startsWith("zoya-") && !p.id.startsWith("user-"));
-      return [...nonVoice, ...zoyaMsgs];
+      const msgMap = new Map();
+      prev.forEach(msg => msgMap.set(msg.id, msg));
+      voiceMessages.forEach(msg => msgMap.set(msg.id, msg));
+      return Array.from(msgMap.values()).sort((a, b) => {
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
     });
   }, [zoya.messages, zoya.activeModel]);
 
@@ -126,19 +130,35 @@ export default function App() {
 
       let accumulatedText = '';
 
-      const { reply, command, browser_commands } = await sendChatMessage(content, messages, (chunk) => {
-        accumulatedText += chunk;
-        setMessages(prev => prev.map(msg => 
-          msg.id === jarvisMsgId ? { ...msg, content: accumulatedText } : msg
-        ));
-      });
+      const { reply, command, browser_commands } = await sendChatMessage(content, messages, 
+        (chunk) => {
+          accumulatedText += chunk;
+          setMessages(prev => prev.map(msg => 
+            msg.id === jarvisMsgId ? { ...msg, content: accumulatedText } : msg
+          ));
+        },
+        (meta) => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === jarvisMsgId ? { ...msg, model: meta.model } : msg
+          ));
+        }
+      );
 
       if (!accumulatedText && reply) {
+        // Extract emotion if present in the final reply
+        let finalReply = reply;
+        let emotion: any = undefined;
+        const emotionMatch = reply.match(/\[(HAPPY|SASSY|ANGRY|THOUGHTFUL|SURPRISED|NEUTRAL)\]/i);
+        if (emotionMatch) {
+          emotion = emotionMatch[1].toLowerCase();
+          finalReply = reply.replace(emotionMatch[0], "").trim();
+        }
+
         setMessages(prev => prev.map(msg => 
-          msg.id === jarvisMsgId ? { ...msg, content: reply } : msg
+          msg.id === jarvisMsgId ? { ...msg, content: finalReply, emotion } : msg
         ));
         setAppState('speaking');
-        tts.speak(reply, () => setAppState('idle'));
+        tts.speak(finalReply, () => setAppState('idle'));
       } else {
         setAppState('idle');
       }

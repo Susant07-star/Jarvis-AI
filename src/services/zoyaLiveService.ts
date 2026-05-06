@@ -23,7 +23,10 @@ import { GoogleGenAI, Modality, Type, type LiveServerMessage } from "@google/gen
 
 // ── System instruction ────────────────────────────────────────────────────────
 
-export const getSystemInstruction = (timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone) => {
+export const getSystemInstruction = (
+  timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  priorContext: string = ""
+) => {
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-US", { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString("en-US", { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -43,7 +46,7 @@ BROWSER TASKS: When boss asks to open websites, search, play videos, click thing
 or do anything on the browser → use the "executeBrowserAction" tool immediately.
 Do NOT ask for confirmation on simple tasks (open YouTube, play music, etc.).
 
-Links: Use EXACT URLs from Google Search grounding. NEVER guess URLs.`;
+Links: Use EXACT URLs from Google Search grounding. NEVER guess URLs.${priorContext}`;
 };
 
 // ── Gemini Live model cascade ─────────────────────────────────────────────────
@@ -95,6 +98,10 @@ export class ZoyaLiveService {
   private nextPlayTime = 0;
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private currentModel = LIVE_MODELS[0];
+
+  // State for accumulating text chunks during a turn
+  private currentZoyaMsgId: string = "";
+  private currentZoyaTranscript: string = "";
 
   public isMuted = false;
   public manuallyStopped = false;
@@ -215,6 +222,21 @@ export class ZoyaLiveService {
       // ── Connect to Gemini Live API ─────────────────────────────────────
       console.log(`[ZoyaLive] Connecting with model: ${this.currentModel}`);
 
+      // Fetch shared session context (chat + voice history) to inject into system instruction
+      let priorContext = "";
+      try {
+        const ctxRes = await fetch("/api/session-context");
+        if (ctxRes.ok) {
+          const ctxData = await ctxRes.json();
+          if (ctxData.hasPriorContext) {
+            priorContext = ctxData.context;
+            console.log(`[ZoyaLive] Injecting ${priorContext.length} chars of shared session context.`);
+          }
+        }
+      } catch {
+        console.warn("[ZoyaLive] Could not fetch session context — starting fresh.");
+      }
+
       this.sessionPromise = this.ai.live.connect({
         model: this.currentModel,
         config: {
@@ -222,7 +244,7 @@ export class ZoyaLiveService {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
           },
-          systemInstruction: getSystemInstruction(this.currentTimezone),
+          systemInstruction: getSystemInstruction(this.currentTimezone, priorContext),
           inputAudioTranscription: {},
           outputAudioTranscription: {},
           tools: [
@@ -360,11 +382,37 @@ export class ZoyaLiveService {
       return;
     }
 
-    // Audio output — play it
-    const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-    if (base64Audio) {
-      this.onStateChange("speaking");
-      this._playAudioChunk(base64Audio);
+    // Handle all parts in the model turn (Audio + Text)
+    const parts = message.serverContent?.modelTurn?.parts || [];
+    for (const part of parts) {
+      // 1. Handle Audio
+      if (part.inlineData?.data) {
+        this.onStateChange("speaking");
+        this._playAudioChunk(part.inlineData.data);
+      }
+    }
+
+    // 2. Handle Text (Zoya's output transcription chunks)
+    const outText = (message as any).serverContent?.outputTranscription?.text;
+    if (outText) {
+      if (!this.currentZoyaMsgId) this.currentZoyaMsgId = `zoya-${crypto.randomUUID()}`;
+      this.currentZoyaTranscript += outText;
+      
+      const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
+      this.onMessage({ id: this.currentZoyaMsgId, sender: "zoya", text: clean });
+    }
+
+    // 3. Turn Complete — Save final text to server memory
+    if ((message as any).serverContent?.turnComplete) {
+      if (this.currentZoyaTranscript.trim()) {
+        const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
+        console.log(`[ZoyaLive] Turn complete. Final text: "${clean.slice(0, 50)}..."`);
+        this._syncMemory("jarvis", clean);
+        
+        // Reset for the next turn
+        this.currentZoyaMsgId = "";
+        this.currentZoyaTranscript = "";
+      }
     }
 
     // Interruption — user spoke while Zoya was talking
@@ -373,17 +421,12 @@ export class ZoyaLiveService {
       this.onStateChange("listening");
     }
 
-    // Output transcription (what Zoya said)
-    const zoyaText = message.serverContent?.modelTurn?.parts?.[0]?.text;
-    if (zoyaText) {
-      const clean = this._extractEmotionAndClean(zoyaText);
-      this.onMessage({ id: `zoya-${Date.now()}`, sender: "zoya", text: clean });
-    }
-
     // Input transcription (what user said)
     const userText = (message as any).serverContent?.inputTranscription?.text;
     if (userText) {
-      this.onMessage({ id: `user-${Date.now()}`, sender: "user", text: userText });
+      const msgId = `user-${crypto.randomUUID()}`;
+      this.onMessage({ id: msgId, sender: "user", text: userText });
+      this._syncMemory("user", userText);
     }
 
     // Google Search grounding metadata
@@ -534,6 +577,25 @@ export class ZoyaLiveService {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     this.playbackContext = new AudioCtx({ sampleRate: 24000 });
     this.nextPlayTime = this.playbackContext.currentTime;
+  }
+
+  /** Sync a message turn to the server memory (fire-and-forget) */
+  private async _syncMemory(role: string, content: string) {
+    try {
+      console.log(`[ZoyaLive] Syncing ${role} message to server...`);
+      fetch("/api/memory/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, content }),
+      }).then(r => {
+        if (!r.ok) console.warn("[ZoyaLive] Sync failed:", r.statusText);
+        else console.log(`[ZoyaLive] ✅ ${role} message synced.`);
+      }).catch(err => {
+        console.warn("[ZoyaLive] Sync network error:", err);
+      });
+    } catch (e) {
+      console.error("[ZoyaLive] Sync error:", e);
+    }
   }
 
   // ── Session lifecycle ─────────────────────────────────────────────────────

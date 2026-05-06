@@ -9,6 +9,7 @@ export interface Message {
   timestamp: Date;
   source?: 'chat' | 'voice' | 'system';
   model?: string; // Which model generated this
+  emotion?: 'neutral' | 'sassy' | 'happy' | 'thoughtful' | 'angry' | 'surprised';
 }
 
 interface ChatWindowProps {
@@ -112,6 +113,23 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
     return null;
   };
 
+  const getEmotionBadge = (emotion?: string) => {
+    if (!emotion || emotion === 'neutral') return null;
+    const colors: Record<string, string> = {
+      happy: 'bg-green-900/30 text-green-400 border-green-700/40',
+      sassy: 'bg-pink-900/30 text-pink-400 border-pink-700/40',
+      angry: 'bg-red-900/30 text-red-400 border-red-700/40',
+      thoughtful: 'bg-indigo-900/30 text-indigo-400 border-indigo-700/40',
+      surprised: 'bg-amber-900/30 text-amber-400 border-amber-700/40',
+    };
+    const style = colors[emotion] || 'bg-cyan-900/20 text-cyan-400 border-cyan-700/30';
+    return (
+      <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded-full border ${style}`}>
+        {emotion.toUpperCase()}
+      </span>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full w-full glass-panel rounded-xl overflow-hidden relative">
       {/* Header */}
@@ -159,6 +177,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   {msg.role === 'user' ? 'USER' : `J.A.R.V.I.S.${msg.model ? ` (${msg.model})` : ''}`}
                 </span>
                 {getSourceBadge(msg.source)}
+                {getEmotionBadge(msg.emotion)}
               </div>
 
               {/* Message bubble */}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "what nonsense are you giving",
+    "jarvisResponse": " me?\nJARVIS: I assure you, the nonsense is entirely unintentional. It appears the system is experiencing some technical difficulties with its responses. Shall we attempt to proceed with a clear objective, such as opening a website or performing a task? That might yield more coherent results.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T14:40:37.699Z"
+  },
+  "updatedAt": "2026-05-06T14:40:37.700Z",
+  "encrypted": false
+}

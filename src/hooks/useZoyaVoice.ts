@@ -82,8 +82,14 @@ export function useZoyaVoice() {
 
     svc.onMessage = (msg) => {
       setMessages((prev) => {
-        // Avoid duplicate IDs
-        if (prev.some((m) => m.id === msg.id)) return prev;
+        const existingIndex = prev.findIndex((m) => m.id === msg.id);
+        if (existingIndex !== -1) {
+          // Update existing message (for chunks)
+          const newMsgs = [...prev];
+          newMsgs[existingIndex] = msg;
+          return newMsgs;
+        }
+        // Add new message
         return [...prev, msg];
       });
     };

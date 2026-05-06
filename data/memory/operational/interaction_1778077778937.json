@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "What are you a human?",
+    "jarvisResponse": "{}",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T14:29:38.937Z"
+  },
+  "updatedAt": "2026-05-06T14:29:38.937Z",
+  "encrypted": false
+}

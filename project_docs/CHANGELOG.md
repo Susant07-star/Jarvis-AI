@@ -4,16 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### [2026-05-06] Zoya Voice Commander Stabilization
-- **Stabilization**: Resolved Gemini 3.1 Flash connection drops by upgrading `@google/genai` to `1.47.0`.
-- **Fix**: Implemented "Ghost Quote" stripping for environment variable API keys to prevent invalid token errors in browser.
-- **Feature**: Added **Time-Aware AI** context (Date, Time, Timezone) directly into Zoya's system instructions.
+### [2026-05-06] Unified Memory Bridge & Gemini Model Stabilization
+- **Critical Fix — Model Name**: Corrected Gemini text API model from invalid `gemini-3.1-flash` to `gemini-3.1-flash-lite-preview`. The former only works on the Live WebSocket audio API; the latter is the correct `generateContent` REST model name — fully resolves the 404 cascade on every chat request.
+- **Dedicated Gemini Chat Provider**: Added `createGeminiChatProvider()` in `llmRouter.ts` that properly separates the system prompt and user message using Gemini's `systemInstruction` config field. This eliminates the "blob prompt" issue that caused confusing or empty responses.
+- **Separate Chat Cascade (`CHAT_PROVIDER_PRIORITY`)**: Chat traffic now routes through its own provider cascade (Gemini 3.1 Flash-Lite → Gemini 2.5 Flash → DeepSeek → Llama) instead of the shared planner cascade, optimized for conversational quality.
+- **Full Error Visibility**: Added `logger.warn` to every failed provider attempt in both `callPlannerWithCascade` and `callChatWithCascade`. Silent failures are now impossible — every cascade event is logged with the exact error message.
+- **Unified Memory Bridge (Chat ↔ Voice)**: Implemented a shared context system so Zoya (voice) and JARVIS (chat) share the same conversation memory:
+  - Added `getSessionContextSummary(n)` to `memory.ts` — reads the last N messages and formats them as a compact token-efficient block.
+  - Added `GET /api/session-context` endpoint in `api.ts` — exposes the shared memory to the frontend.
+  - Modified `zoyaLiveService.ts` `start()` to fetch `/api/session-context` before connecting and inject it into `systemInstruction`.
+  - Both Chat and Voice now use a **20-message (10-exchange) memory window** — synced and consistent across modalities.
+- **Voice already working**: `gemini-3.1-flash-live-preview` (Live WebSocket) remains the correct voice model name — untouched.
+
+### [2026-05-06] J.A.R.V.I.S. Brain Upgrade & Self-Healing Reliability
+- **Brain Migration**: Migrated J.A.R.V.I.S. primary intelligence to **Gemini 3.1 Flash** (Tier 0) for Voice, Chat, and Browser Planning.
+- **Self-Healing Keys**: Implemented a multi-key pool mechanism in `llmRouter.ts` that retries up to 3 separate API keys per provider before cascading, effectively eliminating 429 rate-limit downtime.
+- **Model Transparency**: Added real-time model metadata to the UI. Users can now see exactly which brain is responding (e.g., `gemini-3.1-flash`) in both the chat window and Zoya voice panel.
+- **Dynamic Loading**: Fixed "No LLM provider configured" errors by making provider availability checks dynamic at runtime, resolving race conditions with environment variable loading.
+- **Stabilization**: Resolved Gemini 3.1 Flash Live connection drops by upgrading `@google/genai` to `1.47.0` and optimizing audio output to **24kHz**.
+- **Fix**: Implemented "Ghost Quote" stripping for environment variable API keys across both frontend and backend.
+- **Feature**: Added **Time-Aware AI** context (Date, Time, Timezone) directly into all system instructions.
 - **Feature**: Integrated `TimezoneClock.tsx` in the Navbar for user-selectable region awareness.
-- **Feature**: Added a 3-model fallback cascade: `3.1-flash` → `2.5-flash-dialog` → `2.5-flash-latest`.
-- **Improvement**: Optimized audio output to **24kHz** to fix "slow/laggy" voice issues.
-- **Feature**: Added Zoya UI panel (`ZoyaPanel.tsx`, `ZoyaAvatar.tsx`, `ZoyaVisualizer.tsx`) with glassmorphism styling.
-- **Feature**: Replaced direct Groq calls with multi-provider LLM cascade (`llmRouter.ts`: GPT-4o → DeepSeek-V3 → Llama-3.3).
-- **Feature**: Bridged Gemini function calls (`executeBrowserAction`) to the JARVIS Python orchestrator via `POST /api/zoya-execute`.
+- **Feature**: Bridged Gemini function calls directly to the Python orchestrator via `POST /api/zoya-execute`.
 
 ### [2026-03-27] YouTube Ad Watcher Implementation
 - **Feature**: Implemented background ad watcher that continuously polls for YouTube ad skip buttons (#skip-button, .ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern)

@@ -80,6 +80,11 @@ export default function ZoyaPanel({ zoya }: ZoyaPanelProps) {
                 <span className={`text-[10px] font-mono tracking-widest ${isNearingLimit ? "text-orange-400" : "text-white/50"}`}>
                   SESSION: {formatTime(zoya.sessionSeconds)} / 30:00
                 </span>
+                {zoya.activeModel && (
+                  <span className="text-[9px] font-mono text-cyan-400/60 uppercase tracking-tighter mt-1">
+                    MODEL: {zoya.activeModel}
+                  </span>
+                )}
                 {isNearingLimit && (
                   <span className="text-[9px] text-orange-500 mt-1 flex items-center gap-1">
                     <RefreshCw size={10} className="animate-spin" /> Restarting soon...

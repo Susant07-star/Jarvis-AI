@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "are you gemini or deepseek",
+    "jarvisResponse": " or what?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T14:28:25.306Z"
+  },
+  "updatedAt": "2026-05-06T14:28:25.306Z",
+  "encrypted": false
+}

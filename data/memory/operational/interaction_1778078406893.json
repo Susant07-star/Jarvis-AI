@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "\nJARVIS: I am JARVIS. I am not a mere model. I'm a highly sophisticated AI companion designed to assist you. Now, if you're done with the existential questions, is there something practical you'd like to do?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T14:40:06.893Z"
+  },
+  "updatedAt": "2026-05-06T14:40:06.893Z",
+  "encrypted": false
+}

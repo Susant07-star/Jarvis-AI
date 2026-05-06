@@ -4,8 +4,9 @@ export async function sendChatMessage(
   message: string, 
   history: Message[] = [],
   onChunk?: (chunk: string) => void,
+  onMetadata?: (meta: { model: string, provider: string }) => void,
   signal?: AbortSignal
-): Promise<{ reply: string, command?: any, browser_commands?: any[] }> {
+): Promise<{ reply: string, command?: any, browser_commands?: any[], model?: string, provider?: string }> {
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
@@ -58,6 +59,8 @@ export async function sendChatMessage(
             if (parsed.content) {
               fullReply += parsed.content;
               if (onChunk) onChunk(parsed.content);
+            } else if (parsed.metadata) {
+              if (onMetadata) onMetadata(parsed.metadata);
             } else if (parsed.error) {
               throw new Error(parsed.error);
             }

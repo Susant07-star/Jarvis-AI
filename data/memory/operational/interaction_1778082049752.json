@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "Please tell the joke again",
+    "jarvisResponse": "Ah, repeating myself? I suppose even the most refined wit can be subject to an encore if the audience insists. \n\n\"I told my doctor that I broke my arm in two places. He told me to stop going to those places.\"\n\nA bit pedestrian for my usual standards, but it seems to have tickled your fancy. Shall we move on to something more stimulating, or are you hoping for a third rendition?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T15:40:49.752Z"
+  },
+  "updatedAt": "2026-05-06T15:40:49.752Z",
+  "encrypted": false
+}

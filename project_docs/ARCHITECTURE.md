@@ -17,8 +17,15 @@ Located in `server/`. This is the core cognitive routing layer.
     - `help/explain` → describe pending plan
 *   **SerpAPI Integration**: Node-side `serp_api_search` action executes inline without Python, tracking `+50` tokens per query via `MetricsTracker`.
 *   **Executor (`executor.ts`)**: Parses the planned JSON and sends corresponding HTTP instructions to the Python Agent. **[PHASE 1 FIX]**: Refactored into a sequential async loop that executes all steps in the plan array. Includes resume support (skips completed steps), retry logic (3 attempts per step), and comprehensive error logging with memory snapshots.
-*   **Memory (`memoryManager.ts`)**: Maintains an encrypted sliding window of conversational context, automatically summarizing old tool executions to save tokens.
-*   **Resilience (`llm.ts`)**: Automatically round-robins Groq API keys to prevent rate limits.
+*   **Memory (`memory.ts`)**: Maintains a synchronized session context in `session_memory.json`. Now includes a **Unified Memory Bridge**:
+    - `getSessionContextSummary()` extracts the last 20 messages for cross-modal awareness.
+    - Voice (Zoya) fetches this summary at start to "remember" previous chat turns.
+*   **Cascading Brain (`llmRouter.ts`)**: The core intelligence layer. Replaces the old single-provider logic with a multi-tier, multi-pool cascade:
+    - **Tier 0**: Gemini 3.1 Flash-Lite (`gemini-3.1-flash-lite-preview`) — New primary reasoning brain.
+    - **Tier 1**: DeepSeek V3.2 / V3.1 — Logic and complex reasoning leaders.
+    - **Tier 2**: GPT-OSS 120B — High-parameter fallback.
+    - **Tier 3**: Llama 3.3 / 70B — High-speed conversational fallback.
+*   **Self-Healing Key Rotation**: Dynamically round-robins multiple API keys per provider. Retries up to 3 separate keys on rate limits (429) before cascading to the next provider. Logs every failed attempt with the exact error message for maximum visibility.
 *   **Observability (`metrics.ts`)**: Tracks per-request token usage (classifier, planner, direct, DOM, SerpAPI) and latency, writing structured JSON to `logs/token_detailed.json`. Structured "ACTION RESULT" logs verify tool success/failure. **[PHASE 1 FIX]**: Enhanced with step-level logging (STEP START, STEP RESULT) and Python agent error visibility in Node logs.
 *   **Planner Logic**: Includes `internal_steps` for reasoning transparency and dynamic DOM pruning to stay within `max_tokens_hint`.
 
@@ -46,7 +53,7 @@ Located in `python_agent/`. This is the "hands" and "eyes" of the system.
 
 ## 4. Data Flow (Input → Orchestrator → Execution)
 1.  **Input Phase**: User speaks into the microphone (transcribed by Whisper STT via WebSockets) OR types a chat message (HTTP POST).
-2.  **Orchestrator Phase**: `jarvisBridge.ts` unifies input. **[PHASE 1 FIX]**: State Guard checks confirmation state BEFORE `intentClassifier.ts` to prevent yes/no bypass. `intentClassifier.ts` decides if it's a `direct` chat (e.g., "Hello") or an `agent` task (e.g., "Play a video").
+2.  **Orchestrator Phase**: `jarvisBridge.ts` unifies input. **[PHASE 1 FIX]**: State Guard checks confirmation state BEFORE `intentClassifier.ts` to prevent yes/no bypass. `intentClassifier.ts` decides if it's a `direct` chat (e.g., "Hello") or an `agent` task (e.g., "Play a video"). Both modes utilize the **Cascading Brain** (`llmRouter.ts`) for maximum reliability.
 3.  **Planning Phase**: If `agent` mode, `planner.ts` reads the current DOM Context, prunes it to fit the token budget, and outputs a strict JSON step array including `internal_steps` reasoning.
 4.  **Confirmation Phase**: If `requires_confirmation` is `true`, the system pauses, caches the plan in the shared `confirmationState`, and asks the user for explicit approval. **[PHASE 1 FIX]**: Enhanced confirmation flow supports:
     - `yes` → execute stored plan

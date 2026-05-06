@@ -10,9 +10,14 @@
 * **Glassmorphism UI**: React-based frontend with real-time SSE chat streaming, voice visualization orb, and HUD status indicators.
 * **Zoya Commander Mode (V2)**: Stabilized Gemini 3.1 Flash Live voice interface with 24kHz audio, 3-model fallback cascade, and real-time SDK integration (v1.47.0).
 * **Time-Aware AI**: Dynamic system instruction generator injects current date, time, and user timezone into Zoya's context for sub-second situational awareness.
-* **Unified Bridge Setup**: `jarvisBridge.ts` routes both Voice (WebSocket) and Chat (SSE HTTP) inputs uniformly.
-* **Key Rotation & Multi-Provider Cascade**: `llmRouter.ts` prioritizes GPT-4o → DeepSeek → Llama-3.3 for resilient, intelligent planning.
-* **Memory Management**: Dual-layer JSON approach (`memoryManager.ts`) with operational logs and summarized LLM context.
+* **Unified Bridge Setup**: `jarvisBridge.ts` routes both Voice (WebSocket) and Chat (SSE HTTP) inputs uniformly to the cascading brain.
+* **Tier 0 Cascading Intelligence**: `llmRouter.ts` prioritizes **Gemini 3.1 Flash-Lite (`gemini-3.1-flash-lite-preview`)** for all chat/planning tasks. Voice uses the separate Live API model `gemini-3.1-flash-live-preview`.
+* **Dedicated Chat Provider**: `createGeminiChatProvider()` in `llmRouter.ts` uses Gemini's native `systemInstruction` field to properly separate the system prompt from the user message — eliminates blob-prompt confusion.
+* **Separate Chat Cascade**: `CHAT_PROVIDER_PRIORITY` routes conversational traffic independently of the JSON planner cascade for optimized quality.
+* **Self-Healing Key Rotation**: Implemented a dynamic key-pool mechanism that retries up to 3 separate API keys per provider during rate-limit (429) events before cascading.
+* **Unified Chat ↔ Voice Memory Bridge**: `getSessionContextSummary()` in `memory.ts` reads the shared `session_memory.json` file and formats the last 20 messages as a compact context block. `GET /api/session-context` exposes this to the frontend. `zoyaLiveService.ts` fetches this at every session start and injects it into `systemInstruction` — Zoya is always aware of recent chat history, and vice versa.
+* **Full Error Visibility**: Every failed provider attempt in both cascade functions is now logged with the exact error message via `logger.warn`. Silent failures are impossible.
+* **Memory Management**: Dual-layer JSON approach (`memoryManager.ts`) with operational logs and summarized LLM context. Both chat and voice use a **20-message memory window**.
 * **Continuous Audio**: Browser `ScriptProcessor` (optimized for Zoya) captures MIC data, streaming raw PCM chunks to Gemini Live with sub-200ms latency.
 
 ## Working Components
@@ -32,11 +37,18 @@
 * **Playwright Click Accuracy**: The "Universal DOM Extractor" continues to improve through native YouTube action mappings.
 * **Viewport Syncing**: The Playwright Chromium instance uses a static viewport that does not respond to the React frontend UI pane size.
 
-## Recent Fixes (2026-05-06)
+## Recent Fixes (2026-05-06 — Session 2)
+- **GEMINI MODEL NAME FIXED**: Corrected `gemini-3.1-flash` → `gemini-3.1-flash-lite-preview` for the `generateContent` REST API. The former caused 404 errors on every chat request since it is exclusive to the Live WebSocket API.
+- **DEDICATED CHAT PROVIDER**: Added `createGeminiChatProvider()` using native `systemInstruction` config — eliminates merged-blob prompt issues that caused empty/garbled responses from Gemini.
+- **UNIFIED MEMORY BRIDGE**: Chat and Voice now share a real-time 20-message memory window via `session_memory.json`. Zoya fetches context at session start via `GET /api/session-context` — no summarization model needed, no extra latency.
+- **FULL PROVIDER ERROR LOGGING**: `callPlannerWithCascade` and `callChatWithCascade` now log the exact error message for every failed attempt — debugging cascade issues is now trivial.
+
+## Older Fixes (2026-05-06 — Session 1)
 - **ZOYA VOICE STABILIZATION**: Fixed Gemini 3.1 Flash connection drops by upgrading `@google/genai` to 1.47.0 and stripping invalid config parameters.
-- **API KEY GHOST QUOTES**: Fixed literal quote parsing in `.env.local` that was invalidating API keys in the browser environment.
-- **TIME-AWARE AI**: Integrated `TimezoneClock` and dynamic instruction generator to provide Zoya with real-time date/time context.
-- **MULTI-PROVIDER PLANNER**: Upgraded LLM planner to cascade through OpenAI → DeepSeek → Groq based on key availability.
+- **API KEY GHOST QUOTES**: Fixed literal quote parsing in `.env.local` that was invalidating API keys.
+- **TIME-AWARE AI**: Integrated `TimezoneClock` and dynamic instruction generator to provide context-aware intelligence.
+- **GEMINI 3.1 CHAT INTEGRATION**: Fully migrated conversational chat to the Gemini-led cascade, with real-time model metadata visibility in the UI.
+- **DYNAMIC PROVIDER LOADING**: Fixed server-side race conditions by making LLM provider availability checks dynamic at runtime.
 - **ORCHESTRATOR BRIDGE**: Created `/api/zoya-execute` to route Gemini's voice intents directly into the Python automation agent.
 
 ## Older Fixes (2026-03-27)
@@ -47,4 +59,4 @@
 - **EXECUTION DROP FIXED**: Refactored executor.ts sequential async loop with improved logging and step tracking; verified multi-step execution works.
 - **WEBSOCKET CONFIRMATION UNIFIED**: Replaced duplicate confirmation logic in websocket.ts with centralized checkConfirmationInput.
 
-Last Update: 2026-05-06 - **Zoya Voice Stabilized & Time-Aware Intelligence Complete**
+Last Update: 2026-05-06 — **Gemini Model Fix, Dedicated Chat Provider & Unified Voice↔Chat Memory Bridge**
