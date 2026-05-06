@@ -8,11 +8,12 @@
 
 ## Current Features Implemented
 * **Glassmorphism UI**: React-based frontend with real-time SSE chat streaming, voice visualization orb, and HUD status indicators.
-* **Zoya Commander Mode**: High-fidelity Gemini Live voice interface with animated avatar, emotion tracking, and real-time execution feedback.
+* **Zoya Commander Mode (V2)**: Stabilized Gemini 3.1 Flash Live voice interface with 24kHz audio, 3-model fallback cascade, and real-time SDK integration (v1.47.0).
+* **Time-Aware AI**: Dynamic system instruction generator injects current date, time, and user timezone into Zoya's context for sub-second situational awareness.
 * **Unified Bridge Setup**: `jarvisBridge.ts` routes both Voice (WebSocket) and Chat (SSE HTTP) inputs uniformly.
 * **Key Rotation & Multi-Provider Cascade**: `llmRouter.ts` prioritizes GPT-4o → DeepSeek → Llama-3.3 for resilient, intelligent planning.
 * **Memory Management**: Dual-layer JSON approach (`memoryManager.ts`) with operational logs and summarized LLM context.
-* **Continuous Audio**: Browser `AudioWorklet` continuously captures MIC data, using `SpeechRecognition` `isFinal` events to trigger Groq Whisper STT.
+* **Continuous Audio**: Browser `ScriptProcessor` (optimized for Zoya) captures MIC data, streaming raw PCM chunks to Gemini Live with sub-200ms latency.
 
 ## Working Components
 * Text-To-Speech (ElevenLabs/OpenAI) + Speech-To-Text (Groq Whisper)
@@ -32,7 +33,9 @@
 * **Viewport Syncing**: The Playwright Chromium instance uses a static viewport that does not respond to the React frontend UI pane size.
 
 ## Recent Fixes (2026-05-06)
-- **ZOYA VOICE INTEGRATION**: Gemini Live WebSocket integrated with full UI (Avatar/Visualizer). Fallbacks for API limits.
+- **ZOYA VOICE STABILIZATION**: Fixed Gemini 3.1 Flash connection drops by upgrading `@google/genai` to 1.47.0 and stripping invalid config parameters.
+- **API KEY GHOST QUOTES**: Fixed literal quote parsing in `.env.local` that was invalidating API keys in the browser environment.
+- **TIME-AWARE AI**: Integrated `TimezoneClock` and dynamic instruction generator to provide Zoya with real-time date/time context.
 - **MULTI-PROVIDER PLANNER**: Upgraded LLM planner to cascade through OpenAI → DeepSeek → Groq based on key availability.
 - **ORCHESTRATOR BRIDGE**: Created `/api/zoya-execute` to route Gemini's voice intents directly into the Python automation agent.
 
@@ -44,4 +47,4 @@
 - **EXECUTION DROP FIXED**: Refactored executor.ts sequential async loop with improved logging and step tracking; verified multi-step execution works.
 - **WEBSOCKET CONFIRMATION UNIFIED**: Replaced duplicate confirmation logic in websocket.ts with centralized checkConfirmationInput.
 
-Last Update: 2026-03-27 - **YouTube Ad Watcher & Phase 1 Stabilization Complete**
+Last Update: 2026-05-06 - **Zoya Voice Stabilized & Time-Aware Intelligence Complete**

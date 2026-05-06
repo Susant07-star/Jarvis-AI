@@ -8,6 +8,9 @@
 
 | Symptom | First file to check | What to look for |
 |---|---|---|
+| Zoya 3.1 drops instantly (250ms) | `zoyaLiveService.ts` | Verify `@google/genai` is `1.47.0+`. Check for literal quotes in API keys. |
+| Zoya sounds slow/laggy (monster voice) | `zoyaLiveService.ts` | Ensure `playbackContext` sample rate is exactly `24000`. |
+| Zoya doesn't see tools (executeBrowserAction) | `zoyaLiveService.ts` | Verify tool schema matches `remix-zoya` spec exactly. |
 | JARVIS says "✅ executed" but nothing happened | `logs/debug.log` | `Python agent: 422` or `Python agent: 503` |
 | JARVIS gives wrong / no response | `logs/debug.log` | `Failed to parse tool args` or `LLM routed to TASK` without a follow-up plan |
 | Voice command not recognized | `logs/debug.log` | `STT` entries or missing `[IntentClassifier]` lines |

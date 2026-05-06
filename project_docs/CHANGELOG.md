@@ -4,13 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### [2026-05-06] Zoya Voice Commander Integration
-- **Feature**: Integrated Gemini Live API (`gemini-2.5-flash` cascade) as the primary voice layer (Zoya Mode).
+### [2026-05-06] Zoya Voice Commander Stabilization
+- **Stabilization**: Resolved Gemini 3.1 Flash connection drops by upgrading `@google/genai` to `1.47.0`.
+- **Fix**: Implemented "Ghost Quote" stripping for environment variable API keys to prevent invalid token errors in browser.
+- **Feature**: Added **Time-Aware AI** context (Date, Time, Timezone) directly into Zoya's system instructions.
+- **Feature**: Integrated `TimezoneClock.tsx` in the Navbar for user-selectable region awareness.
+- **Feature**: Added a 3-model fallback cascade: `3.1-flash` → `2.5-flash-dialog` → `2.5-flash-latest`.
+- **Improvement**: Optimized audio output to **24kHz** to fix "slow/laggy" voice issues.
 - **Feature**: Added Zoya UI panel (`ZoyaPanel.tsx`, `ZoyaAvatar.tsx`, `ZoyaVisualizer.tsx`) with glassmorphism styling.
 - **Feature**: Replaced direct Groq calls with multi-provider LLM cascade (`llmRouter.ts`: GPT-4o → DeepSeek-V3 → Llama-3.3).
-- **Feature**: Implemented auto-reconnect logic for Gemini Live WebSocket to handle 30-min limits and drops seamlessly.
-- **Feature**: Bridged Gemini function calls (`executeJarvisCommand`) to the JARVIS Python orchestrator via new `POST /api/zoya-execute` endpoint.
-- **Feature**: Real-time task feedback: Zoya now speaks success/failure results naturally.
+- **Feature**: Bridged Gemini function calls (`executeBrowserAction`) to the JARVIS Python orchestrator via `POST /api/zoya-execute`.
 
 ### [2026-03-27] YouTube Ad Watcher Implementation
 - **Feature**: Implemented background ad watcher that continuously polls for YouTube ad skip buttons (#skip-button, .ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern)
