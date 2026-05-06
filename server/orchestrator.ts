@@ -1,5 +1,6 @@
 import { classifyIntent, IntentType } from "./intentClassifier";
 import { logger } from "./logger";
+import { checkConfirmationInput, ConfirmationResult } from "./confirmationState";
 
 export type OrchestratorMode = "direct" | "agent";
 
@@ -10,17 +11,39 @@ export interface OrchestratorDecision {
   originalInput: string;
   normalizedInput?: string;
   tokens?: number;
+  // If present, indicates the input was a confirmation response
+  confirmationResult?: ConfirmationResult;
 }
 
 /**
  * Core System Orchestrator:
  * Decides whether the input triggers a conversational response directly,
  * or if it requires the Browser Planner to execute automated tasks.
+ * 
+ * Enhanced with State Guard: checks confirmation state BEFORE intent classification.
+ * If the input is a confirmation response (yes/no), returns with confirmationResult.
  */
 export async function determineOrchestrationMode(userInput: string): Promise<OrchestratorDecision> {
   const t0 = Date.now();
   
-  // 1. Identify intent
+  // 0. STATE GUARD: Check confirmation state BEFORE intent classification
+  const confirmationCheck = checkConfirmationInput(userInput);
+  if (confirmationCheck.handled) {
+    const duration = Date.now() - t0;
+    logger.info("Orchestrator", `Confirmation handled in ${duration}ms: TYPE=[${confirmationCheck.type.toUpperCase()}]`);
+    
+    // Return a decision with confirmation result
+    // Mode is 'direct' for confirmation responses (they don't need planning)
+    return {
+      mode: "direct",
+      intent: "chat", // Confirmation responses are treated as chat intent
+      requiresPlanning: false,
+      originalInput: userInput,
+      confirmationResult: confirmationCheck
+    };
+  }
+  
+  // 1. Identify intent (only if not a confirmation response)
   const classification = await classifyIntent(userInput);
   
   // 2. Map intent to execution mode

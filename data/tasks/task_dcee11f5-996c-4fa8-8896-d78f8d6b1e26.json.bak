@@ -1,0 +1,23 @@
+{
+  "task_id": "dcee11f5-996c-4fa8-8896-d78f8d6b1e26",
+  "site": "unknown",
+  "goal": "[chat] search mayalu song",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "type",
+  "timestamp": "2026-03-27T13:56:50.959Z",
+  "updated_at": "2026-03-27T13:56:50.968Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "what nonsense. I said hi",
+    "jarvisResponse": "Indeed you did. A simple \"hello\" was in order. Hello, then. How are you today?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T11:29:24.119Z"
+  },
+  "updatedAt": "2026-05-06T11:29:24.119Z",
+  "encrypted": false
+}

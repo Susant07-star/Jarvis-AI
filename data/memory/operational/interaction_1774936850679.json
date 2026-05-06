@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Mic check, check check, mic check.",
+    "jarvisResponse": "Your voice is coming through loud and clear. If you're ready to proceed, I can help you with searching for meditation music on YouTube, as we were doing earlier. Would you like to open a specific video or explore the search results?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:00:50.679Z"
+  },
+  "updatedAt": "2026-03-31T06:00:50.680Z",
+  "encrypted": false
+}

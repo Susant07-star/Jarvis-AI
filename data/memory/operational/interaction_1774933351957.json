@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open google.com",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_url",
+        "url": "https://www.google.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T05:02:31.957Z"
+  },
+  "updatedAt": "2026-03-31T05:02:31.958Z",
+  "encrypted": false
+}

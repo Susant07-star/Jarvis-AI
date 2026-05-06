@@ -11,7 +11,7 @@ import { logInteraction, trackBrowserTask } from "./browser/jarvisBridge";
 import { logger } from "./logger";
 import { MetricsTracker } from "./utils/metrics";
 
-import { getPendingConfirmation, setPendingConfirmation, clearPendingConfirmation, hasPendingConfirmation } from "./confirmationState";
+import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation, checkConfirmationInput } from "./confirmationState";
 
 interface ConnectionState {
   audioBuffer: Buffer[];
@@ -130,69 +130,86 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       ws.send(JSON.stringify({ type: 'final', text: userText }));
     }
     
-    // 0. Check Confirmation Loop
-    if (hasPendingConfirmation()) {
-      const pendingWs = getPendingConfirmation()!;
-      const lower = userText?.toLowerCase().trim() || "";
-      const confirmPhrases = ['yes', 'y', 'confirm', 'go on', 'please do it', 'do it', 'sure', 'ok'];
-      const declinePhrases = ['no', 'n', 'cancel', 'stop'];
+    // 0. Check Confirmation Loop using centralized State Guard
+    const confirmationResult = checkConfirmationInput(userText || '');
+    if (confirmationResult.handled) {
+      const { type, plan, message } = confirmationResult;
       
-      if (confirmPhrases.some(p => lower === p || lower.startsWith('yes '))) {
-         logger.info("Confirmation", "Approved pending WS plan");
-         const plannedSteps = pendingWs.actions;
-         clearPendingConfirmation();
-         
-         const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
-         const execMsg = `Executing confirmed steps.`;
-         ws.send(JSON.stringify({ type: 'llm_chunk', text: execMsg + " " }));
-         const execAudio = await generateTTS(execMsg);
-         if (execAudio && ws.readyState === ws.OPEN) ws.send(execAudio);
-         
-         if (browserActions.length > 0) {
-           ws.send(JSON.stringify({ type: 'browser_commands', commands: browserActions }));
-           try {
-               await fetch('http://127.0.0.1:8000/execute', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ commands: browserActions })
-               });
-           } catch (e: any) { logger.error('WS', `Python agent unreachable: ${e.message}`); }
-         }
-         
-         const successReply = `Confirmed task executed.`;
-         saveToMemory('user', userText || '');
-         saveToMemory('jarvis', successReply);
-         logInteraction('voice', userText || '', successReply, { browserCommands: plannedSteps });
-         trackBrowserTask('voice', userText || '', plannedSteps);
-   
-         ws.send(JSON.stringify({ type: 'done' }));
-         if (metrics) {
-           metrics.setExecutionResult('Success via confirmation');
-           metrics.finalize();
-         }
-         state.isProcessing = false;
-         return;
-      } else if (declinePhrases.some(p => lower === p || lower.startsWith('cancel '))) {
-         logger.info("Confirmation", "Cancelled pending WS plan");
-         clearPendingConfirmation();
-         const cancelReply = "Action cancelled.";
-         ws.send(JSON.stringify({ type: 'llm_chunk', text: cancelReply + " " }));
-         const cancelAudio = await generateTTS(cancelReply);
-         if (cancelAudio && ws.readyState === ws.OPEN) ws.send(cancelAudio);
-         ws.send(JSON.stringify({ type: 'done' }));
-         
-         if (metrics) { metrics.setExecutionResult('Cancelled by user'); metrics.finalize(); }
-         state.isProcessing = false;
-         return;
-      } else {
-         logger.info("Confirmation", `Waiting on confirmation, received ambiguous input: "${userText}"`);
-         const reprompt = "Please confirm the previous task (yes/no)";
-         ws.send(JSON.stringify({ type: 'llm_chunk', text: reprompt + " " }));
-         const repromptAudio = await generateTTS(reprompt);
-         if (repromptAudio && ws.readyState === ws.OPEN) ws.send(repromptAudio);
-         ws.send(JSON.stringify({ type: 'done' }));
-         state.isProcessing = false;
-         return;
+      if (type === 'confirmed' && plan) {
+        logger.info("Confirmation", "Approved pending WS plan");
+        const browserActions = plan.actions.filter((s:any) => s.action !== 'serp_api_search');
+        const execMsg = message || `Executing confirmed steps.`;
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: execMsg + " " }));
+        const execAudio = await generateTTS(execMsg);
+        if (execAudio && ws.readyState === ws.OPEN) ws.send(execAudio);
+        
+        if (browserActions.length > 0) {
+          ws.send(JSON.stringify({ type: 'browser_commands', commands: browserActions }));
+          try {
+            const response = await fetch('http://127.0.0.1:8000/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ commands: browserActions })
+            });
+            logger.info("WS", `Python executor returned: ${response.status}`);
+            const pythonData = await response.json();
+            const hasFailure = pythonData.results && Array.isArray(pythonData.results) && pythonData.results.some((r: any) => r.status === 'failure');
+            if (hasFailure) {
+                const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
+                throw new Error(`Browser execution failed: ${errors}`);
+            }
+          } catch (e: any) {
+            logger.error('WS', `Python agent execution failed: ${e.message}`);
+            const failReply = `❌ Execution failed: ${e.message}`;
+            ws.send(JSON.stringify({ type: 'llm_chunk', text: failReply }));
+            const failAudio = await generateTTS(failReply);
+            if (failAudio && ws.readyState === ws.OPEN) ws.send(failAudio);
+            saveToMemory('jarvis', failReply);
+            logInteraction('voice', userText || '', failReply);
+            ws.send(JSON.stringify({ type: 'done' }));
+            if (metrics) { metrics.setExecutionResult('Failure via confirmation'); metrics.finalize(); }
+            state.isProcessing = false;
+            return;
+          }
+        }
+        
+        const successReply = message || `Confirmed task executed.`;
+        saveToMemory('user', userText || '');
+        saveToMemory('jarvis', successReply);
+        logInteraction('voice', userText || '', successReply, { browserCommands: plan.actions });
+        trackBrowserTask('voice', userText || '', plan.actions);
+        
+        ws.send(JSON.stringify({ type: 'done' }));
+        if (metrics) {
+          metrics.setExecutionResult('Success via confirmation');
+          metrics.finalize();
+        }
+        state.isProcessing = false;
+        return;
+      } else if (type === 'cancelled') {
+        logger.info("Confirmation", "Cancelled pending WS plan");
+        const cancelReply = message || "Action cancelled.";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: cancelReply + " " }));
+        const cancelAudio = await generateTTS(cancelReply);
+        if (cancelAudio && ws.readyState === ws.OPEN) ws.send(cancelAudio);
+        ws.send(JSON.stringify({ type: 'done' }));
+        
+        if (metrics) { metrics.setExecutionResult('Cancelled by user'); metrics.finalize(); }
+        state.isProcessing = false;
+        return;
+      } else if (type === 'ambiguous') {
+        logger.info("Confirmation", `Waiting on confirmation, received ambiguous input: "${userText}"`);
+        const reprompt = message || "Please confirm the previous task (yes/no)";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: reprompt + " " }));
+        const repromptAudio = await generateTTS(reprompt);
+        if (repromptAudio && ws.readyState === ws.OPEN) ws.send(repromptAudio);
+        ws.send(JSON.stringify({ type: 'done' }));
+        state.isProcessing = false;
+        return;
+      } else if (type === 'new_command') {
+        // fall through to normal processing (the new command will be handled by orchestrator)
+        logger.info("Confirmation", "New command received, discarding pending plan");
+        // continue to orchestrator
       }
     }
 
@@ -205,7 +222,8 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       return;
     }
     
-    ws.send(JSON.stringify({ type: 'final', text: userText }));
+    // NOTE: { type: 'final' } was already sent at line ~130 immediately after STT.
+    // Sending it again here would cause React to skip the useEffect (same value, no re-render).
     saveToMemory('user', userText);
 
     const memory = loadMemory();
@@ -350,7 +368,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
       // C. Confirmation Gateway
       if (requires_confirmation) {
-        setPendingConfirmation({ actions: plannedSteps, goal: userText || '' });
+        setPendingPlanWithMetadata(plannedSteps, userText || '', 'websocket');
         const confirmMsg = `I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed?`;
         saveToMemory('jarvis', confirmMsg);
         logInteraction('voice', userText, confirmMsg);
@@ -394,8 +412,25 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
               body: JSON.stringify({ commands: browserActions })
             });
             logger.info("WS", `Python executor returned: ${pythonRes.status}`);
+            
+            const pythonData = await pythonRes.json();
+            const hasFailure = pythonData.results && Array.isArray(pythonData.results) && pythonData.results.some((r: any) => r.status === 'failure');
+            if (hasFailure) {
+                const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
+                throw new Error(`Browser execution failed: ${errors}`);
+            }
         } catch (e: any) {
-            logger.error('WS', `Python agent unreachable: ${e.message}`);
+            logger.error('WS', `Python agent execution failed: ${e.message}`);
+            const failReply = `❌ Execution failed: ${e.message}`;
+            ws.send(JSON.stringify({ type: 'llm_chunk', text: failReply }));
+            const failAudio = await generateTTS(failReply);
+            if (failAudio && ws.readyState === ws.OPEN) ws.send(failAudio);
+            saveToMemory('jarvis', failReply);
+            logInteraction('voice', userText || goal, failReply);
+            ws.send(JSON.stringify({ type: 'done' }));
+            if (metrics) { metrics.setExecutionResult('Failure'); metrics.finalize(); }
+            state.isProcessing = false;
+            return;
         }
       }
       
@@ -408,7 +443,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       saveToMemory('jarvis', fullResponse);
       logInteraction('voice', userText, fullResponse, { browserCommands: plannedSteps });
       trackBrowserTask('voice', userText, plannedSteps);
-      if (metrics) metrics.setExecutionResult('Success');
+      if (metrics) { metrics.setExecutionResult('Success'); metrics.finalize(); }
     }
     
   } catch (err: any) {

@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "skip ad",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 3
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:57:07.613Z"
+  },
+  "updatedAt": "2026-03-27T13:57:07.613Z",
+  "encrypted": false
+}

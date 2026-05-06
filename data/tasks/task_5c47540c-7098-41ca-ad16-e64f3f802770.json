@@ -1,0 +1,18 @@
+{
+  "task_id": "5c47540c-7098-41ca-ad16-e64f3f802770",
+  "site": "unknown",
+  "goal": "[chat] open youtube",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-27T13:55:29.095Z",
+  "updated_at": "2026-03-27T13:55:29.109Z",
+  "memory_snapshot": {},
+  "errors": []
+}

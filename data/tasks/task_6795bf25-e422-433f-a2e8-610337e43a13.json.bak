@@ -1,0 +1,23 @@
+{
+  "task_id": "6795bf25-e422-433f-a2e8-610337e43a13",
+  "site": "unknown",
+  "goal": "[chat] open youtube and search for naadaniya",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "youtube_search",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-31T06:01:56.180Z",
+  "updated_at": "2026-03-31T06:01:56.188Z",
+  "memory_snapshot": {},
+  "errors": []
+}

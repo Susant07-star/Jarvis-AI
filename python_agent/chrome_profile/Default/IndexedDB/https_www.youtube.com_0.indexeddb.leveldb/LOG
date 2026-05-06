@@ -1,9 +1,17 @@
-2026/03/24-22:47:14.377 3218 Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/03/24-22:47:14.379 3218 Recovering log #40
-2026/03/24-22:47:14.381 3218 Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000040.log 
-2026/03/24-22:47:16.941 5088 Compacting 1@1 + 1@2 files
-2026/03/24-22:47:16.955 5088 Generated table #43@1: 411 keys, 52677 bytes
-2026/03/24-22:47:16.955 5088 Compacted 1@1 + 1@2 files => 52677 bytes
-2026/03/24-22:47:16.957 5088 compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/03/24-22:47:16.958 5088 Delete type=2 #38
-2026/03/24-22:47:16.958 5088 Delete type=2 #41
+2026/03/27-10:24:42.244 3270 Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/27-10:24:42.245 3270 Recovering log #45
+2026/03/27-10:24:42.252 3270 Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000045.log 
+2026/03/27-10:24:42.252 3270 Delete type=2 #43
+2026/03/27-10:24:42.252 3270 Delete type=2 #46
+2026/03/27-10:46:06.090 44dc Level-0 table #51: started
+2026/03/27-10:46:06.185 44dc Level-0 table #51: 1130934 bytes OK
+2026/03/27-10:46:06.188 44dc Delete type=0 #45
+2026/03/27-10:46:06.191 44dc Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2026/03/27-10:46:06.193 44dc Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x0f\x02\x1f\x033\xcb\xe0}\xda\xd2yB\x00\x03\x00\x00\x00\x00\x00\x00K@' @ 32367 : 1
+2026/03/27-10:46:06.193 44dc Compacting 1@1 + 1@2 files
+2026/03/27-10:46:06.213 44dc Generated table #52@1: 517 keys, 68962 bytes
+2026/03/27-10:46:06.213 44dc Compacted 1@1 + 1@2 files => 68962 bytes
+2026/03/27-10:46:06.215 44dc compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/03/27-10:46:06.215 44dc Delete type=2 #48
+2026/03/27-10:46:06.216 44dc Delete type=2 #51
+2026/03/27-10:46:06.220 44dc Manual compaction at level-1 from '\x00\x0f\x02\x1f\x033\xcb\xe0}\xda\xd2yB\x00\x03\x00\x00\x00\x00\x00\x00K@' @ 32367 : 1 .. (end); will stop at (end)

@@ -1,0 +1,18 @@
+{
+  "task_id": "c5bb4b8f-4006-4177-8c5e-2abfc2189ab0",
+  "site": "unknown",
+  "goal": "[chat] like the video",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "youtube_like",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-25T06:58:44.726Z",
+  "updated_at": "2026-03-25T06:58:44.726Z",
+  "memory_snapshot": {},
+  "errors": []
+}

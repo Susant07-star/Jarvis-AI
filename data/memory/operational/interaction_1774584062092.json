@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "play first video",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "media_control",
+        "command": "play"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T04:01:02.092Z"
+  },
+  "updatedAt": "2026-03-27T04:01:02.092Z",
+  "encrypted": false
+}

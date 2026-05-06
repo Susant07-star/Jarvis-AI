@@ -1,0 +1,18 @@
+{
+  "task_id": "a2b72304-b284-4045-b43c-701a7e6fdf95",
+  "site": "unknown",
+  "goal": "[chat] open the song",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "click",
+  "timestamp": "2026-03-25T06:57:38.482Z",
+  "updated_at": "2026-03-25T06:57:38.493Z",
+  "memory_snapshot": {},
+  "errors": []
+}

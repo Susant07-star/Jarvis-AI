@@ -1,0 +1,23 @@
+{
+  "task_id": "d148aca3-2fb6-4384-b1f2-706a55baf04a",
+  "site": "unknown",
+  "goal": "[chat] open youtube",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "type",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "type",
+  "timestamp": "2026-03-31T05:08:00.844Z",
+  "updated_at": "2026-03-31T05:08:00.861Z",
+  "memory_snapshot": {},
+  "errors": []
+}

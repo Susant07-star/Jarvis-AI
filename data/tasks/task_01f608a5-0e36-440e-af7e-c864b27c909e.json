@@ -1,0 +1,18 @@
+{
+  "task_id": "01f608a5-0e36-440e-af7e-c864b27c909e",
+  "site": "unknown",
+  "goal": "[chat] play first video",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "media_control",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "media_control",
+  "timestamp": "2026-03-27T04:01:02.096Z",
+  "updated_at": "2026-03-27T04:01:02.100Z",
+  "memory_snapshot": {},
+  "errors": []
+}

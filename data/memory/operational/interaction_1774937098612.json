@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "skip ad",
+    "jarvisResponse": "\n❌ Execution failed: Browser execution failed: click: Clicked element but verification failed: 13",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:04:58.612Z"
+  },
+  "updatedAt": "2026-03-31T06:04:58.613Z",
+  "encrypted": false
+}

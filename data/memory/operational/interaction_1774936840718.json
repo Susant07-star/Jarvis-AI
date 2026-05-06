@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "සිටින්තියි, මිනින්ති, හිති, හිති, හිති, හිති, හිති, අපි මේදුයේ කිරීමෙන්නේ. එය එය එය එය.",
+    "jarvisResponse": "It seems like you're speaking in Sinhala. I'll do my best to understand and respond accordingly. However, I must say that the text appears to be a poetic or lyrical phrase, possibly from a song. If you'd like to discuss the meaning or context behind it, I'm here to engage in a conversation. Alternatively, if you have a specific task or question in mind, please feel free to ask, and I'll do my best to assist you.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:00:40.718Z"
+  },
+  "updatedAt": "2026-03-31T06:00:40.718Z",
+  "encrypted": false
+}

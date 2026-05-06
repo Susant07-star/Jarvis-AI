@@ -8,6 +8,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   source?: 'chat' | 'voice' | 'system';
+  model?: string; // Which model generated this
 }
 
 interface ChatWindowProps {
@@ -155,7 +156,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   {msg.timestamp.toLocaleTimeString([], { hour12: false })}
                 </span>
                 <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${msg.role === 'user' ? 'text-cyan-500' : 'text-cyan-300'}`}>
-                  {msg.role === 'user' ? 'USER' : 'J.A.R.V.I.S.'}
+                  {msg.role === 'user' ? 'USER' : `J.A.R.V.I.S.${msg.model ? ` (${msg.model})` : ''}`}
                 </span>
                 {getSourceBadge(msg.source)}
               </div>

@@ -1,0 +1,23 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search sadhu baba",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "sadhu baba"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:55:36.897Z"
+  },
+  "updatedAt": "2026-03-27T13:55:36.897Z",
+  "encrypted": false
+}

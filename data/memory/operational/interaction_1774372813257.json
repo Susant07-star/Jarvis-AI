@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube and search for naadaniya song",
+    "jarvisResponse": "Confirmed task executed.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_url",
+        "url": "https://www.youtube.com"
+      },
+      {
+        "action": "youtube_search",
+        "query": "naadaniya song"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T17:20:13.257Z"
+  },
+  "updatedAt": "2026-03-24T17:20:13.257Z",
+  "encrypted": false
+}

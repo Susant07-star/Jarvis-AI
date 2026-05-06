@@ -1,6 +1,7 @@
-2026/03/24-22:21:19.191 3158 Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/03/24-22:21:19.193 3158 Recovering log #36
-2026/03/24-22:21:19.207 3158 Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000036.log 
-2026/03/24-22:26:15.026 3158 Level-0 table #41: started
-2026/03/24-22:26:15.088 3158 Level-0 table #41: 2025344 bytes OK
-2026/03/24-22:26:15.091 3158 Delete type=0 #36
+2026/03/27-10:08:53.470 1c7c Reusing MANIFEST E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/27-10:08:53.472 1c7c Recovering log #45
+2026/03/27-10:08:53.474 1c7c Reusing old log E:\j.a.r.v.i.s.-web-interface\python_agent\chrome_profile\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000045.log 
+2026/03/27-10:08:53.586 1c7c Compacting 1@1 + 1@2 files
+2026/03/27-10:08:53.600 1c7c Generated table #48@1: 490 keys, 68986 bytes
+2026/03/27-10:08:53.600 1c7c Compacted 1@1 + 1@2 files => 68986 bytes
+2026/03/27-10:08:53.602 1c7c compacted to: files[ 0 0 1 0 0 0 0 ]

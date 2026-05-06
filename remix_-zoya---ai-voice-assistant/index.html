@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      // Shim global and handle fetch read-only issues
+      window.global = window;
+      
+      // Handle process shim carefully to not overwrite existing env (like GEMINI_API_KEY)
+      if (typeof window.process === 'undefined') {
+        window.process = { env: {}, version: 'v20.0.0', nextTick: (cb) => setTimeout(cb, 0) };
+      } else if (typeof window.process.env === 'undefined') {
+        window.process.env = {};
+      }
+      
+      // Fix "Cannot set property fetch of #<Window> which has only a getter"
+      // This happens when libraries try to overwrite fetch.
+      (function() {
+        try {
+          const originalFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            value: originalFetch,
+            writable: true,
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.warn('Fetch shim failed:', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

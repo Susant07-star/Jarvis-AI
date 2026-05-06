@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open spotify website in new tab",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_tab",
+        "url": "https://www.spotify.com"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T14:00:10.733Z"
+  },
+  "updatedAt": "2026-03-27T14:00:10.733Z",
+  "encrypted": false
+}

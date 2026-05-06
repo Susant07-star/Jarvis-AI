@@ -1,0 +1,23 @@
+{
+  "task_id": "90bb89f4-6840-4653-9f08-f9ded6c3aa11",
+  "site": "unknown",
+  "goal": "[chat] open new tab, close existing tab of youtube",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_tab",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "close_tab",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "close_tab",
+  "timestamp": "2026-03-27T04:26:19.155Z",
+  "updated_at": "2026-03-27T04:26:19.182Z",
+  "memory_snapshot": {},
+  "errors": []
+}

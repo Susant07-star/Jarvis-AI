@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "check hello can you hear me check check mic check",
+    "jarvisResponse": "It seems like you're conducting a mic check. I can indeed hear you, or rather, I can process the text you're inputting. Your audio checks, \"hello,\" \"can you hear me,\" and \"check\" have all been received and understood. If you're ready to proceed, I'm here to assist you. Shall we get back to the YouTube tab where we were searching for \"naadaniya\"?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:16:34.608Z"
+  },
+  "updatedAt": "2026-03-31T06:16:34.608Z",
+  "encrypted": false
+}

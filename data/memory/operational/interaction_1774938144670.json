@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hello, hello, mic check. Check, check. Hello, Jarvis, can you hear me?",
+    "jarvisResponse": "Your mic check is coming through loud and clear, figuratively speaking, of course. I can process your text inputs without any issues. Now that we've established that, how may I assist you today? We had left off with multiple tabs open, including YouTube, where we were searching for \"meditation music.\" Would you like to continue exploring that or perhaps switch to something else?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:22:24.670Z"
+  },
+  "updatedAt": "2026-03-31T06:22:24.670Z",
+  "encrypted": false
+}

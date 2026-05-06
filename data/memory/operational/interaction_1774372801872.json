@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube and search for naadaniya song",
+    "jarvisResponse": "\n⚠️ I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed? (yes/no)",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T17:20:01.872Z"
+  },
+  "updatedAt": "2026-03-24T17:20:01.872Z",
+  "encrypted": false
+}

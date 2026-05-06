@@ -1,0 +1,18 @@
+{
+  "task_id": "2db4a554-f627-4e6e-822f-07e6f834ff8d",
+  "site": "unknown",
+  "goal": "[chat] open",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "click",
+  "timestamp": "2026-03-27T13:59:56.331Z",
+  "updated_at": "2026-03-27T13:59:56.337Z",
+  "memory_snapshot": {},
+  "errors": []
+}

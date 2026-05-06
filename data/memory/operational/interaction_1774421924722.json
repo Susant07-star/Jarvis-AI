@@ -1,0 +1,17 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "like the video",
+    "jarvisResponse": "Confirmed task executed.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "youtube_like"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-25T06:58:44.722Z"
+  },
+  "updatedAt": "2026-03-25T06:58:44.722Z",
+  "encrypted": false
+}

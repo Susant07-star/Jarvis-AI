@@ -1,0 +1,28 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "log in antother way",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 2,
+        "text": "username"
+      },
+      {
+        "action": "type_secure",
+        "jarvis_id": 2,
+        "text": "password"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 3
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T14:00:56.800Z"
+  },
+  "updatedAt": "2026-03-27T14:00:56.800Z",
+  "encrypted": false
+}

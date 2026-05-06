@@ -1,0 +1,23 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "enter email jarvis.susant@gmail.com and enter",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 2,
+        "text": "jarvis.susant@gmail.com"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:03:27.903Z"
+  },
+  "updatedAt": "2026-03-31T06:03:27.904Z",
+  "encrypted": false
+}

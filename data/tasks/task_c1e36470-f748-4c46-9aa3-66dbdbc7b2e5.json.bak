@@ -1,0 +1,18 @@
+{
+  "task_id": "c1e36470-f748-4c46-9aa3-66dbdbc7b2e5",
+  "site": "unknown",
+  "goal": "[chat] back",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "go_back",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-25T06:59:02.603Z",
+  "updated_at": "2026-03-25T06:59:02.603Z",
+  "memory_snapshot": {},
+  "errors": []
+}

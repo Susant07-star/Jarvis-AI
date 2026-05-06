@@ -1,0 +1,27 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the video akshath-naadaaniyan (off... song",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "akshath naadaaniyan"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 6
+      },
+      {
+        "action": "click",
+        "jarvis_id": 22
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-24T17:21:19.107Z"
+  },
+  "updatedAt": "2026-03-24T17:21:19.108Z",
+  "encrypted": false
+}

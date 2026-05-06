@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hi",
+    "jarvisResponse": "It seems my previous attempt to open YouTube was unsuccessful. Let me try that again for you. execute_browser_commands: open_tab(\"https://www.youtube.com\")",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T11:28:11.099Z"
+  },
+  "updatedAt": "2026-05-06T11:28:11.101Z",
+  "encrypted": false
+}

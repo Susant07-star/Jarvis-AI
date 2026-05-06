@@ -1,0 +1,33 @@
+{
+  "task_id": "94a51203-ddea-49b2-96f6-0c3f701d4c11",
+  "site": "unknown",
+  "goal": "[chat] comment nice",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "youtube_search",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "click",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "scroll",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "youtube_comment",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "scroll",
+  "timestamp": "2026-03-27T13:59:21.256Z",
+  "updated_at": "2026-03-27T13:59:21.271Z",
+  "memory_snapshot": {},
+  "errors": []
+}

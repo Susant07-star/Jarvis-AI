@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "click on use your paasskey",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:03:57.194Z"
+  },
+  "updatedAt": "2026-03-31T06:03:57.195Z",
+  "encrypted": false
+}

@@ -1,0 +1,23 @@
+{
+  "task_id": "5e62c658-fb29-4959-8be5-5ab15b33f791",
+  "site": "unknown",
+  "goal": "[chat] open youtube.com and search for cats",
+  "status": "in_progress",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    },
+    {
+      "action": "youtube_search",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-27T00:36:55.233Z",
+  "updated_at": "2026-03-27T00:36:55.239Z",
+  "memory_snapshot": {},
+  "errors": []
+}

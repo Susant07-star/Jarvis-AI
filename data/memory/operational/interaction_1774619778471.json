@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hyes",
+    "jarvisResponse": "It seems there was a bit of a miscue. You started to say something, but it got cut off. Could you please rephrase or complete your thought? Are you looking for something specific on YouTube, perhaps?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:56:18.471Z"
+  },
+  "updatedAt": "2026-03-27T13:56:18.471Z",
+  "encrypted": false
+}

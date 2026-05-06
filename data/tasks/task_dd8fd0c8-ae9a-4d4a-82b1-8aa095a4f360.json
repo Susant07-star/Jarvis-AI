@@ -1,0 +1,18 @@
+{
+  "task_id": "dd8fd0c8-ae9a-4d4a-82b1-8aa095a4f360",
+  "site": "unknown",
+  "goal": "[chat] open spotify website in new tab",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_tab",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_tab",
+  "timestamp": "2026-03-27T14:00:10.744Z",
+  "updated_at": "2026-03-27T14:00:10.757Z",
+  "memory_snapshot": {},
+  "errors": []
+}

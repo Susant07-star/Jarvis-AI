@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the balen-jay mahakaali video shown on the page",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 42
+      },
+      {
+        "action": "media_control",
+        "command": "play"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T04:24:53.629Z"
+  },
+  "updatedAt": "2026-03-27T04:24:53.629Z",
+  "encrypted": false
+}

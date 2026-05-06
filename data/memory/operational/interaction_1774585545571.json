@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open new tab and close this exitsing tab of youtube",
+    "jarvisResponse": "\n⚠️ I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed? (yes/no)",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T04:25:45.571Z"
+  },
+  "updatedAt": "2026-03-27T04:25:45.571Z",
+  "encrypted": false
+}

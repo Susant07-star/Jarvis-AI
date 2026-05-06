@@ -1,0 +1,18 @@
+{
+  "task_id": "26960eaf-5ddc-4418-9e83-8c2fa6678a5a",
+  "site": "unknown",
+  "goal": "[chat] skip ad",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-31T06:02:31.568Z",
+  "updated_at": "2026-03-31T06:02:31.568Z",
+  "memory_snapshot": {},
+  "errors": []
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "voice",
+    "userMessage": "Hey Mic Check Mic Check",
+    "jarvisResponse": "It seems like you're testing the audio, but since we are communicating through text, I'll respond instead. Everything appears to be in order here. What can I assist you with today?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T10:20:54.604Z"
+  },
+  "updatedAt": "2026-05-06T10:20:54.605Z",
+  "encrypted": false
+}

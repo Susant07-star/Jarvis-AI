@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube, search for dooron dooron song, like it, and subscribe to the channel",
+    "jarvisResponse": "\n⚠️ I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed? (yes/no)",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-26T12:21:07.230Z"
+  },
+  "updatedAt": "2026-03-26T12:21:07.230Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "e8cd9cfc-3e70-45a3-b36d-8cb43e3053ed",
+  "site": "unknown",
+  "goal": "[chat] open example.com",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "open_url",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "open_url",
+  "timestamp": "2026-03-26T12:17:57.347Z",
+  "updated_at": "2026-03-26T12:17:57.356Z",
+  "memory_snapshot": {},
+  "errors": []
+}

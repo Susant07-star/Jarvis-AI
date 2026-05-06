@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hey",
+    "jarvisResponse": "It seems you're done with the browser controls for now. How may I assist you further, or would you like to continue exploring YouTube or perhaps discuss something entirely different?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-25T06:55:30.538Z"
+  },
+  "updatedAt": "2026-03-25T06:55:30.538Z",
+  "encrypted": false
+}

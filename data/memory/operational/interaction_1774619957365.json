@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "comment nice",
+    "jarvisResponse": "\n⚠️ I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed? (yes/no)",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:59:17.365Z"
+  },
+  "updatedAt": "2026-03-27T13:59:17.365Z",
+  "encrypted": false
+}

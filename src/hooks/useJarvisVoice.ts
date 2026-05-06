@@ -85,20 +85,25 @@ export function useJarvisVoice() {
     }
   }, [stopSpeaking]);
 
-  /** Debounced: send speech_end after 1.2s of silence. */
-  const scheduleSpeechEnd = useCallback(() => {
+  /**
+   * Debounced: send speech_end after silence.
+   * fast=true  → 500ms  (used when SpeechRecognition says isFinal — utterance complete)
+   * fast=false → 1500ms (used for interim results — may still be speaking)
+   */
+  const scheduleSpeechEnd = useCallback((fast = false) => {
     if (lockedRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const delay = fast ? 500 : 1500;
     debounceRef.current = setTimeout(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN && speechStartSentRef.current) {
-        console.log('[Voice] Sending speech_end');
+        console.log(`[Voice] Sending speech_end (fast=${fast})`);
         wsRef.current.send(JSON.stringify({ type: 'speech_end' }));
         speechStartSentRef.current = false;
         lockedRef.current = true;   // LOCK — block all speech events until backend responds
         setIsProcessing(true);
       }
       debounceRef.current = null;
-    }, 2000);
+    }, delay);
   }, []);
 
   /** Cancel pending debounce (user is still talking). */
@@ -194,14 +199,18 @@ export function useJarvisVoice() {
           rec.onresult = (ev: any) => {
             if (lockedRef.current) return;
             let interim = '';
+            let hasFinal = false;
             for (let i = ev.resultIndex; i < ev.results.length; i++) {
               interim += ev.results[i][0].transcript;
+              if (ev.results[i].isFinal) hasFinal = true;
             }
             if (interim.trim()) {
               if (!speechStartSentRef.current) sendSpeechStart();
               setInterimTranscript(interim);
             }
-            scheduleSpeechEnd();
+            // isFinal=true means the browser is confident the utterance is complete.
+            // Trigger a short 500ms debounce instead of 1500ms to send quickly.
+            scheduleSpeechEnd(hasFinal);
           };
 
           rec.onerror = (ev: any) => {
@@ -254,6 +263,7 @@ export function useJarvisVoice() {
       worklet.connect(ctx.destination);
 
       setIsListening(true);
+      sendSpeechStart(); // CRITICAL FIX: Tell backend to start buffering audio immediately
     } catch (err: any) {
       console.error('[Voice] Mic error:', err);
       setError('Microphone access denied or unavailable.');

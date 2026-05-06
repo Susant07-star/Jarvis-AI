@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "dislike now",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 28
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-25T06:58:54.045Z"
+  },
+  "updatedAt": "2026-03-25T06:58:54.045Z",
+  "encrypted": false
+}

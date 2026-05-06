@@ -1,0 +1,21 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open new tab, close existing tab of youtube",
+    "jarvisResponse": "Confirmed task executed.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_tab",
+        "url": "https://www.google.com"
+      },
+      {
+        "action": "close_tab"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T04:26:33.805Z"
+  },
+  "updatedAt": "2026-03-27T04:26:33.805Z",
+  "encrypted": false
+}

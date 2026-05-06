@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Zoya - AI Voice Assistant",
+  "description": "A sassy, witty, and intelligent Nepali female AI voice assistant.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

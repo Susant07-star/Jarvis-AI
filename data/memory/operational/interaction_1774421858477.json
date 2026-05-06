@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open the song",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "click",
+        "jarvis_id": 20
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-25T06:57:38.477Z"
+  },
+  "updatedAt": "2026-03-25T06:57:38.477Z",
+  "encrypted": false
+}

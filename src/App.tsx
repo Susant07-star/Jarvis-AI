@@ -2,99 +2,106 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { VoiceVisualizer } from './components/jarvis/VoiceVisualizer';
 import { ChatWindow, Message } from './components/jarvis/ChatWindow';
 import { BrowserAgent } from './components/jarvis/BrowserAgent';
-import { useJarvisVoice } from './hooks/useJarvisVoice';
+import { useZoyaVoice } from './hooks/useZoyaVoice';
+import ZoyaAvatar from './components/jarvis/ZoyaAvatar';
 import { sendChatMessage } from './services/api';
 import { Activity, Cpu, Database, Wifi, Shield, ChevronRight, X } from 'lucide-react';
 import { tts } from './utils/tts';
+import { TimezoneClock } from './components/jarvis/TimezoneClock';
 
 type AppState = 'idle' | 'listening' | 'processing' | 'speaking';
 
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'init',
-      role: 'jarvis',
-      content: 'System initialized. J.A.R.V.I.S. online and awaiting your command, Sir.',
-      timestamp: new Date(),
-      source: 'system'
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [browserProbed, setBrowserProbed] = useState(false);
   const [appState, setAppState] = useState<AppState>('idle');
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const [currentJarvisId, setCurrentJarvisId] = useState<string | null>(null);
   const [showTaskPanel, setShowTaskPanel] = useState(false);
-  
-  const { isListening, isProcessing, isSpeaking, transcript, interimTranscript, llmResponse, startListening, stopListening, stopSpeaking, resetTranscript, hasRecognition, error } = useJarvisVoice();
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const zoya = useZoyaVoice();
+
+  // Sync messages from Zoya into ChatWindow
+  useEffect(() => {
+    const zoyaMsgs = zoya.messages.map(m => ({
+      id: m.id,
+      role: m.sender === "zoya" ? "jarvis" : "user",
+      content: m.text,
+      timestamp: new Date(),
+      source: "voice",
+      model: m.sender === "zoya" ? zoya.activeModel.replace("-native-audio-dialog", "").replace("-live-001", "") : undefined
+    } as Message));
+    
+    setMessages(prev => {
+      // Remove any existing voice messages to avoid duplicates on state refresh
+      const nonVoice = prev.filter(p => !p.id.startsWith("zoya-") && !p.id.startsWith("user-"));
+      return [...nonVoice, ...zoyaMsgs];
+    });
+  }, [zoya.messages, zoya.activeModel]);
 
   useEffect(() => {
-    if (isListening) {
-      setAppState('listening');
-    } else if (isSpeaking) {
-      setAppState('speaking');
-    } else if (isProcessing) {
-      setAppState('processing');
-    } else if (appState === 'listening' || appState === 'processing' || appState === 'speaking') {
-      setAppState('idle');
-    }
-  }, [isListening, isProcessing, isSpeaking]);
+    setAppState(zoya.appState as any);
+  }, [zoya.appState]);
 
+  // ── Startup browser state probe ──
   useEffect(() => {
-    if (interimTranscript) {
-      tts.stop();
-      stopSpeaking();
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    }
-  }, [interimTranscript, stopSpeaking]);
+    if (browserProbed) return;
+    setBrowserProbed(true);
 
-  // Voice transcript → message
-  useEffect(() => {
-    if (transcript && transcript !== '...' && transcript !== 'Processing audio...') {
-      const userId = crypto.randomUUID();
-      setMessages(prev => [...prev, {
-        id: userId,
-        role: 'user',
-        content: transcript,
-        timestamp: new Date(),
-        source: 'voice'
-      }]);
-      
-      const newJarvisId = crypto.randomUUID();
-      setCurrentJarvisId(newJarvisId);
-      setMessages(prev => [...prev, {
-        id: newJarvisId,
+    const probe = async () => {
+      // Base greeting always shows immediately
+      const baseMsg: Message = {
+        id: 'init',
         role: 'jarvis',
-        content: '',
+        content: 'System initialized. J.A.R.V.I.S. online and awaiting your command, Sir.',
         timestamp: new Date(),
-        source: 'voice'
-      }]);
-      
-      resetTranscript();
-    }
-  }, [transcript, resetTranscript]);
+        source: 'system'
+      };
 
-  // LLM response streaming
-  useEffect(() => {
-    if (currentJarvisId && llmResponse) {
-      setMessages(prev => prev.map(msg => 
-        msg.id === currentJarvisId ? { ...msg, content: llmResponse } : msg
-      ));
-    }
-  }, [llmResponse, currentJarvisId]);
+      try {
+        const res = await fetch('/api/browser-status');
+        const data = await res.json();
+
+        if (data.alive && data.tabs && data.tabs.length > 0) {
+          const tabLines = data.tabs
+            .map((t: { index: number; title: string; url: string; active: boolean }) =>
+              `  ${t.active ? '▶' : '○'} [Tab ${t.index + 1}] ${t.title || 'Untitled'} — ${t.url}`
+            )
+            .join('\n');
+
+          const contextMsg: Message = {
+            id: 'browser-context',
+            role: 'jarvis',
+            content: `I've detected an active browser session with ${data.tab_count} open tab${data.tab_count > 1 ? 's' : ''}:\n\n${tabLines}\n\nShall I continue with any of these, or do you have a new directive?`,
+            timestamp: new Date(),
+            source: 'system'
+          };
+          setMessages([baseMsg, contextMsg]);
+        } else {
+          setMessages([baseMsg]);
+        }
+      } catch {
+        // Python agent offline — just show base greeting
+        setMessages([baseMsg]);
+      }
+    };
+
+    probe();
+  }, [browserProbed]);
+  
+  // Remove old Jarvis voice hooks
+  const isListening = zoya.isSessionActive;
+  const isProcessing = zoya.appState === 'processing';
+  const isSpeaking = zoya.appState === 'speaking';
+  const startListening = zoya.startSession;
+  const stopListening = zoya.stopSession;
+  const hasRecognition = true;
+  const error = zoya.errorMessage;
 
   const handleSendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
     
+    // Stop any active tts
     tts.stop();
-    stopSpeaking();
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    const newController = new AbortController();
-    abortControllerRef.current = newController;
     
     const userMsg: Message = {
       id: crypto.randomUUID(),
@@ -118,56 +125,29 @@ export default function App() {
       }]);
 
       let accumulatedText = '';
-      let spokenText = '';
 
       const { reply, command, browser_commands } = await sendChatMessage(content, messages, (chunk) => {
-        setAppState('speaking');
         accumulatedText += chunk;
-        
         setMessages(prev => prev.map(msg => 
           msg.id === jarvisMsgId ? { ...msg, content: accumulatedText } : msg
         ));
-
-        const unprocessedText = accumulatedText.substring(spokenText.length);
-        const sentenceMatch = unprocessedText.match(/.*?[.!?]+(?=\s|$)/);
-        
-        if (sentenceMatch) {
-          const sentence = sentenceMatch[0];
-          spokenText += sentence;
-          tts.speak(sentence);
-        }
-      }, newController.signal);
+      });
 
       if (!accumulatedText && reply) {
         setMessages(prev => prev.map(msg => 
           msg.id === jarvisMsgId ? { ...msg, content: reply } : msg
         ));
         setAppState('speaking');
-        tts.speak(reply, () => {
-          setAppState(isListening ? 'listening' : 'idle');
-        });
-      } else if (!newController.signal.aborted) {
-        const remainingText = accumulatedText.substring(spokenText.length).trim();
-        if (remainingText) {
-          tts.speak(remainingText, () => {
-            setAppState(isListening ? 'listening' : 'idle');
-          });
-        } else {
-          tts.speak('', () => {
-            setAppState(isListening ? 'listening' : 'idle');
-          });
-        }
+        tts.speak(reply, () => setAppState('idle'));
+      } else {
+        setAppState('idle');
       }
 
-      if (browser_commands && !newController.signal.aborted) {
+      if (browser_commands) {
         window.dispatchEvent(new CustomEvent('jarvis_browser_commands', { detail: browser_commands }));
       }
       
     } catch (err: any) {
-      if (err.name === 'AbortError' || newController.signal.aborted) {
-        setAppState(isListening ? 'listening' : 'idle');
-        return;
-      }
       console.error(err);
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
@@ -176,9 +156,9 @@ export default function App() {
         timestamp: new Date(),
         source: 'system'
       }]);
-      setAppState(isListening ? 'listening' : 'idle');
+      setAppState('idle');
     }
-  }, [messages, isListening, stopSpeaking]);
+  }, [messages]);
 
   const statusColor = appState === 'speaking' ? 'text-emerald-400' : appState === 'processing' ? 'text-indigo-400' : appState === 'listening' ? 'text-cyan-400' : 'text-cyan-700';
   const statusDot = appState === 'idle' ? 'bg-cyan-800' : appState === 'listening' ? 'bg-cyan-400 animate-pulse' : appState === 'processing' ? 'bg-indigo-400 animate-pulse' : 'bg-emerald-400 animate-pulse';
@@ -231,40 +211,44 @@ export default function App() {
           >
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>
+          
+          <div className="w-px h-6 bg-cyan-900/50 mx-1"></div>
+          
+          {/* Timezone Clock */}
+          <TimezoneClock timezone={timezone} onTimezoneChange={setTimezone} />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex gap-4 min-h-0">
+      <main className="flex-1 flex gap-4 min-h-0 relative">
         
-        {/* Left: Voice */}
+        {/* Left: Voice (Gemini Live) */}
         <div className="hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0">
+          <div className="mb-8 scale-110">
+            <ZoyaAvatar state={appState} emotion={zoya.emotion} />
+          </div>
+          
           <VoiceVisualizer 
             appState={appState} 
-            onToggle={isListening ? stopListening : startListening} 
+            onToggle={isListening ? stopListening : () => startListening(timezone)} 
             disabled={!hasRecognition}
           />
           
-          <div className="text-center mt-16 max-w-xs">
+          <div className="text-center mt-12 max-w-xs">
             <div className="h-6">
-              {appState === 'listening' && !interimTranscript && <span className="text-cyan-400 font-mono text-sm animate-pulse">Awaiting Input...</span>}
-              {(appState === 'processing' || (appState === 'listening' && interimTranscript)) && <span className="text-indigo-400 font-mono text-sm animate-pulse">Transcribing...</span>}
+              {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse">Awaiting Input...</span>}
+              {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse">Thinking...</span>}
               {appState === 'speaking' && <span className="text-emerald-400 font-mono text-sm">Speaking...</span>}
               {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-sm">Standby</span>}
             </div>
 
-            {!hasRecognition && (
-              <p className="text-red-400 text-xs font-mono mt-4 border border-red-500/30 bg-red-950/30 p-2 rounded">
-                Speech recognition offline.
-              </p>
-            )}
             {error && (
-              <div className="text-red-400 text-xs font-mono mt-3 border border-red-500/30 bg-red-950/30 p-2 rounded">
+              <div className="text-red-400 text-[10px] font-mono mt-3 border border-red-500/30 bg-red-950/30 p-2 rounded">
                 <span className="font-bold">ERR:</span> {error}
               </div>
             )}
             <p className="text-cyan-700/50 text-[10px] font-mono mt-6 uppercase tracking-widest">
-              Click core to initialize voice
+              Gemini Live Pipeline Active
             </p>
           </div>
         </div>
@@ -274,8 +258,8 @@ export default function App() {
           <ChatWindow 
             messages={messages} 
             onSendMessage={handleSendMessage} 
-            isProcessing={appState === 'processing'}
-            transcript={interimTranscript}
+            isProcessing={isProcessing}
+            transcript={''} 
             onVoiceToggle={isListening ? stopListening : startListening}
             isListening={isListening}
             hasRecognition={hasRecognition}

@@ -99,10 +99,12 @@ export async function executePlan(plan: BrowserAction[], site = 'unknown', goal 
     const stepNames = plan.map(p => p.action);
     const task = tracker.createTask(site, goal, stepNames);
     
-    for (let i = 0; i < plan.length; i++) {
+    console.log(`[Executor] Starting plan with ${plan.length} steps for goal: ${goal}`);
+    
+    for (const [i, action] of plan.entries()) {
         // Skip already completed steps (resume support)
         if (tracker.isStepCompleted(task.task_id, i)) {
-            console.log(`Step ${i + 1} (${plan[i].action}): Already completed, skipping.`);
+            console.log(`Step ${i + 1} (${action.action}): Already completed, skipping.`);
             continue;
         }
 
@@ -111,16 +113,17 @@ export async function executePlan(plan: BrowserAction[], site = 'unknown', goal 
 
         while (!success && attempts < 3) {
             try {
-                console.log(`Step ${i + 1} executing... (${plan[i].action})${attempts > 0 ? ` [Retry ${attempts}/2]` : ''}`);
-                await runAction(plan[i]);
+                console.log(`Step ${i + 1} executing... (${action.action})${attempts > 0 ? ` [Retry ${attempts}/2]` : ''}`);
+                await runAction(action);
                 
                 tracker.updateStep(task.task_id, i, 'completed');
                 memory.saveMemory(`${task.task_id}_step_${i}`, {
-                    action: plan[i],
+                    action,
                     status: 'completed',
                     timestamp: new Date().toISOString()
                 });
                 success = true;
+                console.log(`Step ${i + 1} completed successfully.`);
             } catch (e: any) {
                 attempts++;
                 const pageUrl = getContext().pages().slice(-1)[0]?.url() || 'unknown';
@@ -129,7 +132,7 @@ export async function executePlan(plan: BrowserAction[], site = 'unknown', goal 
                     timestamp: new Date().toISOString(),
                     taskId: task.task_id,
                     pageUrl,
-                    actionAttempted: plan[i].action,
+                    actionAttempted: action.action,
                     errorMessage: e.message,
                     memorySnapshot: memory.getMemory(`${task.task_id}_step_${i}`)
                 });
@@ -138,14 +141,14 @@ export async function executePlan(plan: BrowserAction[], site = 'unknown', goal 
                     const canRetry = tracker.markStepRetry(task.task_id, i);
                     if (!canRetry) {
                         tracker.updateStep(task.task_id, i, 'failed', e.message);
-                        alertDeveloper(task.task_id, `Persistent failure at step ${i + 1} (${plan[i].action}): ${e.message}`);
+                        alertDeveloper(task.task_id, `Persistent failure at step ${i + 1} (${action.action}): ${e.message}`);
                         break;
                     }
                     console.log(`Action failed: ${e.message}. Retrying...`);
                     await delay(2000);
                 } else {
                     tracker.updateStep(task.task_id, i, 'failed', e.message);
-                    alertDeveloper(task.task_id, `Persistent failure at step ${i + 1} (${plan[i].action}): ${e.message}`);
+                    alertDeveloper(task.task_id, `Persistent failure at step ${i + 1} (${action.action}): ${e.message}`);
                 }
             }
         }

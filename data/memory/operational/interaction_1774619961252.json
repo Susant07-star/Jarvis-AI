@@ -1,0 +1,30 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "comment nice",
+    "jarvisResponse": "Confirmed task executed.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "youtube_search",
+        "query": "comment nice"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 26
+      },
+      {
+        "action": "scroll",
+        "direction": "down"
+      },
+      {
+        "action": "youtube_comment",
+        "text": "nice"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:59:21.252Z"
+  },
+  "updatedAt": "2026-03-27T13:59:21.252Z",
+  "encrypted": false
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "d9477bc7-9aab-4200-b1c9-76d4faafd7ab",
+  "site": "unknown",
+  "goal": "[chat] click on use your paasskey",
+  "status": "pending",
+  "steps": [
+    {
+      "action": "click",
+      "status": "pending",
+      "retries": 0
+    }
+  ],
+  "last_step": "",
+  "timestamp": "2026-03-31T06:03:57.206Z",
+  "updated_at": "2026-03-31T06:03:57.207Z",
+  "memory_snapshot": {},
+  "errors": []
+}

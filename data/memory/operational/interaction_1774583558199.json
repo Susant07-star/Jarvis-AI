@@ -1,0 +1,18 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search meditation music",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "youtube_search",
+        "query": "meditation music"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T03:52:38.199Z"
+  },
+  "updatedAt": "2026-03-27T03:52:38.199Z",
+  "encrypted": false
+}

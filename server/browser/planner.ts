@@ -1,28 +1,28 @@
-import { getGroqClient } from '../llm';
+import { callPlannerWithCascade } from '../llmRouter';
 import { BrowserAction, memory, tracker } from './executor';
 import { logger } from '../logger';
 
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
-// Enforces JSON mode, validates output, retries ONCE on parse failure, and logs
-// the raw planner response to debug.log for verification.
+// Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
+// Validates JSON output, retries ONCE on parse failure, logs raw output.
 async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; tokens: number }> {
-    const groq = getGroqClient();
     const MAX_ATTEMPTS = 2;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const response = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            messages: [{ role: "system", content: systemPrompt }],
-            temperature: 0,
-            // HARD API ENFORCEMENT: model is forced to only emit valid JSON tokens
-            response_format: { type: "json_object" }
-        });
+        let rawOutput = '';
+        let tokens = 0;
 
-        const rawOutput = response.choices[0]?.message?.content || '';
-        const tokens = response.usage?.total_tokens || 0;
+        try {
+            const result = await callPlannerWithCascade(systemPrompt);
+            rawOutput = result.content;
+            tokens = result.tokens;
 
-        // Log raw output to debug.log for every attempt
-        logger.debug("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Raw output: ${rawOutput}`);
+            logger.debug("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Provider: ${result.provider}/${result.model} | Raw: ${rawOutput}`);
+        } catch (providerErr: any) {
+            logger.error("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] All providers failed: ${providerErr.message}`);
+            if (attempt === MAX_ATTEMPTS) throw providerErr;
+            continue;
+        }
 
         // Validation layer: never trust the model blindly
         try {
@@ -48,6 +48,7 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
 
     throw new Error('Planner: unexpected exit from retry loop');
 }
+
 
 // ── createPlan (no DOM context — used before page is analyzed) ────────────────
 
@@ -134,6 +135,7 @@ Available actions:
 - "type_secure" (requires "jarvis_id", "text")
 - "scroll" (requires "direction": "up" or "down", optional "amount")
 - "youtube_search" (requires "query")
+- "youtube_click_video"
 - "youtube_like"
 - "youtube_subscribe"
 - "youtube_comment" (requires "text")
@@ -152,7 +154,7 @@ INCORRECT: { "action": "media_control", "action": "play" }  <-- JSON KEY COLLISI
     if (totalLength > MAX_CHARS) {
         logger.warn("Planner", `Prompt exceeds length hint (${totalLength} > ${MAX_CHARS}). Trimming non-essential docs.`);
         // Compact action list
-        promptDocs = `Available actions (compact): open_url, open_tab, switch_tab, close_tab, close_browser, go_back, click, type, type_secure, scroll, youtube_search, youtube_like, youtube_subscribe, youtube_comment, serp_api_search, media_control.`;
+        promptDocs = `Available actions (compact): open_url, open_tab, switch_tab, close_tab, close_browser, go_back, click, type, type_secure, scroll, youtube_search, youtube_click_video, youtube_like, youtube_subscribe, youtube_comment, serp_api_search, media_control.`;
         
         let remainingCharQuota = MAX_CHARS - goal.length - memoryContext.length - promptDocs.length - 1000;
         if (domString.length > remainingCharQuota && remainingCharQuota > 0) {
@@ -182,9 +184,17 @@ ${memoryContext}
 Available DOM Elements (current viewport):
 ${domString}
 ${promptDocs}
-NAVIGATION RULE: If user asks to open a website, ALWAYS use "open_url" or "open_tab". NEVER type into the current page's search bar for navigation.
+NAVIGATION RULE: If user says "open [website]" or "go to [website]", ALWAYS use:
+{ "action": "open_url", "url": "https://www.[site].com" }
+Explicit mapping:
+youtube -> https://www.youtube.com
+google -> https://www.google.com
+
+DO NOT interact with existing DOM for navigation tasks. NEVER type into the current page's search bar for navigation.
 
 ANTI-HALLUCINATION RULE: If the user asks to click something NOT in the DOM elements list, do NOT guess a jarvis_id. Use "youtube_search" or "open_url" to find it first.
+
+YOUTUBE SEARCH RULE: After using "youtube_search", you MUST click a video before using "media_control". Do NOT use "media_control" immediately after "youtube_search" without clicking first.
 
 SECURITY RULE: Set "requires_confirmation": true if: youtube_comment, youtube_subscribe, youtube_like, type_secure are used, OR total steps > 3.
 

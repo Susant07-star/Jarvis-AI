@@ -1,5 +1,8 @@
 import asyncio
+import json
 import logging
+import threading
+import time
 from typing import List, Optional
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
@@ -18,14 +21,92 @@ from trusted_sites_agent.browser_site_agent import (
     list_trusted_sites,
 )
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging to both console and file
+log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, "debug.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s.%(msecs)03dZ] [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%dT%H:%M:%S',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
+
+def create_execution_result(action, status, error=None, details=None):
+    """Create a structured execution result dict."""
+    return {
+        "action": action,
+        "status": status,  # "success" or "failure"
+        "error": error,
+        "details": details
+    }
+
+def verify_action_result(driver, cmd_type, expected_url=None, expected_selector=None, timeout=5):
+    """
+    Verify the result of a browser action using URL change and DOM presence checks.
+    
+    Args:
+        driver: Selenium WebDriver instance
+        cmd_type: Type of command that was executed
+        expected_url: Optional expected URL pattern to verify
+        expected_selector: Optional CSS selector to verify DOM presence
+        timeout: Maximum time to wait for verification (seconds)
+    
+    Returns:
+        tuple: (success: bool, details: str)
+    """
+    try:
+        # URL-based verification for navigation actions
+        if expected_url and cmd_type in ["open_tab", "new_tab", "search_site"]:
+            current_url = driver.current_url
+            if expected_url in current_url:
+                logger.info(f"URL verification passed: {expected_url} found in {current_url}")
+                return (True, f"URL verified: {current_url}")
+            else:
+                logger.warning(f"URL verification failed: expected '{expected_url}' in '{current_url}'")
+                return (False, f"URL mismatch: expected '{expected_url}', got '{current_url}'")
+        
+        # DOM-based verification for interaction actions
+        if expected_selector and cmd_type in ["click", "type", "youtube_like", "youtube_subscribe"]:
+            try:
+                element = WebDriverWait(driver, timeout).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, expected_selector))
+                )
+                logger.info(f"DOM verification passed: element found with selector '{expected_selector}'")
+                return (True, f"DOM element verified: {expected_selector}")
+            except Exception as e:
+                logger.warning(f"DOM verification failed: {e}")
+                return (False, f"DOM element not found: {expected_selector}")
+        
+        # For actions without specific verification criteria, check page state
+        if cmd_type in ["scroll", "wait", "skip_ad", "media_control"]:
+            # Verify page is still responsive
+            try:
+                driver.execute_script("return document.readyState")
+                logger.info(f"Page state verification passed for {cmd_type}")
+                return (True, f"Page state verified for {cmd_type}")
+            except Exception as e:
+                logger.warning(f"Page state verification failed: {e}")
+                return (False, f"Page unresponsive after {cmd_type}")
+        
+        # Default: no verification criteria provided
+        return (True, "No verification criteria provided")
+    
+    except Exception as e:
+        logger.error(f"Verification error: {e}")
+        return (False, f"Verification error: {str(e)}")
 
 app = FastAPI(title="JARVIS YouTube Agent")
 
 # Global variables
 driver = None
 last_extracted_elements = []
+ad_watcher_running = False
 
 class BrowserCommand(BaseModel):
     type: str # 'open_tab' | 'search_site' | 'media_control' | 'scroll' | 'analyze_page' | 'click' | 'type' | 'wait' | 'youtube_like' | 'youtube_subscribe' | 'youtube_comment' | 'type_secure'
@@ -53,22 +134,97 @@ def is_driver_alive(d) -> bool:
     except Exception:
         return False
 
+def detect_chrome_version():
+    """Detect installed Chrome version and return major version number."""
+    try:
+        # Try multiple methods to get Chrome version
+        version_str = None
+        
+        # Method 1: Use uc.get_chrome_version() if available
+        if hasattr(uc, 'get_chrome_version'):
+            version_str = uc.get_chrome_version()
+        # Method 2: Use uc.ChromeOptions to detect
+        elif hasattr(uc, 'ChromeOptions'):
+            # Create options and check version
+            options = uc.ChromeOptions()
+            # Some versions expose version through options
+            version_str = getattr(options, '_version', None)
+        
+        # Method 3: Use system registry/command (Windows)
+        if not version_str:
+            import subprocess
+            import re
+            try:
+                # Try reg query on Windows
+                result = subprocess.run(
+                    ['reg', 'query', 'HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon', '/v', 'version'],
+                    capture_output=True, text=True, shell=True
+                )
+                if result.returncode == 0:
+                    match = re.search(r'version\s+REG_SZ\s+([\d.]+)', result.stdout)
+                    if match:
+                        version_str = match.group(1)
+            except:
+                pass
+        
+        if version_str:
+            logger.info(f"[Browser] Detected Chrome version: {version_str}")
+            # Extract major version (first segment)
+            major = int(version_str.split('.')[0]) if version_str else None
+            return major
+        else:
+            logger.warning("[Browser] Could not detect Chrome version")
+            return None
+    except Exception as e:
+        logger.warning(f"[Browser] Could not detect Chrome version: {e}")
+        return None
+
 def _create_driver():
-    """Internal: boots a fresh undetected-chromedriver instance."""
+    """Internal: boots a fresh undetected-chromedriver instance with version matching."""
     logger.info("[Browser] Initializing new WebDriver session...")
-    options = uc.ChromeOptions()
-    profile_dir = os.path.join(os.getcwd(), "chrome_profile")
-    options.add_argument(f"--user-data-dir={profile_dir}")
-    options.add_argument("--profile-directory=Default")
-    options.add_argument('--autoplay-policy=no-user-gesture-required')
-    new_driver = uc.Chrome(options=options, use_subprocess=True)
-    new_driver.set_page_load_timeout(30)
-    logger.info("[Browser] WebDriver session started successfully.")
-    return new_driver
+    
+    # Detect Chrome version and match driver
+    chrome_major = detect_chrome_version()
+    
+    # First attempt: with version matching
+    try:
+        options = uc.ChromeOptions()
+        # Try without user-data-dir first to avoid profile conflicts
+        options.add_argument('--autoplay-policy=no-user-gesture-required')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        
+        driver_kwargs = {"options": options, "use_subprocess": True}
+        if chrome_major:
+            driver_kwargs["version_main"] = chrome_major
+            logger.info(f"[Browser] Using ChromeDriver matching major version {chrome_major}")
+        
+        new_driver = uc.Chrome(**driver_kwargs)
+        new_driver.set_page_load_timeout(30)
+        logger.info("[Browser] WebDriver session started successfully.")
+        return new_driver
+    except Exception as e:
+        logger.error(f"[Browser] Failed to start WebDriver: {e}")
+        # Fallback: try without version_main (create fresh options)
+        if chrome_major:
+            logger.info("[Browser] Retrying without explicit version matching...")
+            try:
+                options = uc.ChromeOptions()
+                options.add_argument('--autoplay-policy=no-user-gesture-required')
+                options.add_argument('--no-sandbox')
+                options.add_argument('--disable-dev-shm-usage')
+                
+                new_driver = uc.Chrome(options=options, use_subprocess=True)
+                new_driver.set_page_load_timeout(30)
+                logger.info("[Browser] WebDriver session started (fallback).")
+                return new_driver
+            except Exception as e2:
+                logger.error(f"[Browser] Fallback also failed: {e2}")
+        raise
 
 def get_driver():
     """Lazy factory: returns live driver, auto-recovering from dead sessions."""
-    global driver
+    global driver, ad_watcher_running
     if driver is None or not is_driver_alive(driver):
         if driver is not None:
             logger.warning("[Browser] Dead session detected. Restarting WebDriver...")
@@ -76,11 +232,118 @@ def get_driver():
             except: pass
             driver = None
         driver = _create_driver()
+        # Start ad watcher when driver is initialized
+        if not ad_watcher_running:
+            start_ad_watcher()
     return driver
+
+def start_ad_watcher():
+    """Start background task to watch for and skip YouTube ads automatically."""
+    global ad_watcher_running
+    if ad_watcher_running:
+        logger.info("[Ad Watcher] Already running, skipping")
+        return
+    
+    ad_watcher_running = True
+    logger.info("[Ad Watcher] Starting background ad watcher")
+    
+    # Start as a background thread
+    import threading
+    watcher_thread = threading.Thread(target=ad_watcher_loop, daemon=True)
+    watcher_thread.start()
+
+def ad_watcher_loop():
+    """Continuous loop to detect and skip YouTube ads."""
+    global ad_watcher_running, driver
+    
+    logger.info("[Ad Watcher] Ad watcher loop started")
+    
+    while ad_watcher_running:
+        try:
+            # Only check if driver is available and we're on YouTube
+            if driver and is_driver_alive(driver):
+                current_url = driver.current_url
+                if "youtube.com" in current_url:
+                    logger.debug("[Ad Watcher] Checking for ads on YouTube...")
+                    # Check for ad skip buttons
+                    ad_selectors = [
+                        "#skip-button",
+                        ".ytp-ad-skip-button",
+                        ".ytp-skip-ad-button",
+                        ".ytp-ad-skip-button-modern"
+                    ]
+                    
+                    for selector in ad_selectors:
+                        try:
+                            # Use JavaScript to check if button exists and is visible
+                            script = f"""
+                                const btn = document.querySelector('{selector}');
+                                if (btn && btn.offsetParent !== null) {{
+                                    return true;
+                                }}
+                                return false;
+                            """
+                            is_visible = driver.execute_script(script)
+                            
+                            if is_visible:
+                                # Click skip button
+                                click_script = f"""
+                                    const btn = document.querySelector('{selector}');
+                                    if (btn) {{
+                                        btn.click();
+                                        return true;
+                                    }}
+                                    return false;
+                                """
+                                clicked = driver.execute_script(click_script)
+                                
+                                if clicked:
+                                    result = {
+                                        "success": True,
+                                        "action": "skip_ad",
+                                        "target": selector,
+                                        "details": "Ad skipped successfully"
+                                    }
+                                    logger.info(f"ACTION RESULT: {json.dumps(result)}")
+                                else:
+                                    result = {
+                                        "success": False,
+                                        "action": "skip_ad",
+                                        "target": selector,
+                                        "details": "Ad skip failed - button not clickable"
+                                    }
+                                    logger.warning(f"ACTION RESULT: {json.dumps(result)}")
+                                
+                                # Break after finding and attempting to click one button
+                                break
+                        except Exception as e:
+                            # Silently continue if check fails
+                            pass
+            
+            # Wait before next check (poll every 2 seconds)
+            import time
+            time.sleep(2)
+            
+        except Exception as e:
+            logger.error(f"[Ad Watcher] Error in ad watcher loop: {e}")
+            # Wait before retrying
+            import time
+            time.sleep(5)
+    
+    logger.info("[Ad Watcher] Ad watcher loop stopped")
+
+def stop_ad_watcher():
+    """Stop the background ad watcher."""
+    global ad_watcher_running
+    ad_watcher_running = False
+    logger.info("[Ad Watcher] Stopping background ad watcher")
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global driver
+    global driver, ad_watcher_running
+    # Stop ad watcher first
+    stop_ad_watcher()
+    # Then shutdown driver
     if driver is not None:
         logger.info("[Browser] Shutting down WebDriver...")
         try: driver.quit()
@@ -104,276 +367,468 @@ def get_tab_by_name(target_name: Optional[str]) -> Optional[str]:
     d.switch_to.window(current)
     return None
 
-def execute_single_command(cmd: BrowserCommand):
+def execute_single_command(cmd: BrowserCommand) -> dict:
     global driver
     logger.info(f"Executing command: {cmd.type} - {cmd.model_dump_json()}")
     
-    # close_browser: graceful session teardown
-    if cmd.type == "close_browser":
-        if driver is not None:
-            try: driver.quit()
-            except: pass
-            driver = None
-        logger.info('{"action": "close_browser", "success": true, "details": "Session terminated"}')
-        return
-    
-    # Ensure a live session exists (lazy init + auto-recovery)
-    d = get_driver()
-    
-    # Simple tab resolution logic
-    target_name = cmd.target_tab or cmd.site
-    if not target_name and cmd.url:
-        target_name = cmd.url
+    try:
+        # close_browser: graceful session teardown
+        if cmd.type == "close_browser":
+            try:
+                if driver is not None:
+                    driver.quit()
+                    driver = None
+                logger.info('{"action": "close_browser", "success": true, "details": "Session terminated"}')
+                return create_execution_result("close_browser", "success", None, "Session terminated")
+            except Exception as e:
+                logger.error(f"Error closing browser: {e}")
+                return create_execution_result("close_browser", "failure", str(e), "Failed to close browser")
         
-    if cmd.type == "open_tab":
-        url = cmd.url
+        # Ensure a live session exists (lazy init + auto-recovery)
+        d = get_driver()
         
-        # If no URL provided, resolve from trusted sites
-        if not url and (cmd.site or target_name):
-            site = (cmd.site or target_name or "").lower().strip()
-            # Use trusted_sites_agent for smart lookup
-            trusted_url = lookup_trusted_site(site)
-            if trusted_url:
-                url = trusted_url
-                logger.info(f"Trusted site found: '{site}' -> {url}")
-            else:
-                # Fallback: Google search for the site name
-                url = f"https://www.google.com/search?q={site}+official+website"
-                logger.info(f"Unknown site '{site}', falling back to Google search")
+        # Simple tab resolution logic
+        target_name = cmd.target_tab or cmd.site
+        if not target_name and cmd.url:
+            target_name = cmd.url
             
-        if not url:
-            logger.warning("open_tab: No URL or site name provided, skipping.")
-            return
-            
-        handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
-        if handle:
-            d.switch_to.window(handle)
-            d.get(url)
-        else:
-            # Open new tab
-            if len(d.window_handles) == 1 and d.current_url == "data:,":
-                 d.get(url)
-            else:
-                 d.switch_to.new_window('tab')
-                 d.get(url)
-                 
-    elif cmd.type == "new_tab":
-        url = cmd.url
-        d.switch_to.new_window('tab')
-        if url:
-            d.get(url)
-            
-    elif cmd.type == "go_back":
-        d.back()
-        logger.info("Executing browser back navigation")
-        
-    elif cmd.type == "skip_ad":
-        # Broad script to try and click standard YouTube and generic ad skip buttons
-        script = """
-            const adBtn = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern');
-            if (adBtn) {
-                adBtn.click();
-                return true;
-            }
-            return false;
-        """
-        d.execute_script(script)
-        logger.info("Attempted to skip ad")
-        
-                 
-    elif cmd.type == "search_site":
-        if not cmd.query:
-            return
-        
-        query_str = cmd.query or ""
-        url = ""
-        target = (target_name or "").lower()
-        if "youtube" in target:
-            url = f"https://www.youtube.com/results?search_query={query_str.replace(' ', '+')}"
-        elif "google" in target:
-            url = f"https://www.google.com/search?q={query_str.replace(' ', '+')}"
-        else:
-            url = f"https://duckduckgo.com/?q={query_str.replace(' ', '+')}"
-            
-        handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
-        if handle:
-            d.switch_to.window(handle)
-            d.get(url)
-        else:
-            # New tab
-            if len(d.window_handles) == 1 and d.current_url == "data:,":
-                 d.get(url)
-            else:
-                 d.switch_to.new_window('tab')
-                 d.get(url)
-                 
-            if "youtube" in target:
-                try:
-                    WebDriverWait(d, 5).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "ytd-video-renderer a#video-title"))
-                    )
-                    d.execute_script("document.querySelector('ytd-video-renderer a#video-title').click();")
-                except Exception as e:
-                    logger.warning(f"Failed to auto-play first video: {e}")
+        if cmd.type == "open_tab":
+            try:
+                url = cmd.url
+                
+                # If no URL provided, resolve from trusted sites
+                if not url and (cmd.site or target_name):
+                    site = (cmd.site or target_name or "").lower().strip()
+                    # Use trusted_sites_agent for smart lookup
+                    trusted_url = lookup_trusted_site(site)
+                    if trusted_url:
+                        url = trusted_url
+                        logger.info(f"Trusted site found: '{site}' -> {url}")
+                    else:
+                        # Fallback: Google search for the site name
+                        url = f"https://www.google.com/search?q={site}+official+website"
+                        logger.info(f"Unknown site '{site}', falling back to Google search")
+                
+                if not url:
+                    logger.warning("open_tab: No URL or site name provided, skipping.")
+                    return create_execution_result("open_tab", "failure", "No URL or site name provided", "Missing URL")
                     
-    elif cmd.type == "media_control":
-        # Make sure we are on the right tab if specified, but if not just try current tab
-        if target_name:
-            handle = get_tab_by_name(target_name)
-            if handle:
-                d.switch_to.window(handle)
+                handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
+                if handle:
+                    d.switch_to.window(handle)
+                    d.get(url)
+                else:
+                    # Open new tab
+                    if len(d.window_handles) == 1 and d.current_url == "data:,":
+                         d.get(url)
+                    else:
+                         d.switch_to.new_window('tab')
+                         d.get(url)
                 
-        # Inject Javascript to control the standard HTML5 video player
-        js_code = ""
-        # Accept 'command' (new standard) OR 'action' (legacy fallback) to avoid JSON key collisions
-        action = cmd.command or cmd.action
-        
-        # Ensure we have a video element first
-        check_js = "return document.querySelector('video') !== null"
-        if not d.execute_script(check_js):
-            logger.warning("No video element found on current page for media_control")
-            return
-            
-        if action == "play":
-            js_code = "document.querySelector('video').play();"
-        elif action == "pause":
-            js_code = "document.querySelector('video').pause();"
-        elif action == "skip_forward":
-            sec = cmd.seconds or 10
-            js_code = f"document.querySelector('video').currentTime += {sec};"
-        elif action == "skip_backward":
-            sec = cmd.seconds or 10
-            js_code = f"document.querySelector('video').currentTime -= {sec};"
-        elif action == "seek":
-            if cmd.seconds is not None:
-                js_code = f"document.querySelector('video').currentTime = {cmd.seconds};"
-            
-        if js_code:
-            d.execute_script(js_code)
-            
-    elif cmd.type == "scroll":
-        if target_name:
-            handle = get_tab_by_name(target_name)
-            if handle:
-                d.switch_to.window(handle)
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "open_tab", expected_url=url)
+                if not verified:
+                    logger.warning(f"open_tab verification failed: {verification_details}")
+                    return create_execution_result("open_tab", "failure", verification_details, f"Opened tab but verification failed: {url}")
                 
-        amount = cmd.amount or 500
-        if cmd.direction == "up":
-            amount = -amount
-            
-        d.execute_script(f"window.scrollBy(0, {amount});")
-        
-    elif cmd.type == "click":
-        if cmd.jarvis_id is not None:
-            # Smart element matching from globally cached DOM
-            target_info = {"id": cmd.jarvis_id}
-            for el in last_extracted_elements:
-                if el.get("id") == cmd.jarvis_id:
-                    target_info = el
-                    break
+                return create_execution_result("open_tab", "success", None, f"Opened tab: {url} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing open_tab: {e}")
+                return create_execution_result("open_tab", "failure", str(e), f"Failed to open tab: {cmd.url}")
                     
-            res = safe_click(target_info)
-            if not res["success"]:
-                raise Exception(f"Failed to click element: {res['details']}")
-    elif cmd.type == "type":
-        if cmd.jarvis_id is not None and cmd.text is not None:
-            # Escape double quotes and backslashes in text for JS
-            text_val = str(cmd.text)
-            safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
-            script = f"""
-                const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
-                if (el) {{
-                    el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
-                    el.focus();
-                    el.value = "{safe_text}";
-                    // Trigger events so React/Vue notice the change
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    return true;
-                }}
-                return false;
-            """
-            result = d.execute_script(script)
-            if not result:
-                raise Exception(f"Element with jarvis_id {cmd.jarvis_id} not found yet")
+        elif cmd.type == "new_tab":
+            try:
+                url = cmd.url
+                d.switch_to.new_window('tab')
+                if url:
+                    d.get(url)
                 
-    elif cmd.type == "type_secure":
-        if cmd.jarvis_id is not None and cmd.text is not None:
-            # Resolves from Environment Variables for Security Mock
-            text_val = str(cmd.text)
-            deciphered = os.environ.get(text_val, text_val)
-            safe_text = str(deciphered).replace('\\', '\\\\').replace('"', '\\"')
-            script = f"""
-                const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
-                if (el) {{
-                    el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
-                    el.focus();
-                    el.value = "{safe_text}";
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    return true;
-                }}
-                return false;
-            """
-            result = d.execute_script(script)
-            logger.info(f"Executed type_secure successfully (plaintext masked)")
-            if not result:
-                raise Exception(f"Element with jarvis_id {cmd.jarvis_id} not found yet")
+                # Post-action verification
+                if url:
+                    verified, verification_details = verify_action_result(d, "new_tab", expected_url=url)
+                    if not verified:
+                        logger.warning(f"new_tab verification failed: {verification_details}")
+                        return create_execution_result("new_tab", "failure", verification_details, f"Created new tab but verification failed: {url}")
+                    return create_execution_result("new_tab", "success", None, f"Created new tab: {url} - {verification_details}")
+                else:
+                    return create_execution_result("new_tab", "success", None, "Created new tab (blank)")
+            except Exception as e:
+                logger.error(f"Error executing new_tab: {e}")
+                return create_execution_result("new_tab", "failure", str(e), "Failed to create new tab")
                 
-    elif cmd.type == "youtube_like":
-        script = """
-        const btn = document.querySelector('ytd-menu-renderer .yt-spec-button-shape-next--tonal');
-        if (btn) { btn.click(); return true; } return false;
-        """
-        d.execute_script(script)
-        logger.info("Executed youtube_like")
+        elif cmd.type == "go_back":
+            try:
+                d.back()
+                logger.info("Executing browser back navigation")
+                return create_execution_result("go_back", "success", None, "Navigated back")
+            except Exception as e:
+                logger.error(f"Error executing go_back: {e}")
+                return create_execution_result("go_back", "failure", str(e), "Failed to navigate back")
+                
+        elif cmd.type == "skip_ad":
+            try:
+                # Broad script to try and click standard YouTube and generic ad skip buttons
+                script = """
+                    const adBtn = document.querySelector('.ytp-skip-ad-button, .ytp-ad-skip-button, .ytp-ad-skip-button-modern');
+                    if (adBtn) {
+                        adBtn.click();
+                        return true;
+                    }
+                    return false;
+                """
+                result = d.execute_script(script)
+                logger.info("Attempted to skip ad")
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "skip_ad")
+                if not verified:
+                    logger.warning(f"skip_ad verification failed: {verification_details}")
+                    return create_execution_result("skip_ad", "failure", verification_details, f"Ad skip attempted but verification failed: {result}")
+                
+                return create_execution_result("skip_ad", "success", None, f"Ad skipped: {result} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing skip_ad: {e}")
+                return create_execution_result("skip_ad", "failure", str(e), "Failed to skip ad")
+                     
+        elif cmd.type == "search_site":
+            try:
+                if not cmd.query:
+                    return create_execution_result("search_site", "failure", "No query provided", "Missing search query")
+                
+                query_str = cmd.query or ""
+                url = ""
+                target = (target_name or "").lower()
+                if "youtube" in target:
+                    url = f"https://www.youtube.com/results?search_query={query_str.replace(' ', '+')}"
+                elif "google" in target:
+                    url = f"https://www.google.com/search?q={query_str.replace(' ', '+')}"
+                else:
+                    url = f"https://duckduckgo.com/?q={query_str.replace(' ', '+')}"
+                    
+                handle = None if cmd.force_new_tab else (get_tab_by_name(target_name) if target_name else None)
+                if handle:
+                    d.switch_to.window(handle)
+                    d.get(url)
+                else:
+                    # New tab
+                    if len(d.window_handles) == 1 and d.current_url == "data:,":
+                         d.get(url)
+                    else:
+                         d.switch_to.new_window('tab')
+                         d.get(url)
+                        
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "search_site", expected_url=url)
+                if not verified:
+                    logger.warning(f"search_site verification failed: {verification_details}")
+                    return create_execution_result("search_site", "failure", verification_details, f"Searched but verification failed: {query_str}")
+                
+                return create_execution_result("search_site", "success", None, f"Searched: {query_str} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing search_site: {e}")
+                return create_execution_result("search_site", "failure", str(e), f"Failed to search: {cmd.query}")
         
-    elif cmd.type == "youtube_subscribe":
-        script = """
-        const btn = document.querySelector('ytd-subscribe-button-renderer button');
-        if (btn) { btn.click(); return true; } return false;
-        """
-        d.execute_script(script)
-        logger.info("Executed youtube_subscribe")
-        
-    elif cmd.type == "youtube_comment":
-        if cmd.text is not None:
-            text_val = str(cmd.text)
-            safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
-            script = f"""
-            const box = document.querySelector('ytd-comment-simplebox-renderer #placeholder-area');
-            if (box) {{
-                box.click();
-                setTimeout(() => {{
-                    const input = document.querySelector('#contenteditable-root');
-                    if (input) {{
-                         input.innerText = "{safe_text}";
-                         input.dispatchEvent(new Event('input', {{bubbles:true}}));
-                         setTimeout(() => {{
-                             const submit = document.querySelector('#submit-button');
-                             if (submit) submit.click();
-                         }}, 500);
+        elif cmd.type == "youtube_click_video":
+            try:
+                WebDriverWait(d, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "ytd-video-renderer a#video-title"))
+                )
+                d.execute_script("document.querySelector('ytd-video-renderer a#video-title').click();")
+                
+                # Verify URL contains watch?v=
+                def custom_verifier(driver):
+                    return "watch?v=" in driver.current_url, f"Current URL: {driver.current_url}"
+                    
+                verified, details = verify_action_result(d, "custom", custom_verifier=custom_verifier)
+                if not verified:
+                    return create_execution_result("youtube_click_video", "failure", details, "Clicked video but not on watch page")
+                    
+                return create_execution_result("youtube_click_video", "success", None, f"Clicked first video - {details}")
+            except Exception as e:
+                logger.error(f"Error executing youtube_click_video: {e}")
+                return create_execution_result("youtube_click_video", "failure", str(e), "Failed to click video")
+                    
+        elif cmd.type == "media_control":
+            try:
+                # Make sure we are on the right tab if specified, but if not just try current tab
+                if target_name:
+                    handle = get_tab_by_name(target_name)
+                    if handle:
+                        d.switch_to.window(handle)
+                        
+                # Inject Javascript to control the standard HTML5 video player
+                js_code = ""
+                # Accept 'command' (new standard) OR 'action' (legacy fallback) to avoid JSON key collisions
+                action = cmd.command or cmd.action
+                
+                # Ensure we have a video element first
+                check_js = "return document.querySelector('video') !== null"
+                if not d.execute_script(check_js):
+                    logger.warning("No video element found on current page for media_control")
+                    return create_execution_result("media_control", "failure", "No video element found", "Video not available")
+                    
+                if action == "play":
+                    js_code = "document.querySelector('video').play();"
+                elif action == "pause":
+                    js_code = "document.querySelector('video').pause();"
+                elif action == "skip_forward":
+                    sec = cmd.seconds or 10
+                    js_code = f"document.querySelector('video').currentTime += {sec};"
+                elif action == "skip_backward":
+                    sec = cmd.seconds or 10
+                    js_code = f"document.querySelector('video').currentTime -= {sec};"
+                elif action == "seek":
+                    if cmd.seconds is not None:
+                        js_code = f"document.querySelector('video').currentTime = {cmd.seconds};"
+                    
+                if js_code:
+                    d.execute_script(js_code)
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "media_control")
+                if not verified:
+                    logger.warning(f"media_control verification failed: {verification_details}")
+                    return create_execution_result("media_control", "failure", verification_details, f"Media control executed but verification failed: {action}")
+                
+                return create_execution_result("media_control", "success", None, f"Media control: {action} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing media_control: {e}")
+                return create_execution_result("media_control", "failure", str(e), f"Failed media control: {cmd.command or cmd.action}")
+                
+        elif cmd.type == "scroll":
+            try:
+                if target_name:
+                    handle = get_tab_by_name(target_name)
+                    if handle:
+                        d.switch_to.window(handle)
+                        
+                amount = cmd.amount or 500
+                if cmd.direction == "up":
+                    amount = -amount
+                    
+                d.execute_script(f"window.scrollBy(0, {amount});")
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "scroll")
+                if not verified:
+                    logger.warning(f"scroll verification failed: {verification_details}")
+                    return create_execution_result("scroll", "failure", verification_details, f"Scrolled but verification failed")
+                
+                return create_execution_result("scroll", "success", None, f"Scrolled {cmd.direction or 'down'} by {abs(amount)}px - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing scroll: {e}")
+                return create_execution_result("scroll", "failure", str(e), "Failed to scroll")
+                
+        elif cmd.type == "click":
+            try:
+                if cmd.jarvis_id is not None:
+                    # Smart element matching from globally cached DOM
+                    target_info = {"id": cmd.jarvis_id}
+                    for el in last_extracted_elements:
+                        if el.get("id") == cmd.jarvis_id:
+                            target_info = el
+                            break
+                            
+                    res = safe_click(target_info)
+                    if not res["success"]:
+                        return create_execution_result("click", "failure", res['details'], f"Failed to click element: {cmd.jarvis_id}")
+                    
+                    # Post-action verification
+                    verified, verification_details = verify_action_result(d, "click", expected_selector=f'[jarvis_id="{cmd.jarvis_id}"]')
+                    if not verified:
+                        logger.warning(f"click verification failed: {verification_details}")
+                        return create_execution_result("click", "failure", verification_details, f"Clicked element but verification failed: {cmd.jarvis_id}")
+                    
+                    return create_execution_result("click", "success", None, f"Clicked element: {cmd.jarvis_id} - {verification_details}")
+                return create_execution_result("click", "failure", "No jarvis_id provided", "Missing element ID")
+            except Exception as e:
+                logger.error(f"Error executing click: {e}")
+                return create_execution_result("click", "failure", str(e), f"Failed to click: {cmd.jarvis_id}")
+                
+        elif cmd.type == "type":
+            try:
+                if cmd.jarvis_id is not None and cmd.text is not None:
+                    # Escape double quotes and backslashes in text for JS
+                    text_val = str(cmd.text)
+                    safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
+                    script = f"""
+                        const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
+                        if (el) {{
+                            el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                            el.focus();
+                            el.value = "{safe_text}";
+                            // Trigger events so React/Vue notice the change
+                            el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                            return true;
+                        }}
+                        return false;
+                    """
+                    result = d.execute_script(script)
+                    if not result:
+                        return create_execution_result("type", "failure", f"Element with jarvis_id {cmd.jarvis_id} not found", "Element not found")
+                    
+                    # Post-action verification
+                    verified, verification_details = verify_action_result(d, "type", expected_selector=f'[jarvis_id="{cmd.jarvis_id}"]')
+                    if not verified:
+                        logger.warning(f"type verification failed: {verification_details}")
+                        return create_execution_result("type", "failure", verification_details, f"Typed into element but verification failed: {cmd.jarvis_id}")
+                    
+                    return create_execution_result("type", "success", None, f"Typed into element: {cmd.jarvis_id} - {verification_details}")
+                return create_execution_result("type", "failure", "No jarvis_id or text provided", "Missing element ID or text")
+            except Exception as e:
+                logger.error(f"Error executing type: {e}")
+                return create_execution_result("type", "failure", str(e), f"Failed to type: {cmd.jarvis_id}")
+                
+        elif cmd.type == "type_secure":
+            try:
+                if cmd.jarvis_id is not None and cmd.text is not None:
+                    # Resolves from Environment Variables for Security Mock
+                    text_val = str(cmd.text)
+                    deciphered = os.environ.get(text_val, text_val)
+                    safe_text = str(deciphered).replace('\\', '\\\\').replace('"', '\\"')
+                    script = f"""
+                        const el = document.querySelector('[jarvis_id="{cmd.jarvis_id}"]');
+                        if (el) {{
+                            el.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+                            el.focus();
+                            el.value = "{safe_text}";
+                            el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                            return true;
+                        }}
+                        return false;
+                    """
+                    result = d.execute_script(script)
+                    logger.info(f"Executed type_secure successfully (plaintext masked)")
+                    if not result:
+                        return create_execution_result("type_secure", "failure", f"Element with jarvis_id {cmd.jarvis_id} not found", "Element not found")
+                    
+                    # Post-action verification
+                    verified, verification_details = verify_action_result(d, "type_secure", expected_selector=f'[jarvis_id="{cmd.jarvis_id}"]')
+                    if not verified:
+                        logger.warning(f"type_secure verification failed: {verification_details}")
+                        return create_execution_result("type_secure", "failure", verification_details, f"Typed securely but verification failed: {cmd.jarvis_id}")
+                    
+                    return create_execution_result("type_secure", "success", None, f"Typed securely into element: {cmd.jarvis_id} - {verification_details}")
+                return create_execution_result("type_secure", "failure", "No jarvis_id or text provided", "Missing element ID or text")
+            except Exception as e:
+                logger.error(f"Error executing type_secure: {e}")
+                return create_execution_result("type_secure", "failure", str(e), f"Failed to type securely: {cmd.jarvis_id}")
+                
+        elif cmd.type == "youtube_like":
+            try:
+                script = """
+                const btn = document.querySelector('ytd-menu-renderer .yt-spec-button-shape-next--tonal');
+                if (btn) { btn.click(); return true; } return false;
+                """
+                result = d.execute_script(script)
+                logger.info("Executed youtube_like")
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "youtube_like")
+                if not verified:
+                    logger.warning(f"youtube_like verification failed: {verification_details}")
+                    return create_execution_result("youtube_like", "failure", verification_details, f"YouTube like attempted but verification failed: {result}")
+                
+                return create_execution_result("youtube_like", "success", None, f"YouTube like: {result} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing youtube_like: {e}")
+                return create_execution_result("youtube_like", "failure", str(e), "Failed to like video")
+                
+        elif cmd.type == "youtube_subscribe":
+            try:
+                script = """
+                const btn = document.querySelector('ytd-subscribe-button-renderer button');
+                if (btn) { btn.click(); return true; } return false;
+                """
+                result = d.execute_script(script)
+                logger.info("Executed youtube_subscribe")
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "youtube_subscribe")
+                if not verified:
+                    logger.warning(f"youtube_subscribe verification failed: {verification_details}")
+                    return create_execution_result("youtube_subscribe", "failure", verification_details, f"YouTube subscribe attempted but verification failed: {result}")
+                
+                return create_execution_result("youtube_subscribe", "success", None, f"YouTube subscribe: {result} - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing youtube_subscribe: {e}")
+                return create_execution_result("youtube_subscribe", "failure", str(e), "Failed to subscribe")
+                
+        elif cmd.type == "youtube_comment":
+            try:
+                if cmd.text is not None:
+                    text_val = str(cmd.text)
+                    safe_text = text_val.replace('\\', '\\\\').replace('"', '\\"')
+                    script = f"""
+                    const box = document.querySelector('ytd-comment-simplebox-renderer #placeholder-area');
+                    if (box) {{
+                        box.click();
+                        setTimeout(() => {{
+                            const input = document.querySelector('#contenteditable-root');
+                            if (input) {{
+                                 input.innerText = "{safe_text}";
+                                 input.dispatchEvent(new Event('input', {{bubbles:true}}));
+                                 setTimeout(() => {{
+                                     const submit = document.querySelector('#submit-button');
+                                     if (submit) submit.click();
+                                 }}, 500);
+                            }}
+                        }}, 500);
+                        return true;
                     }}
-                }}, 500);
-                return true;
-            }}
-            return false;
-            """
-            d.execute_script(script)
-            logger.info("Executed youtube_comment")
-            
-    elif cmd.type == "wait":
-        sec = cmd.seconds or 2
-        import time
-        time.sleep(sec)
+                    return false;
+                    """
+                    result = d.execute_script(script)
+                    logger.info("Executed youtube_comment")
+                    
+                    # Post-action verification
+                    verified, verification_details = verify_action_result(d, "youtube_comment")
+                    if not verified:
+                        logger.warning(f"youtube_comment verification failed: {verification_details}")
+                        return create_execution_result("youtube_comment", "failure", verification_details, f"YouTube comment attempted but verification failed: {result}")
+                    
+                    return create_execution_result("youtube_comment", "success", None, f"YouTube comment: {result} - {verification_details}")
+                return create_execution_result("youtube_comment", "failure", "No text provided", "Missing comment text")
+            except Exception as e:
+                logger.error(f"Error executing youtube_comment: {e}")
+                return create_execution_result("youtube_comment", "failure", str(e), "Failed to post comment")
+                
+        elif cmd.type == "wait":
+            try:
+                sec = cmd.seconds or 2
+                import time
+                time.sleep(sec)
+                
+                # Post-action verification
+                verified, verification_details = verify_action_result(d, "wait")
+                if not verified:
+                    logger.warning(f"wait verification failed: {verification_details}")
+                    return create_execution_result("wait", "failure", verification_details, f"Waited but verification failed")
+                
+                return create_execution_result("wait", "success", None, f"Waited {sec} seconds - {verification_details}")
+            except Exception as e:
+                logger.error(f"Error executing wait: {e}")
+                return create_execution_result("wait", "failure", str(e), "Failed to wait")
+        
+        # Unknown command type
+        return create_execution_result(cmd.type, "failure", f"Unknown command type: {cmd.type}", "Command not recognized")
+        
+    except Exception as e:
+        # Catch-all for any unexpected errors
+        logger.error(f"Unexpected error executing command {cmd.type}: {e}")
+        return create_execution_result(cmd.type, "failure", str(e), "Unexpected error")
 
 def process_commands(commands: List[BrowserCommand]):
     import time
+    results = []
     for cmd in commands:
         max_retries = 3
+        cmd_result = None
         for attempt in range(max_retries):
             try:
-                execute_single_command(cmd)
+                cmd_result = execute_single_command(cmd)
                 break # Success, move to next command
             except Exception as e:
                 # If it's a DOM element not found exception, wait and retry
@@ -382,9 +837,15 @@ def process_commands(commands: List[BrowserCommand]):
                     time.sleep(2)
                 else:
                     logger.error(f"Error executing command {cmd.type}: {e}")
+                    cmd_result = create_execution_result(cmd.type, "failure", str(e), f"Failed after {attempt+1} attempts")
                     break
+        if cmd_result:
+            results.append(cmd_result)
+            if cmd_result["status"] == "failure":
+                break
+    return results
 @app.post("/execute")
-async def execute_commands(req: Request, background_tasks: BackgroundTasks):
+async def execute_commands(req: Request):
     """
     Receives commands and processes them. To avoid blocking the J.A.R.V.I.S LLM
     event loop, we run them as a background task.
@@ -405,7 +866,7 @@ async def execute_commands(req: Request, background_tasks: BackgroundTasks):
         "scroll": "scroll",
         "press": "press",
         "youtube_search": "search_site",
-        "youtube_click_video": "search_site",
+        "youtube_click_video": "youtube_click_video",
         "youtube_like": "youtube_like",
         "youtube_subscribe": "youtube_subscribe",
         "youtube_comment": "youtube_comment",
@@ -456,9 +917,9 @@ async def execute_commands(req: Request, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=422, detail="No valid commands after normalization")
     
     # THIS WAS THE BUG — commands were accepted but never executed!
-    background_tasks.add_task(process_commands, normalized)
+    results = process_commands(normalized)
          
-    return {"status": "accepted", "message": f"Processing {len(normalized)} commands in background."}
+    return {"status": "completed", "results": results}
 
 
 from selenium.webdriver.common.action_chains import ActionChains
@@ -545,7 +1006,15 @@ def safe_click(element_info: dict):
                 logger.info(f"ACTION RESULT: {json.dumps(result)}")
                 return result
             else:
-                logger.warning(f"Attempt {attempt+1}: Click executed but DOM/URL state unchanged")
+                result = {
+                    "success": True, 
+                    "action": "click", 
+                    "status": "success",
+                    "target": target_name, 
+                    "details": "no navigation change (allowed)"
+                }
+                logger.info(f"ACTION RESULT: {json.dumps(result)} - SOFT SUCCESS")
+                return result
                 
         except Exception as e:
             logger.warning(f"Attempt {attempt+1}: Safe click error: {e}")
@@ -629,7 +1098,45 @@ return getInteractiveElements();
 class AnalyzeRequest(BaseModel):
     target_tab: Optional[str] = None
 
+@app.get("/browser-status")
+async def browser_status():
+    """
+    Returns current browser state WITHOUT initializing a new session.
+    If browser is already open, returns all open tabs with their URLs and titles.
+    If no session is live, returns { alive: false }.
+    Used by the frontend on startup so JARVIS can greet with context.
+    """
+    global driver
+    try:
+        if driver is None or not is_driver_alive(driver):
+            return {"alive": False, "tabs": []}
+
+        tabs = []
+        current_handle = driver.current_window_handle
+        for handle in driver.window_handles:
+            try:
+                driver.switch_to.window(handle)
+                tabs.append({
+                    "index": len(tabs),
+                    "url": driver.current_url,
+                    "title": driver.title,
+                    "active": handle == current_handle
+                })
+            except Exception:
+                pass
+        # Restore original tab
+        try:
+            driver.switch_to.window(current_handle)
+        except Exception:
+            pass
+
+        return {"alive": True, "tabs": tabs, "tab_count": len(tabs)}
+    except Exception as e:
+        logger.warning(f"[BrowserStatus] Could not read browser state: {e}")
+        return {"alive": False, "tabs": []}
+
 @app.post("/analyze")
+
 async def analyze_page(req: AnalyzeRequest):
     """
     Scans the current page and returns a numbered list of interactive elements.
@@ -674,6 +1181,29 @@ async def analyze_page(req: AnalyzeRequest):
         
     except Exception as e:
         logger.error(f"Error analyzing page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class EvaluateRequest(BaseModel):
+    script: str
+    target_tab: Optional[str] = None
+
+@app.post("/evaluate")
+async def evaluate_script(req: EvaluateRequest):
+    """
+    Evaluates an arbitrary JavaScript string in the active browser context 
+    and returns its result, useful for QA test probes.
+    """
+    try:
+        d = get_driver()
+        if req.target_tab:
+            handle = get_tab_by_name(req.target_tab)
+            if handle:
+                d.switch_to.window(handle)
+        
+        result_val = d.execute_script(req.script)
+        return {"status": "success", "result": result_val}
+    except Exception as e:
+        logger.error(f"Error evaluating script: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

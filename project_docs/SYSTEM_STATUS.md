@@ -8,8 +8,9 @@
 
 ## Current Features Implemented
 * **Glassmorphism UI**: React-based frontend with real-time SSE chat streaming, voice visualization orb, and HUD status indicators.
+* **Zoya Commander Mode**: High-fidelity Gemini Live voice interface with animated avatar, emotion tracking, and real-time execution feedback.
 * **Unified Bridge Setup**: `jarvisBridge.ts` routes both Voice (WebSocket) and Chat (SSE HTTP) inputs uniformly.
-* **Key Rotation & Resilience**: `llm.ts` uses round-robin API key rotation with 429 rate-limit blacklisting and a `callWithRetry` wrapper.
+* **Key Rotation & Multi-Provider Cascade**: `llmRouter.ts` prioritizes GPT-4o → DeepSeek → Llama-3.3 for resilient, intelligent planning.
 * **Memory Management**: Dual-layer JSON approach (`memoryManager.ts`) with operational logs and summarized LLM context.
 * **Continuous Audio**: Browser `AudioWorklet` continuously captures MIC data, using `SpeechRecognition` `isFinal` events to trigger Groq Whisper STT.
 
@@ -20,10 +21,27 @@
 * Encrypted credential storage stubs
 * **Intent Classification & Orchestrator Flow**: Routes traffic cleanly between simple chat and browser tasks.
 * **Strict JSON Page Planning**: Planner strictly outputs deterministic JSON step arrays `{"steps": []}` with `internal_steps` reasoning and dynamic DOM pruning.
-* **Shared Confirmation Loop**: Unified `confirmationState.ts` gateway prevents channel-mismatch between WebSocket and API interactions.
-* **Action Result Visibility**: Structured JSON logging for all browser planner successes/failures.
+ * **Shared Confirmation Loop**: Enhanced `confirmationState.ts` with Session State Manager and State Guard in orchestrator. Centralized confirmation handling with comprehensive logging.
+ * **Action Result Visibility**: Structured JSON logging for all browser planner successes/failures.
+ * **State Guard**: Confirmation check now happens BEFORE IntentClassifier, preventing yes/no bypass.
+ * **YouTube Ad Watcher**: Background thread that continuously polls for and automatically skips YouTube ads without user confirmation. Logs ACTION RESULT format with success, action, target, and details.
+ * **File Logging**: Python agent now logs to both console and logs/debug.log file for better debugging.
+ * **Chrome Driver Stability**: Fixed connection issues by removing user-data-dir configuration and creating fresh ChromeOptions objects in fallback paths.
 
 * **Playwright Click Accuracy**: The "Universal DOM Extractor" continues to improve through native YouTube action mappings.
 * **Viewport Syncing**: The Playwright Chromium instance uses a static viewport that does not respond to the React frontend UI pane size.
 
-Last Update: 2026-03-24 - **Phase 1 Stabilization Milestone Reached**
+## Recent Fixes (2026-05-06)
+- **ZOYA VOICE INTEGRATION**: Gemini Live WebSocket integrated with full UI (Avatar/Visualizer). Fallbacks for API limits.
+- **MULTI-PROVIDER PLANNER**: Upgraded LLM planner to cascade through OpenAI → DeepSeek → Groq based on key availability.
+- **ORCHESTRATOR BRIDGE**: Created `/api/zoya-execute` to route Gemini's voice intents directly into the Python automation agent.
+
+## Older Fixes (2026-03-27)
+- **YOUTUBE AD WATCHER IMPLEMENTED**: Background thread continuously polls for and automatically skips YouTube ads without user confirmation. Logs ACTION RESULT format with success, action, target, and details.
+- **FILE LOGGING ADDED**: Python agent now logs to both console and logs/debug.log file for better debugging and visibility.
+- **CHROME DRIVER STABILITY**: Fixed connection issues by removing user-data-dir configuration and creating fresh ChromeOptions objects in fallback paths.
+- **CONFIRMATION BYPASS ENHANCED**: State Guard now intercepts yes/no inputs even without pending confirmation, preventing misclassification.
+- **EXECUTION DROP FIXED**: Refactored executor.ts sequential async loop with improved logging and step tracking; verified multi-step execution works.
+- **WEBSOCKET CONFIRMATION UNIFIED**: Replaced duplicate confirmation logic in websocket.ts with centralized checkConfirmationInput.
+
+Last Update: 2026-03-27 - **YouTube Ad Watcher & Phase 1 Stabilization Complete**

@@ -1,0 +1,18 @@
+{
+  "task_id": "523d1fba-0c25-4466-9d59-1b4508aefd4b",
+  "site": "unknown",
+  "goal": "[chat] scroll down",
+  "status": "completed",
+  "steps": [
+    {
+      "action": "scroll",
+      "status": "completed",
+      "retries": 0
+    }
+  ],
+  "last_step": "scroll",
+  "timestamp": "2026-03-24T17:24:24.416Z",
+  "updated_at": "2026-03-24T17:24:24.421Z",
+  "memory_snapshot": {},
+  "errors": []
+}

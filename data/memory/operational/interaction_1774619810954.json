@@ -1,0 +1,23 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "search mayalu song",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "type",
+        "jarvis_id": 4,
+        "text": "mayalu song"
+      },
+      {
+        "action": "click",
+        "jarvis_id": 5
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T13:56:50.954Z"
+  },
+  "updatedAt": "2026-03-27T13:56:50.954Z",
+  "encrypted": false
+}

@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "hi",
+    "jarvisResponse": "YouTube should now be open. What would you like to do next? Search for a specific video, explore the homepage, or perhaps something else?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T11:28:34.755Z"
+  },
+  "updatedAt": "2026-05-06T11:28:34.755Z",
+  "encrypted": false
+}

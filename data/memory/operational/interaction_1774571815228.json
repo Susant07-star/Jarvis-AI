@@ -1,0 +1,22 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube.com and search for cats",
+    "jarvisResponse": "\n✅ I have executed your instructions.",
+    "toolCalls": [],
+    "browserCommands": [
+      {
+        "action": "open_url",
+        "url": "https://www.youtube.com"
+      },
+      {
+        "action": "youtube_search",
+        "query": "cats"
+      }
+    ],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T00:36:55.228Z"
+  },
+  "updatedAt": "2026-03-27T00:36:55.228Z",
+  "encrypted": false
+}

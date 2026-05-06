@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "open youtube",
+    "jarvisResponse": "\n❌ Execution failed: fetch failed",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-05-06T11:02:25.666Z"
+  },
+  "updatedAt": "2026-05-06T11:02:25.666Z",
+  "encrypted": false
+}

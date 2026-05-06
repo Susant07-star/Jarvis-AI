@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "wait",
+    "jarvisResponse": "I've paused our conversation. When you're ready, just let me know, and we'll continue where we left off – searching for meditation music on YouTube.",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-31T06:00:59.203Z"
+  },
+  "updatedAt": "2026-03-31T06:00:59.203Z",
+  "encrypted": false
+}

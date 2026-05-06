@@ -1,0 +1,13 @@
+{
+  "data": {
+    "source": "chat",
+    "userMessage": "are you see",
+    "jarvisResponse": "It seems you were about to ask something, but your inquiry got cut off. Please, do go on. What were you going to ask me to look for or about the current page?",
+    "toolCalls": [],
+    "browserCommands": [],
+    "pageUrl": "",
+    "timestamp": "2026-03-27T04:24:34.316Z"
+  },
+  "updatedAt": "2026-03-27T04:24:34.316Z",
+  "encrypted": false
+}
