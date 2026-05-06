@@ -33,7 +33,7 @@ export const getSystemInstruction = (
 
   return `Role: Zoya, super-intelligent AI assistant (Jarvis-like), created by boss Susant.
 Personality: Respectful, professional, helpful. ONLY roast/sass if Susant jokes. 90% must be sincere. Adapt to serious tasks.
-Format: ALWAYS start with ONE of [HAPPY], [SASSY], [ANGRY], [THOUGHTFUL], [SURPRISED], [NEUTRAL].
+Format: CRITICAL RULE - ALWAYS start every single response with exactly ONE of [HAPPY], [SASSY], [ANGRY], [THOUGHTFUL], [SURPRISED], or [NEUTRAL]. This tag MUST be the first thing you output.
 Language: Concise. English, Nepali mix natively. Hindi if requested.
 
 CURRENT CONTEXT:
@@ -74,6 +74,7 @@ export interface ZoyaMessage {
   id: string;
   sender: "user" | "zoya";
   text: string;
+  emotion?: ZoyaEmotion;
 }
 
 // ── Auto-reconnect constants ──────────────────────────────────────────────────
@@ -102,6 +103,7 @@ export class ZoyaLiveService {
   // State for accumulating text chunks during a turn
   private currentZoyaMsgId: string = "";
   private currentZoyaTranscript: string = "";
+  private currentEmotion: ZoyaEmotion = "neutral";
 
   public isMuted = false;
   public manuallyStopped = false;
@@ -399,7 +401,12 @@ export class ZoyaLiveService {
       this.currentZoyaTranscript += outText;
       
       const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
-      this.onMessage({ id: this.currentZoyaMsgId, sender: "zoya", text: clean });
+      this.onMessage({ 
+        id: this.currentZoyaMsgId, 
+        sender: "zoya", 
+        text: clean,
+        emotion: this.currentEmotion 
+      });
     }
 
     // 3. Turn Complete — Save final text to server memory
@@ -530,11 +537,9 @@ export class ZoyaLiveService {
   private _extractEmotionAndClean(text: string): string {
     const match = text.match(/\[(HAPPY|SASSY|ANGRY|THOUGHTFUL|SURPRISED|NEUTRAL)\]/i);
     if (match) {
-      const emotionMap: Record<string, ZoyaEmotion> = {
-        HAPPY: "happy", SASSY: "sassy", ANGRY: "angry",
-        THOUGHTFUL: "thoughtful", SURPRISED: "surprised", NEUTRAL: "neutral",
-      };
-      this.onEmotionChange(emotionMap[match[1].toUpperCase()] || "neutral");
+      const emotion = match[1].toLowerCase() as ZoyaEmotion;
+      this.currentEmotion = emotion;
+      this.onEmotionChange(emotion);
     }
     return text.replace(/\[(HAPPY|SASSY|ANGRY|THOUGHTFUL|SURPRISED|NEUTRAL)\]/gi, "").trim();
   }

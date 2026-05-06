@@ -7,6 +7,7 @@ export interface TokenMetrics {
   planner: number;
   direct: number;
   dom: number;
+  voice: number;
 }
 
 export interface RequestMetricsData {
@@ -28,7 +29,7 @@ export class MetricsTracker {
       input,
       intent: 'unknown',
       mode: 'none',
-      tokens: { classifier: 0, planner: 0, direct: 0, dom: 0 },
+      tokens: { classifier: 0, planner: 0, direct: 0, dom: 0, voice: 0 },
       startTime: Date.now()
     };
     const logsDir = path.resolve(process.cwd(), 'logs');

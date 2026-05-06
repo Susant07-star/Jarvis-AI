@@ -114,7 +114,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
   };
 
   const getEmotionBadge = (emotion?: string) => {
-    if (!emotion || emotion === 'neutral') return null;
+    if (!emotion) return null;
     const colors: Record<string, string> = {
       happy: 'bg-green-900/30 text-green-400 border-green-700/40',
       sassy: 'bg-pink-900/30 text-pink-400 border-pink-700/40',

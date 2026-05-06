@@ -70,3 +70,9 @@ To ensure J.A.R.V.I.S. maintains a single unified memory regardless of whether t
 - **Server → Zoya**: When a voice session starts, Zoya fetches a summary of recent chat history from `/api/session-context` and injects it into her system prompt.
 - **Unified IDs**: Voice turns use `zoya-UUID` or `user-UUID` to track streaming chunks and prevent duplication in the Chat Window.
 - **Emotion Tracking**: Emotions (e.g., `[SASSY]`) are parsed from responses and displayed as visual badges in the UI, synchronized across both chat and voice modalities.
+
+## 6. Metrics & Logging
+The system utilizes a structured metrics layer to track performance and cost:
+- **MetricsTracker**: A centralized utility in `server/utils/metrics.ts` that captures input, intent, orchestration mode, and token usage.
+- **Token Detailed Log**: All interactions append a JSON entry to `logs/token_detailed.json` containing specific counts for each pipeline stage (Classifier, Planner, Direct Chat, DOM analysis, and Voice Sync).
+- **Health Logs**: `logs/debug.log` captures system-wide errors and info events, managed by `rotate_logs.ps1` to prevent storage bloat.

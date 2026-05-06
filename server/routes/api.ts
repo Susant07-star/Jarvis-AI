@@ -25,8 +25,13 @@ if (!fs.existsSync('uploads')) {
  * Handle text-based chat interactions.
  */
 router.post("/zoya-execute", async (req, res) => {
+  let metrics: MetricsTracker | null = null;
   try {
     const { intent } = req.body;
+    metrics = new MetricsTracker(intent || "voice_turn");
+    metrics.setMode("voice_agent");
+    metrics.setIntent("task");
+    
     if (!intent) return res.status(400).json({ success: false, error: "Missing intent" });
 
     logger.info("API", `[Zoya Execute] Received intent: ${intent}`);
@@ -53,7 +58,12 @@ router.post("/zoya-execute", async (req, res) => {
       logger.warn("API", "Could not fetch DOM map for Zoya execute");
     }
 
-    const { actions: plannedSteps, errorFallback, model, provider } = await planWithDOM(decision.normalizedInput || intent, [domMap]) as any;
+    const { actions: plannedSteps, tokens: plannerTokens, errorFallback, model, provider } = await planWithDOM(decision.normalizedInput || intent, [domMap]) as any;
+
+    if (metrics) {
+      metrics.addTokens('planner', plannerTokens || 0);
+      metrics.setPlannerOutput(plannedSteps);
+    }
 
     if (!plannedSteps || plannedSteps.length === 0) {
       return res.json({ success: false, error: errorFallback || "Could not formulate a valid plan." });
@@ -92,6 +102,10 @@ router.post("/zoya-execute", async (req, res) => {
       }
     }
 
+    if (metrics) {
+      metrics.setExecutionResult("Success");
+      metrics.finalize();
+    }
     res.json({ success: true, result: "Browser actions executed successfully.", metadata: { model, provider } });
 
   } catch (error: any) {
@@ -229,6 +243,7 @@ router.post("/chat", async (req, res) => {
       logInteraction('chat', message, result.content);
       
       if (metrics) {
+        metrics.addTokens('direct', result.tokens || 0);
         metrics.setExecutionResult(`Chat via ${result.model}`);
         metrics.finalize();
       }
@@ -448,6 +463,14 @@ router.post("/memory/sync", (req, res) => {
     const { role, content } = req.body;
     if (role && content) {
       saveToMemory(role, content);
+      
+      const metrics = new MetricsTracker(content);
+      metrics.setIntent("sync");
+      metrics.setMode("voice_sync");
+      // Estimate 1 token per 4 chars for the synced text
+      metrics.addTokens('voice', Math.ceil(content.length / 4));
+      metrics.finalize();
+
       res.json({ success: true });
     } else {
       res.status(400).json({ error: "Missing role or content" });

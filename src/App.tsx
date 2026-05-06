@@ -29,7 +29,7 @@ export default function App() {
       timestamp: new Date(),
       source: "voice",
       model: zoya.activeModel.replace("-native-audio-dialog", "").replace("-live-001", ""),
-      emotion: m.sender === "zoya" ? zoya.emotion : undefined
+      emotion: m.sender === "zoya" ? m.emotion : undefined
     }));
     
     setMessages(prev => {
