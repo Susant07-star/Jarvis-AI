@@ -452,17 +452,25 @@ export class ZoyaLiveService {
 
     // Google Search grounding metadata
     const grounding = (message as any).serverContent?.modelTurn?.groundingMetadata;
-    if (grounding?.groundingChunks) {
-      const urls = grounding.groundingChunks.map((c: any) => c.web?.url || c.web?.uri).filter(Boolean);
-      if (urls.length > 0) {
-        this.onThought("Analyzing Google search results...");
+    if (grounding) {
+      if (grounding.groundingChunks && grounding.groundingChunks.length > 0) {
+        const urls = grounding.groundingChunks.map((c: any) => c.web?.url || c.web?.uri).filter(Boolean);
+        console.log(`[ZoyaLive] 🔍 GOOGLE SEARCH USED — Found ${urls.length} sources:`, urls);
+        this.onThought(`🔍 Searched Google — ${urls.length} sources found`);
         this.onSources(urls);
+      } else {
+        console.warn(`[ZoyaLive] ⚠️ GOOGLE SEARCH ATTEMPTED but returned 0 results. Raw grounding:`, JSON.stringify(grounding).slice(0, 300));
+        this.onThought(`⚠️ Google search returned no results`);
       }
     }
 
     // Function calls
     const calls = message.toolCall?.functionCalls;
     if (calls && calls.length > 0) {
+      for (const call of calls) {
+        console.log(`[ZoyaLive] 🛠️ TOOL CALL: "${call.name}" | Args:`, JSON.stringify(call.args));
+        this.onThought(`🛠️ Calling tool: ${call.name}`);
+      }
       for (const call of calls) {
         await this._handleFunctionCall(call);
       }
