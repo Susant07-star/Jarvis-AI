@@ -67,6 +67,8 @@ A background process that ensures J.A.R.V.I.S. never stays "broken."
 
 - **Autonomous Hybrid Browser Agent (Gemini 3 Flash)**: An upgrade to J.A.R.V.I.S.'s execution engine. It will use a multi-modal "Look -> Decide -> Act" loop. By feeding Gemini 3 Flash both a **Simplified DOM** (for precision) and a **Spatial Screenshot** (for layout awareness), J.A.R.V.I.S. will gain the ability to navigate complex web apps, handle dynamic popups, and reason through visual interfaces autonomously, exactly like a human researcher.
 
+- **Autonomous Asynchronous Butler (Long-Running Missions)**: A shift from synchronous chat to asynchronous task execution. Zoya will be able to say, *"I'll handle that research, sir. I'll notify you when it's done,"* allowing the user to disconnect or focus on other tasks. The system will leverage background worker queues and WebSocket push notifications to "wake up" the voice session and proactively deliver results (e.g., generated PDFs, complex reports, or image galleries) once the heavy lifting is complete.
+
 ---
 *"At your service, sir. Let's build something extraordinary."*
 
