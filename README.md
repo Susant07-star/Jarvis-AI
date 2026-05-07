@@ -91,6 +91,11 @@ python server.ts
 - [ ] **Thought Process Dropdown**: Real-time transparency into J.A.R.V.I.S.'s internal reasoning logs.
 - [ ] **Self-Healing Loop**: Automated error correction for breaking web selectors.
 
+---
+
+## 📄 License
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
 <br />
 
 <div align="center">
