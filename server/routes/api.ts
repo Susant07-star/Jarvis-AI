@@ -11,7 +11,7 @@ import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
 import { logger } from "../logger";
 import { MetricsTracker } from "../utils/metrics";
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
-import { callChatWithCascade } from "../llmRouter";
+import { callChatWithCascade, callResearchWithCascade } from "../llmRouter";
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -507,12 +507,34 @@ router.post("/feedback", async (req, res) => {
  * Returns a compact, token-efficient summary of recent conversation history.
  * Consumed by Zoya voice service at session start to inject shared memory.
  */
-router.get("/session-context", (req, res) => {
+/**
+ * POST /api/intelligent-search
+ * Dedicated high-precision research endpoint for Zoya.
+ * Uses Gemini 2.5 with Google Search grounding.
+ */
+router.post("/intelligent-search", async (req, res) => {
+  let metrics: MetricsTracker | null = null;
   try {
-    const context = getSessionContextSummary(20);
-    res.json({ context, hasPriorContext: context.length > 0 });
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Missing query" });
+
+    metrics = new MetricsTracker(query);
+    metrics.setMode("research");
+    metrics.setIntent("deep_search");
+
+    logger.info("API", `[Research] Performing deep search for: "${query}"`);
+    
+    const answer = await callResearchWithCascade(query);
+    
+    if (metrics) {
+      metrics.setExecutionResult("Success");
+      metrics.finalize();
+    }
+
+    res.json({ success: true, answer });
   } catch (error: any) {
-    res.json({ context: "", hasPriorContext: false });
+    logger.error("API", "Intelligent Search Error", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

@@ -148,39 +148,20 @@ const gemini25FlashChat = createGeminiChatProvider("Google", "gemini-2.5-flash",
 
 // ── Model Priority Cascade ────────────────────────────────────────────────────
 
-/**
- * JARVIS BRAIN PRIORITY (Strongest to Weakest):
- * Tier 0: Gemini 3.1 Flash-Lite (generateContent) — newest Google reasoning model
- * Tier 1: DeepSeek V3.2 / V3.1 (Logic Kings)
- * Tier 2: GPT-OSS 120B (The Giant Thinking models)
- * Tier 3: Llama 3.3 / 70B (The Fast Agents)
- * Tier 4: GLM 4.7 (Specialized)
- */
 const PROVIDER_PRIORITY: Provider[] = [
-  // Tier 0: Newest Google intelligence for planning/JSON
   gemini31FlashLite,
   gemini25Flash,
-
-  // Tier 1: Logic Leaders
   sambaNovaV32,
   sambaNovaV31,
-
-  // Tier 2: The 120B Heavyweights
   sambaNovaGptOss,
   groqGptOss,
   cerebrasGptOss,
-
-  // Tier 3: The Fast 70B Agents
   sambaNovaLlama33,
   groqLlama70B,
   cerebrasLlama70B,
-
-  // Tier 4: Specialty
   cerebrasGlm4
 ];
 
-// Separate priority cascade for conversational chat
-// Uses Gemini Chat providers (with systemInstruction support)
 const CHAT_PROVIDER_PRIORITY: Provider[] = [
   gemini31FlashLiteChat,
   gemini25FlashChat,
@@ -192,7 +173,6 @@ const CHAT_PROVIDER_PRIORITY: Provider[] = [
 
 export async function callPlannerWithCascade(systemPrompt: string): Promise<PlannerResponse> {
   const available = PROVIDER_PRIORITY.filter((p) => p.isAvailable());
-  logger.info("LLMRouter", `Available providers: ${available.map(p => p.name + ":" + p.model).join(", ")}`);
   if (available.length === 0) throw new Error("No LLM provider configured.");
 
   for (let i = 0; i < available.length; i++) {
@@ -202,18 +182,12 @@ export async function callPlannerWithCascade(systemPrompt: string): Promise<Plan
 
     while (attempt < keyRetries) {
       try {
-        logger.info("LLMRouter", `[Key Attempt ${attempt + 1}] Calling ${provider.name}:${provider.model} (Planner)`);
         return await provider.call(systemPrompt, true);
       } catch (err: any) {
-        const errorMsg = err?.message || String(err);
-        logger.warn("LLMRouter", `⚠️ ${provider.name}:${provider.model} attempt ${attempt + 1} failed: ${errorMsg.slice(0, 120)}`);
-        const isRateLimit = errorMsg.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("Rate limit");
-        if (isRateLimit && attempt < keyRetries - 1) {
+        if (attempt < keyRetries - 1) {
           attempt++;
           continue;
         }
-        // Non-rate-limit errors: cascade immediately
-        logger.warn("LLMRouter", `⚠️ ${provider.name}:${provider.model} failed/limited. Cascading...`);
         break;
       }
     }
@@ -223,8 +197,6 @@ export async function callPlannerWithCascade(systemPrompt: string): Promise<Plan
 
 export async function callChatWithCascade(systemPrompt: string, userMessage: string, pastMemory: any[] = []): Promise<PlannerResponse> {
   const available = CHAT_PROVIDER_PRIORITY.filter((p) => p.isAvailable());
-  logger.info("LLMRouter", `Chat providers: ${available.map(p => p.name + ":" + p.model).join(", ")}`);
-
   if (available.length === 0) throw new Error("No LLM provider configured.");
 
   const fullPrompt = `${systemPrompt}\n\nConversation Context: ${JSON.stringify(pastMemory.slice(-20))}\n\nUser: ${userMessage}`;
@@ -236,19 +208,38 @@ export async function callChatWithCascade(systemPrompt: string, userMessage: str
 
     while (attempt < keyRetries) {
       try {
-        logger.info("LLMRouter", `[Key Attempt ${attempt + 1}] Calling ${provider.name}:${provider.model} (Chat)`);
         return await provider.call(fullPrompt, false);
       } catch (err: any) {
-        const errorMsg = err?.message || String(err);
-        logger.warn("LLMRouter", `⚠️ ${provider.name}:${provider.model} attempt ${attempt + 1} failed: ${errorMsg.slice(0, 150)}`);
         if (attempt < keyRetries - 1) {
           attempt++;
           continue;
         }
-        logger.warn("LLMRouter", `⚠️ ${provider.name}:${provider.model} exhausted. Cascading...`);
         break;
       }
     }
   }
   throw new Error("All LLM brains exhausted during chat.");
+}
+
+export async function callResearchWithCascade(query: string): Promise<string> {
+  const apiKey = getRandomKey(process.env.GEMINI_API_KEY);
+  if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+
+  const genAI = new GoogleGenAI({ apiKey });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  try {
+    logger.info("LLMRouter", `[Research] Calling Gemini 2.5 Flash for query: "${query}"`);
+    const result = await (model as any).generateContent({
+      contents: [{ role: "user", parts: [{ text: query }] }],
+      tools: [{ google_search: {} }],
+    });
+
+    return result.response.text();
+  } catch (err: any) {
+    logger.error("LLMRouter", `[Research] Gemini 2.5 Flash failed: ${err.message}`);
+    const backupModel = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+    const backupResult = await backupModel.generateContent(query);
+    return backupResult.response.text();
+  }
 }

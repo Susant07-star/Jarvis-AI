@@ -44,7 +44,9 @@ The current time is: ${timeStr}.
 
 TOOL USAGE RULES (CRITICAL — READ CAREFULLY):
 
-✅ USE "google_search" for: ANY question about people, news, facts, movies, YouTubers, prices, weather, sports scores, or anything where you need information. This is INVISIBLE — it never opens a browser window.
+✅ USE "intelligent_search" for: ANY question about people, news, facts, movies, YouTubers, prices, weather, sports scores, or anything where you need information. This is your most reliable search engine. Use this by default for all research.
+
+✅ USE "google_search" as a background grounding backup for real-time context.
 
 ✅ USE "executeBrowserAction" ONLY when boss says explicit navigation words like:
   - "Open YouTube", "Open Google", "Go to Netflix"
@@ -277,6 +279,17 @@ export class ZoyaLiveService {
                   }
                 },
                 {
+                  name: "intelligent_search",
+                  description: "Use this for DEEP research and latest news. This uses a high-precision reasoning engine to find facts about people, news, movies, or any question where you need accurate information. Use this instead of google_search if you want guaranteed results.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: { type: Type.STRING, description: "The specific question or topic to research." },
+                    },
+                    required: ["query"],
+                  },
+                },
+                {
                   name: "readWebpage",
                   description: "Read and analyze the content of a URL. Use when boss provides a link to summarize.",
                   parameters: {
@@ -413,13 +426,13 @@ export class ZoyaLiveService {
     if (outText) {
       if (!this.currentZoyaMsgId) this.currentZoyaMsgId = `zoya-${crypto.randomUUID()}`;
       this.currentZoyaTranscript += outText;
-      
+
       const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
-      this.onMessage({ 
-        id: this.currentZoyaMsgId, 
-        sender: "zoya", 
+      this.onMessage({
+        id: this.currentZoyaMsgId,
+        sender: "zoya",
         text: clean,
-        emotion: this.currentEmotion 
+        emotion: this.currentEmotion
       });
     }
 
@@ -429,7 +442,7 @@ export class ZoyaLiveService {
         const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
         console.log(`[ZoyaLive] Turn complete. Final text: "${clean.slice(0, 50)}..."`);
         this._syncMemory("jarvis", clean);
-        
+
         // Reset for the next turn
         this.currentZoyaMsgId = "";
         this.currentZoyaTranscript = "";
@@ -526,6 +539,40 @@ export class ZoyaLiveService {
             name: call.name,
             id: call.id,
             response: { result: "FAILURE: JARVIS backend is not running. Start the Python agent and Node server first." },
+          }],
+        });
+      }
+    } else if (call.name === "intelligent_search") {
+      const { query } = call.args as any;
+      this.onThought(`🔍 J.A.R.V.I.S. Deep Research: "${query}"`);
+      
+      try {
+        const res = await fetch("/api/intelligent-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+
+        const data = await res.json();
+        
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: data.answer || "I'm sorry, I couldn't find information on that topic right now." },
+          }],
+        });
+
+        if (data.answer) {
+          this.onThought("✅ Research complete.");
+        }
+      } catch (err: any) {
+        this.onThought("❌ Research engine failed.");
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: "Research engine is currently offline. Please try again in a moment." },
           }],
         });
       }
