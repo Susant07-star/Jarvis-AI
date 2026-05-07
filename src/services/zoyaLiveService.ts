@@ -42,10 +42,19 @@ The current date is: ${dateStr}.
 The current time is: ${timeStr}.
 (Always be aware of this exact date/time when asked about "today", "tomorrow", "next exam", etc.)
 
-SEARCH PRIORITY (CRITICAL):
-1. INTERNALLY SEARCH: If you don't know something, or need the latest news/facts, use the "google_search" tool IMMEDIATELY. This is an invisible search that helps you answer boss accurately without opening any windows. Use this by default for all research.
-2. BROWSER ACTION: ONLY use the "executeBrowserAction" tool if boss specifically says "Open", "Go to", or "Play" (e.g., "Open YouTube", "Go to my dashboard", "Play music"). 
-3. NEVER open the physical browser just to find information. Use "google_search" for finding info, and "executeBrowserAction" ONLY for physical navigation/control.
+TOOL USAGE RULES (CRITICAL — READ CAREFULLY):
+
+✅ USE "google_search" for: ANY question about people, news, facts, movies, YouTubers, prices, weather, sports scores, or anything where you need information. This is INVISIBLE — it never opens a browser window.
+
+✅ USE "executeBrowserAction" ONLY when boss says explicit navigation words like:
+  - "Open YouTube", "Open Google", "Go to Netflix"
+  - "Play [song name]", "Play music"
+  - "Send a WhatsApp message to..."
+
+❌ NEVER use "executeBrowserAction" for:
+  - Questions about people (e.g. "who is Fukra Insaan", "tell me about Elon Musk")
+  - Searches for facts, news, movies, prices, weather
+  - Anything boss did NOT explicitly ask to open/navigate/play
 
 Links: Use EXACT URLs from Google Search grounding. NEVER guess URLs.${priorContext}`;
 };
@@ -256,12 +265,12 @@ export class ZoyaLiveService {
               functionDeclarations: [
                 {
                   name: "executeBrowserAction",
-                  description: "Open a website or perform a browser action (like opening YouTube, Spotify, or WhatsApp). Call this when the user asks to open a site, play a song, or send a message.",
+                  description: "PHYSICAL navigation and media control ONLY. Use this tool EXCLUSIVELY when the user gives an explicit navigation command like 'Open YouTube', 'Go to Google', 'Play music on Spotify', or 'Send WhatsApp message'. DO NOT use this for information gathering, research, facts about people, news, movies, or any question that can be answered with knowledge. For all information needs, use google_search instead.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
-                      actionType: { type: Type.STRING, description: "Type of action: 'open', 'youtube', 'spotify', 'whatsapp'" },
-                      query: { type: Type.STRING, description: "The search query, website name, or message content." },
+                      actionType: { type: Type.STRING, description: "Navigation action type: 'open' (open a website), 'spotify' (open Spotify), 'whatsapp' (send WhatsApp message). Use 'open' for YouTube navigation. DO NOT use for searching information." },
+                      query: { type: Type.STRING, description: "The website name or URL to open, or the song name to play. NOT for research queries." },
                       target: { type: Type.STRING, description: "The target phone number for WhatsApp, if applicable." }
                     },
                     required: ["actionType", "query"]
