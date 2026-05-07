@@ -42,9 +42,10 @@ The current date is: ${dateStr}.
 The current time is: ${timeStr}.
 (Always be aware of this exact date/time when asked about "today", "tomorrow", "next exam", etc.)
 
-BROWSER TASKS: When boss asks to open websites, search, play videos, click things,
-or do anything on the browser → use the "executeBrowserAction" tool immediately.
-Do NOT ask for confirmation on simple tasks (open YouTube, play music, etc.).
+SEARCH PRIORITY (CRITICAL):
+1. INTERNALLY SEARCH: If you don't know something, or need the latest news/facts, use the "google_search" tool IMMEDIATELY. This is an invisible search that helps you answer boss accurately without opening any windows. Use this by default for all research.
+2. BROWSER ACTION: ONLY use the "executeBrowserAction" tool if boss specifically says "Open", "Go to", or "Play" (e.g., "Open YouTube", "Go to my dashboard", "Play music"). 
+3. NEVER open the physical browser just to find information. Use "google_search" for finding info, and "executeBrowserAction" ONLY for physical navigation/control.
 
 Links: Use EXACT URLs from Google Search grounding. NEVER guess URLs.${priorContext}`;
 };

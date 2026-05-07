@@ -11,13 +11,17 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         let rawOutput = '';
         let tokens = 0;
+        let model = 'unknown';
+        let provider = 'unknown';
 
         try {
             const result = await callPlannerWithCascade(systemPrompt);
             rawOutput = result.content;
             tokens = result.tokens;
+            model = result.model;
+            provider = result.provider;
 
-            logger.debug("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Provider: ${result.provider}/${result.model} | Raw: ${rawOutput}`);
+            logger.debug("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Provider: ${provider}/${model} | Raw: ${rawOutput}`);
         } catch (providerErr: any) {
             logger.error("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] All providers failed: ${providerErr.message}`);
             if (attempt === MAX_ATTEMPTS) throw providerErr;
@@ -34,7 +38,7 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
             }
 
             logger.info("Planner", `[Attempt ${attempt}] Valid plan (${parsed.steps.length} steps)`);
-            return { parsed, tokens, model: result.model, provider: result.provider };
+            return { parsed, tokens, model, provider };
 
         } catch (validationError: any) {
             logger.error("Planner", `[Attempt ${attempt}/${MAX_ATTEMPTS}] Bad JSON: ${validationError.message} | Raw snippet: "${rawOutput.slice(0, 300)}"`);
@@ -100,6 +104,8 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
 User goal: "${goal}"`;
 
     try {
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt);
+        const actions: BrowserAction[] = parsed.steps || [];
         const requires_confirmation = parsed.requires_confirmation || false;
         const internal_steps: string[] = parsed.internal_steps || [];
         logger.info("Planner", `createPlan done (${actions.length} steps, confirm: ${requires_confirmation})`);
