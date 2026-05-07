@@ -62,3 +62,7 @@ Follow these rules strictly:
 - Explain reasoning for major decisions.
 - Include affected files, functions, modules.
 - Highlight potential issues, risks, and improvements.
+
+
+
+I am thinking to integrate a new feature to the system. When I tell zoya to do a task, whether she do google native search visit site or her thinking should be accessable and can be seen by me by clicking on the drow down arrow in the chat box, and if I click on the drow down arrow it will show me the details of the task and see her thinking and the steps she is taking to complete the task whether it is site visted or anything.

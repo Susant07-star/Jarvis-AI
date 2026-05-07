@@ -84,5 +84,3 @@ The system maintains a balance between "perfect recall" and "system performance"
 - **Context HUD**: The frontend visualizes the current token load (estimated at 4 chars/token) against a 32,768 token "high-performance" threshold.
 - **Unified Sync**: Both the React Chat and Zoya Live Voice services contribute to the same memory file, ensuring a shared context across different modes of interaction.
 
-## 8. Future Roadmap
-- **Thought Process Dropdown (UI Transparency)**: A planned feature to add an expandable `<details>` accordion to chat bubbles when J.A.R.V.I.S./Zoya executes tasks. This will allow the user to click a dropdown arrow and view the AI's internal reasoning, intermediate search queries (Native Search), and DOM actions in real-time, matching the transparency of advanced AI tools.

@@ -250,6 +250,7 @@ export class ZoyaLiveService {
           inputAudioTranscription: {},
           outputAudioTranscription: {},
           tools: [
+            { google_search: {} } as any,
             {
               functionDeclarations: [
                 {
@@ -291,6 +292,9 @@ export class ZoyaLiveService {
               ],
             },
           ],
+          toolConfig: {
+            include_server_side_tool_invocations: true
+          } as any,
         },
         callbacks: {
           onopen: () => {

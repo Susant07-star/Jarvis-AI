@@ -61,5 +61,12 @@ A background process that ensures J.A.R.V.I.S. never stays "broken."
 3. **Implement "Commander" Mode:** Coded logic for Zoya to give verbal updates and UI feedback while background tasks are running.
 4. **Setup Error Analysis:** Multi-provider LLM cascade now handles basic error reasoning before reporting back to Zoya.
 
+
+## 8. Future Roadmap
+- **Thought Process Dropdown (UI Transparency)**: A planned feature to add an expandable `<details>` accordion to chat bubbles when J.A.R.V.I.S./Zoya executes tasks. This will allow the user to click a dropdown arrow and view the AI's internal reasoning, intermediate search queries (Native Search), and DOM actions in real-time, matching the transparency of advanced AI tools.
+
+- **Autonomous Hybrid Browser Agent (Gemini 3 Flash)**: An upgrade to J.A.R.V.I.S.'s execution engine. It will use a multi-modal "Look -> Decide -> Act" loop. By feeding Gemini 3 Flash both a **Simplified DOM** (for precision) and a **Spatial Screenshot** (for layout awareness), J.A.R.V.I.S. will gain the ability to navigate complex web apps, handle dynamic popups, and reason through visual interfaces autonomously, exactly like a human researcher.
+
 ---
 *"At your service, sir. Let's build something extraordinary."*
+
