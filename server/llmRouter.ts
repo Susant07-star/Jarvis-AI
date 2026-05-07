@@ -226,19 +226,20 @@ export async function callResearchWithCascade(query: string): Promise<string> {
   if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
 
   const genAI = new GoogleGenAI({ apiKey });
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  // Use 2.0-flash (stable grounding)
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash",
+    tools: [{ googleSearchRetrieval: {} }] as any
+  });
 
   try {
-    logger.info("LLMRouter", `[Research] Calling Gemini 2.5 Flash for query: "${query}"`);
-    const result = await (model as any).generateContent({
-      contents: [{ role: "user", parts: [{ text: query }] }],
-      tools: [{ google_search: {} }],
-    });
-
+    logger.info("LLMRouter", `[Research] Calling Gemini 2.0 Flash for query: "${query}"`);
+    const result = await model.generateContent(query);
     return result.response.text();
   } catch (err: any) {
-    logger.error("LLMRouter", `[Research] Gemini 2.5 Flash failed: ${err.message}`);
-    const backupModel = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+    logger.error("LLMRouter", `[Research] Gemini 2.0 Flash failed: ${err.message}`);
+    // Fallback to 1.5 Flash (stable name)
+    const backupModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const backupResult = await backupModel.generateContent(query);
     return backupResult.response.text();
   }
