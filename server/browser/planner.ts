@@ -1,6 +1,8 @@
 import { callPlannerWithCascade } from '../llmRouter';
 import { BrowserAction, memory, tracker } from './executor';
 import { logger } from '../logger';
+import fs from 'fs';
+import path from 'path';
 
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
 // Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
@@ -229,6 +231,81 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
     } catch (e: any) {
         logger.error("Planner", `planWithDOM failed: ${e.message}`);
         logger.info("Planner", `ACTION RESULT: ${JSON.stringify({ success: false, action: "planner", target: null, details: `Planner failed: ${e.message}` })}`);
+        return { actions: [], tokens: 0, requires_confirmation: false, internal_steps: [], errorFallback: e.message };
+    }
+}
+
+// ── planWithVisualAgent (using Set-of-Mark Screenshot) ────────────────────────
+
+export async function planWithVisualAgent(goal: string, imageBase64: string, elementsMap: any[]): Promise<{actions: BrowserAction[], tokens: number, requires_confirmation: boolean, internal_steps?: string[], errorFallback?: string, model?: string, provider?: string}> {
+    const systemPrompt = `You are the J.A.R.V.I.S. Visual Browser Agent.
+
+ABSOLUTE RULE — JSON ONLY:
+You MUST ONLY return a valid JSON object. Do NOT include ANY explanation, reasoning, markdown code fences, sentences, or text outside the JSON object. Violations will cause a system crash.
+
+User goal: "${goal}"
+
+You have been provided with a screenshot of the current browser tab.
+Every interactive element on the screen has been marked with a red border and a red box containing an ID number.
+
+Available actions you can output in the "steps" array:
+- "click" (requires "jarvis_id": <number from the image>)
+- "type" (requires "jarvis_id", "text")
+- "type_secure" (requires "jarvis_id", "text") - use for passwords
+- "scroll" (requires "direction": "up" or "down")
+- "open_url" (requires "url")
+- "youtube_search" (requires "query")
+- "go_back"
+- "wait" (requires "seconds")
+
+CRITICAL RULES:
+1. ONLY use "jarvis_id" numbers that you can clearly see in the screenshot.
+2. If you need to search Google or YouTube, you can use "open_url" or "youtube_search" directly without clicking the search bar.
+3. Keep your plans very short. Since the screen changes after every click, usually 1 or 2 steps is best.
+
+REQUIRED OUTPUT FORMAT:
+{
+  "requires_confirmation": false,
+  "internal_steps": ["I see the search button is box 14. I will click it."],
+  "steps": [
+    { "action": "click", "jarvis_id": 14 }
+  ]
+}`;
+
+    try {
+        // Use the new imageBase64 parameter we added to the LLM Router
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, imageBase64);
+        
+        // We still use BrowserAction format, but we will let the execution layer map jarvis_id to coordinates
+        const actions: BrowserAction[] = parsed.steps || [];
+        const requires_confirmation = parsed.requires_confirmation || false;
+        const internal_steps: string[] = parsed.internal_steps || [];
+        
+        if (actions.length === 0) {
+            logger.warn("VisualAgent", `Failed to generate actions. Model: ${provider}/${model}. Tokens: ${tokens}.`);
+            return { actions: [], tokens: 0, requires_confirmation: false, internal_steps, errorFallback: "I couldn't generate actionable visual steps.", model, provider };
+        }
+        
+        // --- Enhanced Debugging & Screenshot Saving ---
+        if (imageBase64) {
+            try {
+                const logsDir = path.resolve(process.cwd(), 'logs', 'debug_screenshots');
+                if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+                const fileName = `screenshot_${Date.now()}.png`;
+                fs.promises.writeFile(path.join(logsDir, fileName), Buffer.from(imageBase64, 'base64'))
+                    .then(() => logger.info("VisualAgent", `Saved debug screenshot to logs/debug_screenshots/${fileName}`))
+                    .catch(err => logger.warn("VisualAgent", `Could not save debug screenshot: ${err}`));
+            } catch (err) {
+                logger.warn("VisualAgent", `Could not save debug screenshot: ${err}`);
+            }
+        }
+
+        logger.info("VisualAgent", `SUCCESS | Model: ${provider}/${model} | Tokens: ${tokens} | Confirm: ${requires_confirmation}`);
+        logger.info("VisualAgent", `Plan: ${JSON.stringify(actions)}`);
+        
+        return { actions, tokens, requires_confirmation, internal_steps, model, provider };
+    } catch (e: any) {
+        logger.error("Planner", `planWithVisualAgent failed: ${e.message}`);
         return { actions: [], tokens: 0, requires_confirmation: false, internal_steps: [], errorFallback: e.message };
     }
 }

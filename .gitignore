@@ -14,3 +14,4 @@ python_agent/chrome_profile/
 __pycache__/
 *.pyc
 browser-data/
+data/

@@ -8,8 +8,8 @@ async function runAutonomousTest() {
     console.log(`User Goal: ${goal}`);
     const plan = await createPlan(goal);
     
-    if (plan.length > 0) {
-        await executePlan(plan);
+    if (plan.actions.length > 0) {
+        await executePlan(plan.actions);
         console.log("Autonomous multi-step working");
         process.exit(0);
     } else {

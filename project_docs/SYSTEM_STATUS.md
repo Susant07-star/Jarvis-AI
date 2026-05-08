@@ -7,56 +7,31 @@
 - **Changelog**: `project_docs/CHANGELOG.md`
 
 ## Current Features Implemented
-* **Glassmorphism UI**: React-based frontend with real-time SSE chat streaming, voice visualization orb, and HUD status indicators.
-* **Zoya Commander Mode (V2)**: Stabilized Gemini 3.1 Flash Live voice interface with 24kHz audio, 3-model fallback cascade, and real-time SDK integration (v1.47.0).
-* **Time-Aware AI**: Dynamic system instruction generator injects current date, time, and user timezone into Zoya's context for sub-second situational awareness.
-* **Unified Bridge Setup**: `jarvisBridge.ts` routes both Voice (WebSocket) and Chat (SSE HTTP) inputs uniformly to the cascading brain.
-* **Tier 0 Cascading Intelligence**: `llmRouter.ts` prioritizes **Gemini 3.1 Flash-Lite (`gemini-3.1-flash-lite-preview`)** for all chat/planning tasks. Voice uses the separate Live API model `gemini-3.1-flash-live-preview`.
-* **Dedicated Chat Provider**: `createGeminiChatProvider()` in `llmRouter.ts` uses Gemini's native `systemInstruction` field to properly separate the system prompt from the user message — eliminates blob-prompt confusion.
-* **Separate Chat Cascade**: `CHAT_PROVIDER_PRIORITY` routes conversational traffic independently of the JSON planner cascade for optimized quality.
-* **Self-Healing Key Rotation**: Implemented a dynamic key-pool mechanism that retries up to 3 separate API keys per provider during rate-limit (429) events before cascading.
-* **Unified Chat ↔ Voice Memory Bridge**: `getSessionContextSummary()` in `memory.ts` reads the shared `session_memory.json` file and formats the last 20 messages as a compact context block. `GET /api/session-context` exposes this to the frontend. `zoyaLiveService.ts` fetches this at every session start and injects it into `systemInstruction` — Zoya is always aware of recent chat history, and vice versa.
-* **Full Error Visibility**: Every failed provider attempt in both cascade functions is now logged with the exact error message via `logger.warn`. Silent failures are impossible.
-* **Memory Management**: Dual-layer JSON approach (`memoryManager.ts`) with operational logs and summarized LLM context. Both chat and voice use a **20-message memory window**.
-* **Continuous Audio**: Browser `ScriptProcessor` (optimized for Zoya) captures MIC data, streaming raw PCM chunks to Gemini Live with sub-200ms latency.
+*   **Set-of-Mark (SoM) Visual Agent**: JARVIS now "sees" the browser. It injects numbered bounding boxes over the UI and uses Gemini's vision engine to plan actions.
+*   **Pixel-Perfect Coordinate Engine**: Browser interactions are now based on precise X,Y coordinates mapped from the visual bounding boxes, eliminating CSS selector fragility.
+*   **Dynamic API Key Rotation**: The system now counts available keys in `.env` and automatically rotates/retries through all of them on 429 errors before cascading to fallback models.
+*   **Non-Blocking Debug HUD**: Visual screenshots of every planning turn are saved to `logs/debug_screenshots/` asynchronously, ensuring zero impact on system latency.
+*   **Unified Memory Bridge**: Chat and Voice share a real-time 20-message memory window via `session_memory.json`.
+*   **Intelligence Cascade**: `llmRouter.ts` prioritizes Gemini 3.1 Flash-Lite with 2.5 Flash as a fallback for high-quality reasoning.
 
 ## Working Components
-* Text-To-Speech (ElevenLabs/OpenAI) + Speech-To-Text (Groq Whisper)
-* API Key rotation and Token Logging
-* Playwright Backend Navigation (open URLs, search YouTube)
-* Encrypted credential storage stubs
-* **Intent Classification & Orchestrator Flow**: Routes traffic cleanly between simple chat and browser tasks.
-* **Strict JSON Page Planning**: Planner strictly outputs deterministic JSON step arrays `{"steps": []}` with `internal_steps` reasoning and dynamic DOM pruning.
- * **Shared Confirmation Loop**: Enhanced `confirmationState.ts` with Session State Manager and State Guard in orchestrator. Centralized confirmation handling with comprehensive logging.
- * **Action Result Visibility**: Structured JSON logging for all browser planner successes/failures.
- * **State Guard**: Confirmation check now happens BEFORE IntentClassifier, preventing yes/no bypass.
- * **YouTube Ad Watcher**: Background thread that continuously polls for and automatically skips YouTube ads without user confirmation. Logs ACTION RESULT format with success, action, target, and details.
- * **File Logging**: Python agent now logs to both console and logs/debug.log file for better debugging.
- * **Chrome Driver Stability**: Fixed connection issues by removing user-data-dir configuration and creating fresh ChromeOptions objects in fallback paths.
+*   **Visual Planner**: Multi-modal planning using Base64 screenshot payloads.
+*   **Research API**: Google Search Grounding with 3-model fallback and key rotation.
+*   **Zoya Voice (V2)**: Gemini 3.1 Flash Live voice interface with 24kHz audio.
+*   **YouTube Ad Watcher**: Background thread that skips ads autonomously.
 
-* **Playwright Click Accuracy**: The "Universal DOM Extractor" continues to improve through native YouTube action mappings.
-* **Viewport Syncing**: The Playwright Chromium instance uses a static viewport that does not respond to the React frontend UI pane size.
+## Recent Fixes (2026-05-08)
+*   **KEY ROTATION FIXED**: `llmRouter.ts` now uses `getKeyCount()` to dynamically scale retries based on your `.env` configuration.
+*   **RESEARCH FALLBACK STABILIZED**: Fixed 404/Quota errors in Intelligent Search by routing through 3.1 Flash Lite and 2.5 Flash with separate quota pools.
+*   **WINDOWS EMOJI CRASH FIXED**: Removed emoji characters from terminal print statements in test scripts to prevent Windows encoding crashes.
+*   **VISUAL AGENT IMPLEMENTED**: Replaced old DOM-parsing `planWithDOM` with the modern `planWithVisualAgent` using Set-of-Mark screenshots.
 
-## Recent Fixes (2026-05-06 — Session 2)
-- **GEMINI MODEL NAME FIXED**: Corrected `gemini-3.1-flash` → `gemini-3.1-flash-lite-preview` for the `generateContent` REST API. The former caused 404 errors on every chat request since it is exclusive to the Live WebSocket API.
-- **DEDICATED CHAT PROVIDER**: Added `createGeminiChatProvider()` using native `systemInstruction` config — eliminates merged-blob prompt issues that caused empty/garbled responses from Gemini.
-- **UNIFIED MEMORY BRIDGE**: Chat and Voice now share a real-time 20-message memory window via `session_memory.json`. Zoya fetches context at session start via `GET /api/session-context` — no summarization model needed, no extra latency.
-- **FULL PROVIDER ERROR LOGGING**: `callPlannerWithCascade` and `callChatWithCascade` now log the exact error message for every failed attempt — debugging cascade issues is now trivial.
+## Current Priorities (Roadmap Shift)
+1.  **Telegram Integration**: Text and Voice bridge for remote control.
+2.  **Audio Calling**: Real-time voice calls from Telegram to Gemini.
+3.  **Dropdown Thinking**: Collapsible reasoning UI for Chat and Telegram.
+4.  **File Generation**: PDF/Markdown/CSV report generation.
+5.  **Deep Research**: Enhanced multi-step web research.
+6.  **Browser Agent Optimization**: Scaling and polishing the SoM engine.
 
-## Older Fixes (2026-05-06 — Session 1)
-- **ZOYA VOICE STABILIZATION**: Fixed Gemini 3.1 Flash connection drops by upgrading `@google/genai` to 1.47.0 and stripping invalid config parameters.
-- **API KEY GHOST QUOTES**: Fixed literal quote parsing in `.env.local` that was invalidating API keys.
-- **TIME-AWARE AI**: Integrated `TimezoneClock` and dynamic instruction generator to provide context-aware intelligence.
-- **GEMINI 3.1 CHAT INTEGRATION**: Fully migrated conversational chat to the Gemini-led cascade, with real-time model metadata visibility in the UI.
-- **DYNAMIC PROVIDER LOADING**: Fixed server-side race conditions by making LLM provider availability checks dynamic at runtime.
-- **ORCHESTRATOR BRIDGE**: Created `/api/zoya-execute` to route Gemini's voice intents directly into the Python automation agent.
-
-## Older Fixes (2026-03-27)
-- **YOUTUBE AD WATCHER IMPLEMENTED**: Background thread continuously polls for and automatically skips YouTube ads without user confirmation. Logs ACTION RESULT format with success, action, target, and details.
-- **FILE LOGGING ADDED**: Python agent now logs to both console and logs/debug.log file for better debugging and visibility.
-- **CHROME DRIVER STABILITY**: Fixed connection issues by removing user-data-dir configuration and creating fresh ChromeOptions objects in fallback paths.
-- **CONFIRMATION BYPASS ENHANCED**: State Guard now intercepts yes/no inputs even without pending confirmation, preventing misclassification.
-- **EXECUTION DROP FIXED**: Refactored executor.ts sequential async loop with improved logging and step tracking; verified multi-step execution works.
-- **WEBSOCKET CONFIRMATION UNIFIED**: Replaced duplicate confirmation logic in websocket.ts with centralized checkConfirmationInput.
-
-Last Update: 2026-05-06 — **Gemini Model Fix, Dedicated Chat Provider & Unified Voice↔Chat Memory Bridge**
+*Last Update: 2026-05-08 | Visual Agent Implementation & Key Rotation Stabilization.*

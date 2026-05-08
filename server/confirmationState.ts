@@ -38,6 +38,9 @@ export interface ConfirmationResult {
 }
 
 let _pending: PendingPlan | null = null;
+let _timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+const CONFIRMATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 /** Returns the currently queued pending plan, or null if there is none. */
 export function getPendingConfirmation(): PendingPlan | null {
@@ -46,13 +49,25 @@ export function getPendingConfirmation(): PendingPlan | null {
 
 /** Cache a plan that requires confirmation before execution. */
 export function setPendingConfirmation(plan: PendingPlan): void {
+  if (_timeoutHandle) {
+    clearTimeout(_timeoutHandle);
+  }
   _pending = plan;
   logger.info("[STATE]", `Plan stored (${plan.actions.length} steps) from ${plan.source}`);
   logger.info("[STATE]", `awaiting_confirmation = true`);
+
+  _timeoutHandle = setTimeout(() => {
+    logger.info("[STATE]", `Pending plan timed out after 5 minutes: ${plan.goal}`);
+    clearPendingConfirmation();
+  }, CONFIRMATION_TIMEOUT_MS);
 }
 
 /** Remove the pending plan (after confirmed, declined, or timed out). */
 export function clearPendingConfirmation(): void {
+  if (_timeoutHandle) {
+    clearTimeout(_timeoutHandle);
+    _timeoutHandle = null;
+  }
   if (_pending) {
     logger.info("[STATE]", `Clearing pending plan: ${_pending.goal}`);
   }

@@ -1,4 +1,4 @@
-import { executeAction, BrowserAction } from './executor';
+import { executePlan, BrowserAction } from './executor';
 
 async function runTest() {
     const actions: BrowserAction[] = [
@@ -7,9 +7,7 @@ async function runTest() {
         { action: 'youtube_like' }
     ];
 
-    for (const action of actions) {
-        await executeAction(action);
-    }
+    await executePlan(actions);
     
     console.log("YouTube control working");
     process.exit(0);

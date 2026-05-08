@@ -1,4 +1,4 @@
-import { executeAction, BrowserAction } from './executor';
+import { executePlan, BrowserAction } from './executor';
 
 async function runTest() {
     const actions: BrowserAction[] = [
@@ -10,9 +10,7 @@ async function runTest() {
         { action: 'click', selector: 'h3' } // click first result
     ];
 
-    for (const action of actions) {
-        await executeAction(action);
-    }
+    await executePlan(actions);
     
     console.log("Playwright working with executor");
     process.exit(0);

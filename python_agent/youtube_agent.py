@@ -964,18 +964,29 @@ def safe_click(element_info: dict):
             d.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", el)
             time.sleep(0.5)
             
-            methods = ['normal', 'js', 'action_chains']
+            methods = ['normal', 'js', 'action_chains', 'coordinate']
             clicked = False
             used_method = ""
             
+            center_x = element_info.get('center_x')
+            center_y = element_info.get('center_y')
+            
             for method in methods:
                 try:
-                    if method == 'normal':
+                    if method == 'coordinate' and center_x and center_y:
+                        scroll_js = f"window.scrollTo({{top: {center_y} - (window.innerHeight / 2), left: {center_x} - (window.innerWidth / 2), behavior: 'instant'}});"
+                        d.execute_script(scroll_js)
+                        time.sleep(0.5)
+                        click_js = f"let el = document.elementFromPoint({center_x} - window.scrollX, {center_y} - window.scrollY); if (el) el.click();"
+                        d.execute_script(click_js)
+                    elif method == 'normal' and el:
                         el.click()
-                    elif method == 'js':
+                    elif method == 'js' and el:
                         d.execute_script("arguments[0].click();", el)
-                    elif method == 'action_chains':
+                    elif method == 'action_chains' and el:
                         ActionChains(d).move_to_element(el).click().perform()
+                    else:
+                        continue
                     
                     clicked = True
                     used_method = method
@@ -1095,6 +1106,73 @@ function getInteractiveElements() {
 return getInteractiveElements();
 """
 
+MARKER_JS = """
+function drawBoundingBoxes() {
+    // Remove existing markers if any
+    document.querySelectorAll('.jarvis-marker').forEach(el => el.remove());
+    
+    let result = { elements: [] };
+    let idCounter = 1;
+    
+    const selectors = 'a, button, input, select, textarea, [role="button"], [role="link"], [role="menuitem"], [role="option"], [tabindex]:not([tabindex="-1"])';
+    const nodes = document.querySelectorAll(selectors);
+    
+    nodes.forEach(node => {
+        const rect = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        const isVisible = rect.width > 0 && rect.height > 0 && 
+                          style.visibility !== 'hidden' && 
+                          style.display !== 'none' &&
+                          style.opacity !== '0';
+                          
+        if (node.tagName.toLowerCase() === 'input' && node.type === 'hidden') return;
+        
+        if (isVisible) {
+            // Draw tag
+            const marker = document.createElement('div');
+            marker.className = 'jarvis-marker';
+            marker.style.position = 'absolute';
+            marker.style.left = (rect.left + window.scrollX) + 'px';
+            marker.style.top = (rect.top + window.scrollY) + 'px';
+            marker.style.backgroundColor = 'red';
+            marker.style.color = 'white';
+            marker.style.fontSize = '12px';
+            marker.style.fontWeight = 'bold';
+            marker.style.padding = '2px 4px';
+            marker.style.zIndex = '2147483647';
+            marker.style.pointerEvents = 'none';
+            marker.innerText = idCounter;
+            document.body.appendChild(marker);
+            
+            // Draw border
+            const border = document.createElement('div');
+            border.className = 'jarvis-marker';
+            border.style.position = 'absolute';
+            border.style.left = (rect.left + window.scrollX) + 'px';
+            border.style.top = (rect.top + window.scrollY) + 'px';
+            border.style.width = rect.width + 'px';
+            border.style.height = rect.height + 'px';
+            border.style.border = '2px solid red';
+            border.style.boxSizing = 'border-box';
+            border.style.zIndex = '2147483646';
+            border.style.pointerEvents = 'none';
+            document.body.appendChild(border);
+            
+            result.elements.push({
+                id: idCounter,
+                center_x: rect.left + window.scrollX + (rect.width / 2),
+                center_y: rect.top + window.scrollY + (rect.height / 2),
+                text: (node.innerText || node.value || node.getAttribute('aria-label') || '').substring(0, 50).replace(/\\n/g, ' ')
+            });
+            idCounter++;
+        }
+    });
+    
+    return JSON.stringify(result);
+}
+return drawBoundingBoxes();
+"""
+
 class AnalyzeRequest(BaseModel):
     target_tab: Optional[str] = None
 
@@ -1181,6 +1259,65 @@ async def analyze_page(req: AnalyzeRequest):
         
     except Exception as e:
         logger.error(f"Error analyzing page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/mark-page")
+async def mark_page():
+    """
+    Injects bounding boxes over interactive elements, takes a base64 screenshot,
+    and returns both the image and the coordinate map for the LLM Visual Agent.
+    """
+    try:
+        d = get_driver()
+        d.execute_script("return document.readyState") == "complete"
+        
+        # Inject JS and get elements
+        result_text = d.execute_script(MARKER_JS)
+        import json
+        elements = json.loads(result_text)
+        
+        global last_extracted_elements
+        last_extracted_elements = elements.get("elements", [])
+        
+        # Take base64 screenshot
+        screenshot_b64 = d.get_screenshot_as_base64()
+        
+        # Cleanup markers so page looks normal again
+        d.execute_script("document.querySelectorAll('.jarvis-marker').forEach(el => el.remove());")
+        
+        return {"status": "success", "image": screenshot_b64, "elements": elements.get("elements", [])}
+    except Exception as e:
+        logger.error(f"Error marking page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ClickCoordinateRequest(BaseModel):
+    x: float
+    y: float
+
+@app.post("/click-coordinate")
+async def click_coordinate(req: ClickCoordinateRequest):
+    """Clicks a specific coordinate on the page (used by Visual Agent)."""
+    try:
+        d = get_driver()
+        # Scroll element into the center of the viewport
+        scroll_js = f"window.scrollTo({{top: {req.y} - (window.innerHeight / 2), left: {req.x} - (window.innerWidth / 2), behavior: 'instant'}});"
+        d.execute_script(scroll_js)
+        import time
+        time.sleep(0.5)
+        
+        # Use elementFromPoint to click
+        click_js = f"""
+        let el = document.elementFromPoint({req.x} - window.scrollX, {req.y} - window.scrollY);
+        if (el) {{
+            el.click();
+            return true;
+        }}
+        return false;
+        """
+        success = d.execute_script(click_js)
+        return {"status": "success", "clicked": success}
+    except Exception as e:
+        logger.error(f"Error clicking coordinate: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 class EvaluateRequest(BaseModel):

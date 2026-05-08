@@ -1,5 +1,5 @@
 import { executePlan } from './executor';
-import { planWithDOM } from './planner';
+import { planWithVisualAgent } from './planner';
 import { extractDOM } from './domExtractor';
 import { initBrowser } from './browserManager';
 
@@ -18,10 +18,10 @@ async function runUniversalTest() {
         console.log(`User Goal: ${goal}`);
         
         // Execute the contextual extraction planner
-        const plan = await planWithDOM(goal, domElements);
+        const { actions: plan } = await planWithVisualAgent(goal, "", domElements);
         
-        if (plan && plan.length > 0) {
-            await executePlan(plan);
+        if (plan && plan.actions.length > 0) {
+            await executePlan(plan.actions);
             console.log("Universal DOM layer working");
             process.exit(0);
         } else {

@@ -107,6 +107,7 @@ export class ZoyaLiveService {
 
   private isActive = false;
   private isSocketOpen = false;
+  private isSetupComplete = false;
   private connectionStartTime = 0;
   private nextPlayTime = 0;
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -155,7 +156,7 @@ export class ZoyaLiveService {
     this.onModelChange(this.currentModel);
 
     try {
-      const rawKey = (import.meta.env.VITE_GEMINI_API_KEY as string) ||
+      const rawKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
         (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '') ||
         "";
       // Remove any literal quotes that might be wrapping the string or individual keys
@@ -315,9 +316,10 @@ export class ZoyaLiveService {
               ],
             },
           ],
+          // @ts-ignore - Temporary bypass for incomplete types in @google/genai LiveConnectConfig
           toolConfig: {
             include_server_side_tool_invocations: true
-          } as any,
+          },
         },
         callbacks: {
           onopen: () => {

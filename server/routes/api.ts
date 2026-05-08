@@ -44,21 +44,25 @@ router.post("/zoya-execute", async (req, res) => {
     }
 
     // Must be agent mode
-    const { planWithDOM } = await import("../browser/planner");
+    const { planWithVisualAgent } = await import("../browser/planner");
     
-    // Get DOM if available
-    let domMap = {};
+    // Get Marked Screenshot if available
+    let base64Image = "";
+    let elementsMap = [];
     try {
-      const pythonDomRes = await fetch('http://127.0.0.1:8000/analyze', { 
+      const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
         method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
       });
-      const domData = await pythonDomRes.json();
-      domMap = domData.elements || {};
+      const markData = await pythonRes.json();
+      if (markData.status === "success") {
+        base64Image = markData.image;
+        elementsMap = markData.elements || [];
+      }
     } catch(e) {
-      logger.warn("API", "Could not fetch DOM map for Zoya execute");
+      logger.warn("API", "Could not fetch marked screenshot for Zoya execute");
     }
 
-    const { actions: plannedSteps, tokens: plannerTokens, errorFallback, model, provider } = await planWithDOM(decision.normalizedInput || intent, [domMap]) as any;
+    const { actions: plannedSteps, tokens: plannerTokens, errorFallback, model, provider } = await planWithVisualAgent(decision.normalizedInput || intent, base64Image, elementsMap) as any;
 
     if (metrics) {
       metrics.addTokens('planner', plannerTokens || 0);
@@ -71,9 +75,12 @@ router.post("/zoya-execute", async (req, res) => {
 
     // Execute node actions (SerpAPI)
     const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search');
+    let searchResult = "";
     for (const na of nodeActions) {
        logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-       // (Real implementation would do search here)
+       const groq = getGroqClient();
+       const summary = await performSearch(na.query, groq);
+       searchResult += `Search results for "${na.query}":\n${summary}\n`;
     }
 
     // Execute Python actions
@@ -106,7 +113,8 @@ router.post("/zoya-execute", async (req, res) => {
       metrics.setExecutionResult("Success");
       metrics.finalize();
     }
-    res.json({ success: true, result: "Browser actions executed successfully.", metadata: { model, provider } });
+    const finalResult = searchResult ? `Browser actions executed. ${searchResult}` : "Browser actions executed successfully.";
+    res.json({ success: true, result: finalResult, metadata: { model, provider } });
 
   } catch (error: any) {
     logger.error("API", "Zoya Execute Error", error);
@@ -252,22 +260,26 @@ router.post("/chat", async (req, res) => {
       return res.end();
     } else {
       // Agent Task Mode (Strict Planning -> Execution)
-      const { planWithDOM } = await import("../browser/planner");
+      const { planWithVisualAgent } = await import("../browser/planner");
       
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // A. Extract minimal Contextual DOM
-      let domMap = {};
+      // A. Extract Marked Screenshot
+      let base64Image = "";
+      let elementsMap = [];
       try {
-        const pythonDomRes = await fetch('http://127.0.0.1:8000/analyze', { 
+        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
             method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
         });
-        const domData = await pythonDomRes.json();
-        domMap = domData.elements || {};
+        const markData = await pythonRes.json();
+        if (markData.status === "success") {
+          base64Image = markData.image;
+          elementsMap = markData.elements || [];
+        }
       } catch(e) {
-        logger.warn("API", "Could not fetch DOM map, running blind planner");
+        logger.warn("API", "Could not fetch marked screenshot, running blind planner");
       }
 
       // Use normalized input to eliminate LLM confusion over chatty sentences
@@ -279,7 +291,7 @@ router.post("/chat", async (req, res) => {
       }
 
       // B. Create Strict JSON Plan
-      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithDOM(goal, [domMap]) as any;
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
       
       // Send model metadata
       res.write(`data: ${JSON.stringify({ metadata: { model, provider } })}\n\n`);
@@ -330,9 +342,12 @@ router.post("/chat", async (req, res) => {
 
       for (const na of nodeActions) {
          logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-         res.write(`data: ${JSON.stringify({ content: `\n[SerpAPI] Searched for: ${na.query}` })}\n\n`);
-         // Mock API Tokens
-         if (metrics) metrics.addTokens('planner', 50);
+         res.write(`data: ${JSON.stringify({ content: `\n[SerpAPI] Searching for: ${na.query}...` })}\n\n`);
+         const groq = getGroqClient();
+         const summary = await performSearch(na.query, groq);
+         res.write(`data: ${JSON.stringify({ content: `\n\n*Search Results:*\n${summary}\n\n` })}\n\n`);
+         
+         if (metrics) metrics.addTokens('planner', 50); // Approximate cost for search API
       }
 
       // E. Execute via Python Layer

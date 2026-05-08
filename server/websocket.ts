@@ -311,21 +311,25 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
     } else {
       // Agent Task Mode (Strict Planning -> Execution)
-      const { planWithDOM } = await import("./browser/planner");
+      const { planWithVisualAgent } = await import("./browser/planner");
       
       // LLM start signal, but no verbose audio
       ws.send(JSON.stringify({ type: 'llm_start' }));
 
-      // A. Extract minimal Contextual DOM
-      let domMap = {};
+      // A. Extract Marked Screenshot
+      let base64Image = "";
+      let elementsMap = [];
       try {
-        const pythonDomRes = await fetch('http://127.0.0.1:8000/analyze', { 
+        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
             method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
         });
-        const domData = await pythonDomRes.json();
-        domMap = domData.elements || {};
+        const markData = await pythonRes.json();
+        if (markData.status === "success") {
+          base64Image = markData.image;
+          elementsMap = markData.elements || [];
+        }
       } catch(e) {
-        logger.warn("WS", "Could not fetch DOM map, running blind planner");
+        logger.warn("WS", "Could not fetch marked screenshot, running blind planner");
       }
 
       if (state.abortController?.signal.aborted) throw new Error('AbortError');
@@ -338,7 +342,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       }
 
       // B. Create Strict JSON Plan
-      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps } = await planWithDOM(goal, [domMap]) as any;
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
       if (metrics) {
         metrics.addTokens('planner', plannerTokens);
         metrics.setPlannerOutput(plannedSteps);
