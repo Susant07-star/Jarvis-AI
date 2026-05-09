@@ -1,49 +1,84 @@
-# J.A.R.V.I.S. Architecture Documentation
+# J.A.R.V.I.S. Technical Architecture
 
-## 1. Frontend Layer (React / Vite)
-Located in `src/`. The user interface is a responsive, glassmorphism-styled dashboard. 
-*   **ChatWindow.tsx**: Displays SSE-streamed messages from the Node backend. Includes positive/negative feedback logging buttons.
-*   **VoiceVisualizer.tsx**: Provides visual feedback for voice pipeline state (`listening`, `processing`, `speaking`).
-*   **useJarvisVoice.ts**: A custom React Hook that captures raw PCM mic data via an `AudioWorklet`.
+## 1. Conversational Intelligence Layer
 
-## 2. Backend Brain (Node.js / Express)
-Located in `server/`. This is the core cognitive routing layer.
-*   **Orchestrator**: The incoming command (from `api.ts` or `websocket.ts`) is routed through `jarvisBridge.ts` into an Intent Classifier.
-*   **Visual Planner (`planner.ts`)**: 
-    - **Multi-Modal Set-of-Mark (SoM)**: Instead of reading raw DOM code, the planner now uses the Python Agent to capture a marked-up screenshot of the browser.
-    - **Vision-Led Planning**: The planner sends the Base64 screenshot and a numerical element map to Gemini's vision engine. Gemini "sees" the UI and identifies elements by their red-boxed ID numbers (`jarvis_id`).
-*   **Cascading Brain (`llmRouter.ts`)**: 
-    - **Provider Priority**:
-        - **Primary**: `gemini-3.1-flash-lite-preview` (Fastest, Vision-capable, High Quota).
-        - **Secondary**: `gemini-2.5-flash` (High Reasoning, Vision-capable).
-        - **Tertiary**: `gemini-2.0-flash` (Legacy).
-    - **Dynamic Key Rotation**: Automatically counts the number of keys in the `.env` file (via `getKeyCount`) and rotates through all of them randomly on 429 errors before falling back to the next model.
-*   **Observability (`metrics.ts`)**: Tracks per-request token usage and latency. 
-*   **Debug HUD**: Base64 screenshots are saved asynchronously to `logs/debug_screenshots/` for visual verification of what the AI saw during planning.
+### Stateful Thread Management (`ThreadManager.ts`)
+We have moved away from stateless history transmission to a **Persistent, Disk-Based Thread System**.
+- **Location**: `data/threads/{threadId}.json`
+- **Benefit**: Reduces token overhead by ~80% by only sending necessary message deltas instead of the entire chat history in every request.
+- **Persistence**: Conversation state survives server restarts and is shared across Web and Telegram.
 
-## 3. Executor Engine (Python / Selenium)
-Located in `python_agent/`. This is the "hands" and "eyes" of the system.
-*   **youtube_agent.py**: A FastAPI server wrapped around an ongoing Selenium session.
-*   **Visual Engine (`/mark-page`)**: 
-    - Injects a specialized JavaScript payload (`MARKER_JS`) that identifies all interactive elements.
-    - Draws red bounding boxes and numerical tags over every element on the screen.
-    - Captures a Base64 screenshot and returns it to Node alongside a coordinate map.
-    - Automatically cleans up the markers instantly after capture to avoid UI pollution.
-*   **Coordinate-Based Safe Click**: 
-    - Since the visual agent works with pixel-perfect screenshots, the click engine now supports direct coordinate clicking.
-    - Maps the `jarvis_id` (box number) from the planner back to its precise `center_x`, `center_y` pixels.
-    - Performs the click using Selenium's ActionChains or direct JS `elementFromPoint` events.
+### Modular Prompt Assembly (`prompt_builder.ts`)
+The system uses a **"Soul vs. Skills"** architecture for system instructions.
+- **Soul (`personality.json`)**: Defines the core identity (JARVIS, aristocratic, concise, Nepali-mirroring). Shared by ALL agents.
+- **Skills (`voice_skills.json`, `tools_browser.json`, etc.)**: Adds capabilities specific to the medium (e.g., emotion tags for voice, DOM selectors for browser).
+- **Integration**: The `buildPrompt()` function dynamically assembles these modules into a single optimized system instruction.
 
-## 4. Data Flow (Input → Orchestrator → Execution)
-1.  **Input Phase**: User speaks or types a message.
-2.  **Orchestrator Phase**: `jarvisBridge.ts` unifies input and classifies intent.
-3.  **Visual Extraction**: Node calls Python's `/mark-page`. Python marks the UI, grabs a screenshot, and sends the Base64 image + coordinate map back to Node.
-4.  **Planning Phase**: `planner.ts` sends the user goal + Base64 screenshot to Gemini 3.1 Flash Lite.
-5.  **Execution Phase**: Gemini returns a JSON plan like `{"action": "click", "jarvis_id": 14}`. Python receives this, looks up the coordinates for box 14, and performs a pixel-perfect click.
-6.  **Verification Phase**: Success/Failure is logged to `debug.log` and the screenshot is archived for debugging.
+---
 
-## 5. Intelligence & Knowledge (Research)
-*   **Intelligent Search**: A dedicated tool in `llmRouter.ts` that uses Google Search Grounding.
-*   **Multi-Model Fallback**: If Gemini 3.1 hits a quota, it rotates keys. If all keys fail, it falls back to 2.5 Flash and then 2.0 Flash to ensure the search always succeeds.
+## 2. Neural Sync Bridge
 
-*Last Updated: 2026-05-08 | Transitioned to Visual Set-of-Mark Architecture.*
+### Shared Context API
+The Frontend (Zoya Gemini Live) and Backend (Node.js/Telegram) are now synchronized via:
+- **`GET /api/config/voice-prompt`**: Dynamically pulls the "Soul" from the server to ensure personality consistency.
+- **`GET /api/session-context`**: Injects shared chat/voice history into the Gemini Live session so Zoya "remembers" what was said in text chat.
+
+---
+
+## 3. Input & Orchestration
+
+### Intent Classification (`intentClassifier.ts`)
+Uses a high-speed Llama-3-8B model to route requests:
+- **Direct Mode**: Conversational, tone instructions, language shifts. (Routed to `callChatWithCascade`).
+- **Agent Mode**: Physical browser tasks or deep research. (Routed to `planner.ts`).
+
+### Multilingual Transcription
+The Telegram transcription engine (Whisper) is configured for **Native Nepali/English Detection**.
+- **Context Hinting**: Includes `Nepali, English, JARVIS, Susant` as prompt context to Whisper to ensure high accuracy for code-switching.
+- **Language Lock**: Explicitly removed forced 'en' translation to allow native Nepali text processing.
+
+---
+
+## 4. UI/UX Protocols
+
+### Conciseness Protocol
+JARVIS is governed by a strict "Anti-Essay" rule. Responses are limited to 2-3 sentences unless "detailed analysis" is requested. This makes him feel like a human assistant rather than an LLM.
+
+### Visual Status
+- **Browser Badges**: Real-time token and model telemetry.
+- **Search Success**: Clear `[SUCCESS]` indicators in logs for multi-model research cascades.
+---
+
+## 5. Telegram Remote Access Layer
+
+### Telegram Web App (Mini App)
+For mobile remote access, J.A.R.V.I.S. utilizes a **Telegram Web App Interface**.
+- **Route**: `GET /telegram-call`
+- **Bridge**: The Telegram bot provides a persistent "Call" button that opens this mobile-optimized route.
+- **Voice Stack**: Integrates `ZoyaLiveService` via WebRTC/WebSockets directly inside the Telegram browser, bypassing bot-level audio limitations.
+- **Aesthetics**: Automatically inherits Telegram's theme colors and expands to full-screen for an immersive 3D Avatar experience.
+- **Ngrok Static Tunnels**: Uses fixed-domain ngrok tunnels to ensure the Web App URL remains persistent across restarts.
+
+---
+
+## 6. Time & Transparency Layers
+
+### Neural Scheduler (`scheduler.ts`)
+A background execution engine for time-delayed tasks.
+- **Current State (MVP)**: Uses high-precision Node.js `setTimeout` in-memory timers to track `delay_seconds` for future events.
+- **Actions**: Supports native Telegram messages and `triggerProactiveCall` (Urgent Ringing).
+- **Tooling**: Integrated into the Planner as `schedule_action` and into the Voice Session via the `/api/scheduler/register` bridge.
+- **Future Migration (Supabase)**: Because Render free-tier restarts wipe in-memory `setTimeout` objects, the architecture will migrate to a persistent Supabase/Postgres queue or Upstash QStash webhook trigger to ensure indestructible task scheduling.
+
+### Deep Trace Logging
+A unified diagnostic system for real-time neural observation.
+- **Trace Points**: Logs intent classification (Why?), planner reasoning (How?), and tool registration (What?).
+- **HUD Telemetry**: Captures exact latency in milliseconds and total token consumption for every request.
+- **Lifecycle Tracking**: Monitors scheduled tasks from registration to final execution trigger.
+
+---
+
+## 7. Dual-Search Strategy
+The system utilizes two distinct research engines:
+1. **Gemini Grounding**: Used for conversational knowledge and deep research (Answering).
+2. **DuckDuckGo/SerpAPI**: Used by the Planner for raw link extraction and browser automation (Doing).

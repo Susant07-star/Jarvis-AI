@@ -253,7 +253,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       // Direct Conversational Mode
       logger.info('WS', `LLM for: "${userText}"`);
       const messages = [
-        { role: "system", content: buildPrompt("browser") },
+        { role: "system", content: buildPrompt("voice") }, // lightweight prompt for chat
         ...compressedMemory
       ];
 
@@ -264,6 +264,13 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
         max_tokens: 1024
       });
 
+      ws.send(JSON.stringify({ 
+        type: 'metadata', 
+        metadata: { 
+          model: "llama-3.3-70b-versatile", 
+          provider: "Groq" 
+        } 
+      }));
       ws.send(JSON.stringify({ type: 'llm_start' }));
 
       for await (const chunk of stream) {
@@ -342,7 +349,12 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       }
 
       // B. Create Strict JSON Plan
-      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
+      
+      ws.send(JSON.stringify({ 
+        type: 'metadata', 
+        metadata: { model, provider } 
+      }));
       if (metrics) {
         metrics.addTokens('planner', plannerTokens);
         metrics.setPlannerOutput(plannedSteps);
@@ -390,13 +402,24 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
         return;
       }
 
-      // D. Node Action Execution (SerpAPI)
-      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search');
-      const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
+      // D. Node Action Execution (SerpAPI, Scheduler)
+      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
+      const browserActions = plannedSteps.filter((s:any) => !['serp_api_search', 'schedule_call', 'schedule_message'].includes(s.action));
 
       for (const na of nodeActions) {
-         logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-         ws.send(JSON.stringify({ type: 'llm_chunk', text: `[SerpAPI] Searched for: ${na.query} ` }));
+         if (na.action === 'serp_api_search') {
+            logger.info("WS", `[TOOL] Executing SerpAPI: ${na.query}`);
+            ws.send(JSON.stringify({ type: 'llm_chunk', text: `[SerpAPI] Searched for: ${na.query} ` }));
+         } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
+            const { jarvisScheduler } = await import('./scheduler');
+            const threadId = (ws as any).threadId || "ws_client";
+            const chatIdMatch = threadId.match(/tg_(\d+)/);
+            const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
+
+            const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
+            logger.info("WS", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
+            ws.send(JSON.stringify({ type: 'llm_chunk', text: `[Scheduler] Set timer for ${na.delay_seconds} seconds. ` }));
+         }
          if (metrics) metrics.addTokens('planner', 50);
       }
 

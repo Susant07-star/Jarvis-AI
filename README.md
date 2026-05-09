@@ -46,10 +46,12 @@ Unlike standard AI interfaces, J.A.R.V.I.S. features a **Real-time Telemetry HUD
 
 | Feature | Description | Status |
 | :--- | :--- | :--- |
-| **🗣️ Live Voice API** | Sub-second Hinglish conversation via WebSockets with Gemini 3.1 Flash. | **STABLE** |
-| **🌐 Native Search** | Real-time internet research grounding without browser overhead. | **LIVE** |
-| **🤖 Autonomous Browser** | Full control of YouTube, Spotify, and WhatsApp via Python/Selenium. | **ACTIVE** |
-| **📊 Neural HUD** | Real-time token usage and memory load visualization. | **NEW** |
+| **🗣️ Live Voice API** | Sub-second Hinglish conversation via WebSockets. | **STABLE** |
+| **📱 Telegram Call** | Urgent 🚨 Ringing UI + Sci-fi alerts + Haptic feedback. | **V2** |
+| **🕒 Neural Scheduler** | Plan future calls or messages (e.g., "Remind me in 10 mins"). | **NEW** |
+| **🌐 Dual-Search Engine** | Powered by Tavily AI + SerpAPI + DuckDuckGo. | **ACTIVE** |
+| **🤖 Browser Agent** | Full control of YouTube, Spotify, and more via Python. | **ACTIVE** |
+| **📊 Trace HUD** | Deep real-time logs for reasoning, latency, and tokens. | **NEW** |
 
 ---
 
@@ -88,6 +90,7 @@ python server.ts
 
 ## 🛰️ Future Roadmap: The "God-Mode" Upgrade
 - [ ] **Autonomous Hybrid Browser Agent**: Multi-modal "Look -> Decide -> Act" loop using visual screenshots + DOM.
+- [ ] **Indestructible Scheduler (Render + Supabase)**: Migrate from in-memory timeouts to a Postgres queue for 100% reliable task tracking across server restarts.
 - [ ] **Thought Process Dropdown**: Real-time transparency into J.A.R.V.I.S.'s internal reasoning logs.
 - [ ] **Self-Healing Loop**: Automated error correction for breaking web selectors.
 

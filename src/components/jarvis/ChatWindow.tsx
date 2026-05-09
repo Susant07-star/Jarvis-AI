@@ -9,6 +9,8 @@ export interface Message {
   timestamp: Date;
   source?: 'chat' | 'voice' | 'system';
   model?: string; // Which model generated this
+  tokens?: number; // How many tokens were used
+  usedResearch?: boolean; // If web research was triggered
   emotion?: 'neutral' | 'sassy' | 'happy' | 'thoughtful' | 'angry' | 'surprised';
 }
 
@@ -174,8 +176,9 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   {msg.timestamp.toLocaleTimeString([], { hour12: false })}
                 </span>
                 <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${msg.role === 'user' ? 'text-cyan-500' : 'text-cyan-300'}`}>
-                  {msg.role === 'user' ? 'USER' : `J.A.R.V.I.S.${msg.model ? ` (${msg.model})` : ''}`}
+                  {msg.role === 'user' ? 'USER' : `J.A.R.V.I.S.${msg.model ? ` (${msg.model}${msg.usedResearch ? ' ⚡' : ''})` : ''}`}
                 </span>
+                {msg.tokens ? <span className="text-[8px] font-mono text-cyan-600/60">🪙 {msg.tokens}</span> : null}
                 {getSourceBadge(msg.source)}
                 {getEmotionBadge(msg.emotion)}
               </div>

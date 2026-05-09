@@ -12,9 +12,32 @@ import { logger } from "../logger";
 import { MetricsTracker } from "../utils/metrics";
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
 import { callChatWithCascade, callResearchWithCascade } from "../llmRouter";
+import { ThreadManager } from "../threadManager";
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
+
+// ── Shared config for frontend ──
+router.get("/config/voice-prompt", async (req, res) => {
+  try {
+    const prompt = buildPrompt("voice");
+    res.json({ prompt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to assemble voice prompt" });
+  }
+});
+
+router.get("/session-context", async (req, res) => {
+  try {
+    const context = await getSessionContextSummary();
+    res.json({ 
+      hasPriorContext: !!context,
+      context: context || "" 
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch session context" });
+  }
+});
 
 // Ensure uploads directory exists
 if (!fs.existsSync('uploads')) {
@@ -73,14 +96,25 @@ router.post("/zoya-execute", async (req, res) => {
       return res.json({ success: false, error: errorFallback || "Could not formulate a valid plan." });
     }
 
-    // Execute node actions (SerpAPI)
-    const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search');
+    // Execute Node/System actions
+    const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
     let searchResult = "";
     for (const na of nodeActions) {
-       logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-       const groq = getGroqClient();
-       const summary = await performSearch(na.query, groq);
-       searchResult += `Search results for "${na.query}":\n${summary}\n`;
+       if (na.action === 'serp_api_search') {
+          logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
+          const groq = getGroqClient();
+          const summary = await performSearch(na.query, groq);
+          searchResult += `Search results for "${na.query}":\n${summary}\n`;
+       } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
+          const { jarvisScheduler } = await import("../scheduler");
+          const threadId = req.body.thread_id || "";
+          const chatIdMatch = threadId.match(/tg_(\d+)/);
+          const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
+          
+          const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
+          logger.info("API", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
+          searchResult += `[Scheduler] Action scheduled (TaskID: ${taskId}) for ${na.delay_seconds}s from now.\n`;
+       }
     }
 
     // Execute Python actions
@@ -226,28 +260,35 @@ router.post("/chat", async (req, res) => {
 
     if (decision.mode === "direct") {
       // Direct Conversational Mode using Cascading Brains
-      const memory = loadMemory();
+      const threadId = req.body.thread_id || "default_chat";
+      const history = ThreadManager.getHistory(threadId, 20);
       
-      const systemPrompt = buildPrompt("browser");
-      const result = await callChatWithCascade(systemPrompt, message, memory);
+      const systemPrompt = buildPrompt("voice"); 
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...history,
+        { role: "user", content: message }
+      ];
+
+      const result = await callChatWithCascade(messages as any);
+
+      // Save to persistent thread memory
+      ThreadManager.appendMessage(threadId, { role: "user", content: message });
+      ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
       // Send model metadata first
-      res.write(`data: ${JSON.stringify({ metadata: { model: result.model, provider: result.provider } })}\n\n`);
+      res.write(`data: ${JSON.stringify({ metadata: { model: result.model, provider: result.provider, tokens: result.tokens } })}\n\n`);
 
-      // Since we got a full response from the cascade, we simulate a fast stream or just send it
       const words = result.content.split(' ');
       for (let i = 0; i < words.length; i++) {
         res.write(`data: ${JSON.stringify({ content: words[i] + (i === words.length - 1 ? "" : " ") })}\n\n`);
-        // Small delay to make it feel natural if the response is long
         if (words.length > 50 && i % 5 === 0) await new Promise(r => setTimeout(r, 10));
       }
       
-      saveToMemory('user', message);
-      saveToMemory('jarvis', result.content);
       logInteraction('chat', message, result.content);
       
       if (metrics) {
@@ -294,7 +335,7 @@ router.post("/chat", async (req, res) => {
       const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
       
       // Send model metadata
-      res.write(`data: ${JSON.stringify({ metadata: { model, provider } })}\n\n`);
+      res.write(`data: ${JSON.stringify({ metadata: { model, provider, tokens: plannerTokens } })}\n\n`);
 
       if (internal_steps && internal_steps.length > 0) {
         const reasoning = internal_steps.map((s: string) => `> _${s}_`).join('\n');
@@ -336,18 +377,28 @@ router.post("/chat", async (req, res) => {
         return res.end();
       }
 
-      // D. Node Action Execution (SerpAPI)
-      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search');
-      const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
+      // D. Node Action Execution (SerpAPI, Scheduler)
+      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
+      const browserActions = plannedSteps.filter((s:any) => !['serp_api_search', 'schedule_call', 'schedule_message'].includes(s.action));
 
       for (const na of nodeActions) {
-         logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-         res.write(`data: ${JSON.stringify({ content: `\n[SerpAPI] Searching for: ${na.query}...` })}\n\n`);
-         const groq = getGroqClient();
-         const summary = await performSearch(na.query, groq);
-         res.write(`data: ${JSON.stringify({ content: `\n\n*Search Results:*\n${summary}\n\n` })}\n\n`);
+         if (na.action === 'serp_api_search') {
+            logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
+            res.write(`data: ${JSON.stringify({ content: `\n[SerpAPI] Searching for: ${na.query}...` })}\n\n`);
+            const groq = getGroqClient();
+            const summary = await performSearch(na.query, groq);
+            res.write(`data: ${JSON.stringify({ content: `\n\n*Search Results:*\n${summary}\n\n` })}\n\n`);
+         } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
+            const { jarvisScheduler } = await import("../scheduler");
+            const threadId = req.body.thread_id || "";
+            const chatIdMatch = threadId.match(/tg_(\d+)/);
+            const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
+            
+            jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
+            res.write(`data: ${JSON.stringify({ content: `\n[Scheduler] Action scheduled for ${na.delay_seconds} seconds from now.` })}\n\n`);
+         }
          
-         if (metrics) metrics.addTokens('planner', 50); // Approximate cost for search API
+         if (metrics) metrics.addTokens('planner', 50); 
       }
 
       // E. Execute via Python Layer
@@ -550,6 +601,30 @@ router.post("/intelligent-search", async (req, res) => {
   } catch (error: any) {
     logger.error("API", "Intelligent Search Error", error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/scheduler/register
+ * Allows frontend voice sessions to register background timers via J.A.R.V.I.S.
+ */
+router.post("/scheduler/register", async (req, res) => {
+  try {
+    const { type, content, delay_seconds, chatId } = req.body;
+    if (!type || delay_seconds === undefined) {
+      return res.status(400).json({ error: "Missing type or delay_seconds" });
+    }
+    
+    // Fallback to 0 if no chatId is provided by the frontend session
+    const targetChatId = chatId || 0; 
+    
+    const { jarvisScheduler } = await import("../scheduler");
+    const taskId = jarvisScheduler.schedule(targetChatId, type, content || "Scheduled Voice Action", delay_seconds);
+    
+    res.json({ success: true, taskId });
+  } catch (error: any) {
+    logger.error("API", "Scheduler Registration Error", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

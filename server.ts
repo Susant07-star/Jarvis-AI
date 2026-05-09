@@ -8,6 +8,7 @@ import path from "path";
 import http from "http";
 import apiRoutes from "./server/routes/api";
 import { setupWebSocketServer } from "./server/websocket";
+import { startTelegramBot } from "./server/telegramBot";
 
 async function startServer() {
   const app = express();
@@ -47,6 +48,9 @@ async function startServer() {
   
   // Setup WebSocket server for real-time voice interaction
   setupWebSocketServer(server);
+
+  // Start Telegram bot (non-blocking, runs in background)
+  startTelegramBot();
 
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);

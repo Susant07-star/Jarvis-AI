@@ -75,7 +75,7 @@ export default function App() {
       const baseMsg: Message = {
         id: 'init',
         role: 'jarvis',
-        content: 'System initialized. J.A.R.V.I.S. online and awaiting your command, Sir.',
+        content: 'System initialized. J.A.R.V.I.S. online and awaiting your command, Boss.',
         timestamp: new Date(),
         source: 'system'
       };
@@ -158,7 +158,12 @@ export default function App() {
         },
         (meta) => {
           setMessages(prev => prev.map(msg => 
-            msg.id === jarvisMsgId ? { ...msg, model: meta.model } : msg
+            msg.id === jarvisMsgId ? { 
+              ...msg, 
+              model: meta.model, 
+              tokens: meta.tokens, 
+              usedResearch: meta.usedResearch 
+            } : msg
           ));
         }
       );

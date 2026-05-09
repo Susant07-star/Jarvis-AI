@@ -24,6 +24,7 @@ import { GoogleGenAI, Modality, Type, type LiveServerMessage } from "@google/gen
 // ── System instruction ────────────────────────────────────────────────────────
 
 export const getSystemInstruction = (
+  basePrompt: string = "",
   timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
   priorContext: string = ""
 ) => {
@@ -31,34 +32,27 @@ export const getSystemInstruction = (
   const dateStr = now.toLocaleDateString("en-US", { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString("en-US", { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-  return `Role: Zoya, super-intelligent AI assistant (Jarvis-like), created by boss Susant.
-Personality: Respectful, professional, helpful. ONLY roast/sass if Susant jokes. 90% must be sincere. Adapt to serious tasks.
-Format: CRITICAL RULE - ALWAYS start every single response with exactly ONE of [HAPPY], [SASSY], [ANGRY], [THOUGHTFUL], [SURPRISED], or [NEUTRAL]. This tag MUST be the first thing you output.
-Language: Concise. English, Nepali mix natively. Hindi if requested.
+  // 1. Load Persona (Master Soul or Fallback)
+  const persona = basePrompt || `Role: Zoya, super-intelligent AI assistant (Jarvis-like), created by boss Susant.
+Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptation of classic JARVIS.`;
 
-CURRENT CONTEXT:
-The user is currently in the ${timezone} timezone.
-The current date is: ${dateStr}.
-The current time is: ${timeStr}.
-(Always be aware of this exact date/time when asked about "today", "tomorrow", "next exam", etc.)
+  // 2. Assemble Final Instruction
+  return `${persona}
 
-TOOL USAGE RULES (CRITICAL — READ CAREFULLY):
+### 🛡️ OPERATIONAL PROTOCOLS (CRITICAL):
+- **Emotion Tags**: ALWAYS start every single response with exactly ONE of [HAPPY], [SASSY], [ANGRY], [THOUGHTFUL], [SURPRISED], or [NEUTRAL].
+- **Mirroring**: Reply in the same script/language as the user (Nepali/English).
 
-✅ USE "intelligent_search" for: ANY question about people, news, facts, movies, YouTubers, prices, weather, sports scores, or anything where you need information. This is your most reliable search engine. Use this by default for all research.
+### 🛠️ TOOL USAGE RULES (CRITICAL):
+- **intelligent_search**: Use for ANY question about people, news, facts, movies, prices, or research.
+- **executeBrowserAction**: Use ONLY for physical navigation (Open YouTube, Play music, Send WhatsApp).
 
-✅ USE "google_search" as a background grounding backup for real-time context.
+### 📅 CURRENT CONTEXT:
+- Timezone: ${timezone}
+- Date: ${dateStr}
+- Time: ${timeStr}
 
-✅ USE "executeBrowserAction" ONLY when boss says explicit navigation words like:
-  - "Open YouTube", "Open Google", "Go to Netflix"
-  - "Play [song name]", "Play music"
-  - "Send a WhatsApp message to..."
-
-❌ NEVER use "executeBrowserAction" for:
-  - Questions about people (e.g. "who is Fukra Insaan", "tell me about Elon Musk")
-  - Searches for facts, news, movies, prices, weather
-  - Anything boss did NOT explicitly ask to open/navigate/play
-
-Links: Use EXACT URLs from Google Search grounding. NEVER guess URLs.${priorContext}`;
+${priorContext}`;
 };
 
 // ── Gemini Live model cascade ─────────────────────────────────────────────────
@@ -121,6 +115,7 @@ export class ZoyaLiveService {
   public isMuted = false;
   public manuallyStopped = false;
   public currentTimezone?: string;
+  public currentChatId?: number;
 
   // ── Public callbacks ──────────────────────────────────────────────────────
 
@@ -182,8 +177,9 @@ export class ZoyaLiveService {
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
-        if (!this.sessionPromise || !this.isActive) return;
+        if (!this.sessionPromise || !this.isActive || this.isMuted) return;
         const raw = e.inputBuffer.getChannelData(0);
+
         const pcm16 = new Int16Array(raw.length);
         for (let i = 0; i < raw.length; i++) {
           const s = Math.max(-1, Math.min(1, raw[i]));
@@ -239,6 +235,9 @@ export class ZoyaLiveService {
 
       // Fetch shared session context (chat + voice history) to inject into system instruction
       let priorContext = "";
+      let masterPrompt = "";
+      
+      // Fetch Session Context (Prior memory)
       try {
         const ctxRes = await fetch("/api/session-context");
         if (ctxRes.ok) {
@@ -248,8 +247,20 @@ export class ZoyaLiveService {
             console.log(`[ZoyaLive] Injecting ${priorContext.length} chars of shared session context.`);
           }
         }
-      } catch {
-        console.warn("[ZoyaLive] Could not fetch session context — starting fresh.");
+      } catch (err) {
+        console.warn("[ZoyaLive] Could not fetch session context:", err);
+      }
+
+      // Fetch Master Identity (Soul)
+      try {
+        const cfgRes = await fetch("/api/config/voice-prompt");
+        if (cfgRes.ok) {
+          const cfgData = await cfgRes.json();
+          masterPrompt = cfgData.prompt;
+          console.log("[ZoyaLive] Master Identity Synchronized.");
+        }
+      } catch (err) {
+        console.warn("[ZoyaLive] Could not fetch master prompt:", err);
       }
 
       this.sessionPromise = this.ai.live.connect({
@@ -259,7 +270,7 @@ export class ZoyaLiveService {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
           },
-          systemInstruction: getSystemInstruction(this.currentTimezone, priorContext),
+          systemInstruction: getSystemInstruction(masterPrompt, this.currentTimezone, priorContext),
           inputAudioTranscription: {},
           outputAudioTranscription: {},
           tools: [
@@ -311,6 +322,19 @@ export class ZoyaLiveService {
                       url: { type: Type.STRING, description: "URL link to the file." },
                     },
                     required: ["title", "url"],
+                  },
+                },
+                {
+                  name: "schedule_action",
+                  description: "Schedule a future call or message. Use this for 'Remind me in X', 'Call me at Y', etc. You MUST calculate delay_seconds relative to NOW.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      type: { type: Type.STRING, description: "Action type: 'call' or 'message'." },
+                      content: { type: Type.STRING, description: "The message or call reason." },
+                      delay_seconds: { type: Type.NUMBER, description: "TOTAL seconds to wait from now. 1 min = 60, 1 hour = 3600." }
+                    },
+                    required: ["type", "content", "delay_seconds"],
                   },
                 },
               ],
@@ -600,6 +624,30 @@ export class ZoyaLiveService {
       session.sendToolResponse({
         functionResponses: [{ name: call.name, id: call.id, response: { result: "File saved to panel." } }],
       });
+    } else if (call.name === "schedule_action") {
+      const { type, content, delay_seconds } = call.args as any;
+      this.onThought(`🕒 Scheduling ${type} in ${delay_seconds}s`);
+      
+      try {
+        const res = await fetch("/api/scheduler/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, content, delay_seconds, chatId: this.currentChatId || 0 }),
+        });
+        
+        if (res.ok) {
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: "Timer registered successfully in the backend system." } }],
+          });
+        } else {
+          throw new Error("Backend scheduler failed");
+        }
+      } catch (err: any) {
+        this.onThought("❌ Failed to schedule task.");
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not connect to the scheduling system." } }],
+        });
+      }
     }
   }
 
@@ -630,7 +678,13 @@ export class ZoyaLiveService {
 
       const src = this.playbackContext.createBufferSource();
       src.buffer = audioBuf;
-      src.connect(this.playbackContext.destination);
+
+      // Create a GainNode to boost volume (2.0 = 200% volume)
+      const gainNode = this.playbackContext.createGain();
+      gainNode.gain.value = 1.0; 
+
+      src.connect(gainNode);
+      gainNode.connect(this.playbackContext.destination);
 
       const now = this.playbackContext.currentTime;
       if (this.nextPlayTime < now) this.nextPlayTime = now;
@@ -646,6 +700,7 @@ export class ZoyaLiveService {
       console.error("[ZoyaLive] Audio playback error:", e);
     }
   }
+
 
   private _stopPlayback() {
     if (!this.playbackContext) return;

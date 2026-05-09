@@ -50,7 +50,7 @@ export async function determineOrchestrationMode(userInput: string): Promise<Orc
   let mode: OrchestratorMode;
   let requiresPlanning = false;
 
-  if (classification.type === "task") {
+  if (classification === "task") {
     // Action required in browser
     mode = "agent";
     requiresPlanning = true;
@@ -62,14 +62,13 @@ export async function determineOrchestrationMode(userInput: string): Promise<Orc
 
   const duration = Date.now() - t0;
   
-  logger.info("Orchestrator", `Decision made in ${duration}ms: MODE=[${mode.toUpperCase()}] PLAN=[${requiresPlanning}]`);
+  // DEEP DEBUGGING: Log the intent decision with the input for clarity
+  logger.info("Orchestrator", `Decision for "${userInput.substring(0, 50)}...": MODE=[${mode.toUpperCase()}] PLAN=[${requiresPlanning}] (Classifier: ${classification})`);
 
   return {
     mode,
-    intent: classification.type,
+    intent: classification as any,
     requiresPlanning,
-    originalInput: userInput,
-    normalizedInput: classification.normalized_task,
-    tokens: classification.tokens
+    originalInput: userInput
   };
 }

@@ -23,7 +23,7 @@ export interface BrowserAction {
     action: 'open_url' | 'click' | 'type' | 'press' | 'scroll' |
             'youtube_search' | 'youtube_click_video' | 'youtube_like' |
             'youtube_comment' | 'open_tab' | 'switch_tab' | 'close_tab' |
-            'universal_click' | 'universal_type';
+            'universal_click' | 'universal_type' | 'schedule_call' | 'schedule_message';
     url?: string;
     selector?: string;
     text?: string;
@@ -31,6 +31,8 @@ export interface BrowserAction {
     direction?: 'up' | 'down';
     query?: string;
     index?: number;
+    delay_seconds?: number;
+    reason?: string;
     selectorStrategy?: 'role'|'text'|'placeholder'|'selector';
     selectorValue?: string;
     name?: string;

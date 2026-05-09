@@ -113,8 +113,11 @@ export function getGroqClient(): Groq {
 /**
  * Wraps an async function that uses Groq. On 429, blacklists the key and retries with next.
  */
-export async function callWithRetry<T>(fn: (groq: Groq) => Promise<T>, maxRetries = 3): Promise<T> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+export async function callWithRetry<T>(fn: (groq: Groq) => Promise<T>, maxRetries?: number): Promise<T> {
+  initKeyPool();
+  const limit = maxRetries ?? keyPool.length; // Use all keys by default
+  
+  for (let attempt = 0; attempt < limit; attempt++) {
     const apiKey = getNextAvailableKey();
     const groq = new Groq({ apiKey });
     try {
@@ -123,7 +126,7 @@ export async function callWithRetry<T>(fn: (groq: Groq) => Promise<T>, maxRetrie
       const status = err?.status || err?.error?.status;
       if (status === 429) {
         blacklistCurrentKey(apiKey);
-        logger.warn('LLM', `429 rate limit hit (attempt ${attempt + 1}/${maxRetries}). Rotating key...`);
+        logger.warn('LLM', `429 rate limit hit (attempt ${attempt + 1}/${limit}). Rotating key...`);
         continue;
       }
       throw err; // Non-429 errors propagate immediately

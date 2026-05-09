@@ -18,8 +18,15 @@ interface ZoyaAvatarProps {
 
 export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: ZoyaAvatarProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Detect mobile/touch device to reduce performance load
+    const mobileCheck = window.matchMedia('(pointer: coarse)').matches || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    setIsMobile(mobileCheck);
+
+    if (mobileCheck) return; // Skip mouse tracking on mobile
+
     let rafId: number;
     const onMove = (e: MouseEvent) => {
       if (rafId) cancelAnimationFrame(rafId);
@@ -63,24 +70,25 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
       return { scale: [1, 1.05, 1], transition: { duration: 0.3 } };
     if (currentEmotion === "thoughtful")
       return { rotateZ: [0, -1, 1, 0], transition: { duration: 4, repeat: Infinity, ease: "easeInOut" } };
+    
     return {
-      rotateX: state === "listening" ? 5 : mousePos.y * -5,
-      rotateY: mousePos.x * 10,
-      x: mousePos.x * 10,
+      rotateX: isMobile ? 0 : (state === "listening" ? 5 : mousePos.y * -5),
+      rotateY: isMobile ? 0 : mousePos.x * 10,
+      x: isMobile ? 0 : mousePos.x * 10,
       transition: { duration: 0.1, ease: "linear" },
     };
-  }, [currentEmotion, state, mousePos]);
+  }, [currentEmotion, state, mousePos, isMobile]);
 
   return (
     <div className={`relative ${sizeClasses} flex items-center justify-center`} style={{ perspective: "1000px" }}>
-      {/* Outer glow aura */}
+      {/* Outer glow aura - Optimized for mobile by reducing blur */}
       <motion.div
         animate={{
           scale: currentEmotion === "angry" ? [1, 1.2, 1] : [1, 1.1, 1],
-          opacity: currentEmotion === "angry" ? [0.2, 0.4, 0.2] : [0.1, 0.2, 0.1],
+          opacity: currentEmotion === "angry" ? [0.2, 0.4, 0.2] : [0.1, 0.15, 0.1],
         }}
         transition={{ duration: currentEmotion === "angry" ? 0.5 : 4, repeat: Infinity }}
-        className="absolute inset-0 rounded-full blur-[80px]"
+        className={`absolute inset-0 rounded-full ${isMobile ? 'blur-[40px]' : 'blur-[80px]'}`}
         style={{ backgroundColor: theme.color }}
       />
 
@@ -93,7 +101,7 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
         {/* Face plate */}
         <motion.div
           animate={faceAnimation}
-          className="relative w-full h-full rounded-[45%_45%_40%_40%] border border-white/20 bg-gradient-to-b from-slate-900 via-slate-800 to-black shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
+          className="relative w-full h-full rounded-[45%_45%_40%_40%] border border-white/20 bg-gradient-to-b from-slate-900 via-slate-800 to-black shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none opacity-40" />
 
@@ -105,19 +113,19 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
 
           {/* Eyes */}
           <div className="absolute top-[37%] left-0 right-0 flex justify-between px-[12%] z-10">
-            <Eye side="left" state={state} emotion={currentEmotion} theme={theme} mousePos={mousePos} />
-            <Eye side="right" state={state} emotion={currentEmotion} theme={theme} mousePos={mousePos} />
+            <Eye side="left" state={state} emotion={currentEmotion} theme={theme} mousePos={mousePos} isMobile={isMobile} />
+            <Eye side="right" state={state} emotion={currentEmotion} theme={theme} mousePos={mousePos} isMobile={isMobile} />
           </div>
 
-          {/* Cheek glow */}
+          {/* Cheek glow - Reduced for mobile */}
           <div className="absolute top-[55%] left-0 right-0 flex justify-between px-[12%] pointer-events-none">
-            <div className={`w-[25%] h-6 blur-3xl opacity-20 rounded-full ${theme.bg}`} />
-            <div className={`w-[25%] h-6 blur-3xl opacity-20 rounded-full ${theme.bg}`} />
+            <div className={`w-[25%] h-6 ${isMobile ? 'blur-xl' : 'blur-3xl'} opacity-20 rounded-full ${theme.bg}`} />
+            <div className={`w-[25%] h-6 ${isMobile ? 'blur-xl' : 'blur-3xl'} opacity-20 rounded-full ${theme.bg}`} />
           </div>
 
           {/* Mouth */}
           <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-10">
-            <Mouth state={state} emotion={currentEmotion} theme={theme} />
+            <Mouth state={state} emotion={currentEmotion} theme={theme} isMobile={isMobile} />
           </div>
 
           {/* Chin detail */}
@@ -132,6 +140,7 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
   );
 }
 
+
 function Eyebrow({ side, emotion }: { side: "left" | "right"; emotion: ZoyaEmotion }) {
   const y = emotion === "surprised" ? -14 : emotion === "angry" ? 10 : emotion === "thoughtful" ? (side === "left" ? -4 : 2) : emotion === "sassy" && side === "left" ? -8 : 0;
   const rotate = emotion === "angry" ? (side === "left" ? 35 : -35) : emotion === "happy" ? (side === "left" ? -20 : 20) : emotion === "surprised" ? (side === "left" ? -25 : 25) : (side === "left" ? -10 : 10);
@@ -143,11 +152,11 @@ function Eyebrow({ side, emotion }: { side: "left" | "right"; emotion: ZoyaEmoti
   );
 }
 
-function Eye({ side, state, emotion, theme, mousePos }: { side: "left" | "right"; state: ZoyaState; emotion: ZoyaEmotion; theme: any; mousePos: { x: number; y: number } }) {
+function Eye({ side, state, emotion, theme, mousePos, isMobile }: { side: "left" | "right"; state: ZoyaState; emotion: ZoyaEmotion; theme: any; mousePos: { x: number; y: number }; isMobile: boolean }) {
   const isBlinking = state === "idle" && emotion !== "surprised";
   const scaleY = emotion === "angry" ? 0.35 : emotion === "surprised" ? 1.6 : emotion === "happy" ? 0.5 : 1;
-  const eyeX = emotion === "sassy" ? (side === "left" ? 8 : 4) : mousePos.x * 10;
-  const eyeY = mousePos.y * 6;
+  const eyeX = emotion === "sassy" ? (side === "left" ? 8 : 4) : (isMobile ? 0 : mousePos.x * 10);
+  const eyeY = isMobile ? 0 : mousePos.y * 6;
 
   return (
     <div className="relative">
@@ -161,13 +170,13 @@ function Eye({ side, state, emotion, theme, mousePos }: { side: "left" | "right"
           animate={{ scale: emotion === "surprised" ? 1.4 : state === "listening" ? 1.3 : 1, x: eyeX, y: eyeY }}
           transition={emotion === "thoughtful" ? { duration: 4, repeat: Infinity } : { duration: 0.1, ease: "linear" }}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: `${theme.color}44`, boxShadow: `0 0 16px ${theme.glow}` }}
+          style={{ backgroundColor: `${theme.color}44`, boxShadow: isMobile ? "none" : `0 0 16px ${theme.glow}` }}
         >
           <div className={`w-4 h-4 rounded-full ${theme.bg} opacity-60`} />
           <div className="absolute w-1.5 h-1.5 bg-black rounded-full" />
           <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white/40 rounded-full blur-[1px]" />
         </motion.div>
-        {state === "processing" && (
+        {state === "processing" && !isMobile && (
           <motion.div
             animate={{ top: ["-10%", "110%"] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
@@ -179,7 +188,7 @@ function Eye({ side, state, emotion, theme, mousePos }: { side: "left" | "right"
   );
 }
 
-function Mouth({ state, emotion, theme }: { state: ZoyaState; emotion: ZoyaEmotion; theme: any }) {
+function Mouth({ state, emotion, theme, isMobile }: { state: ZoyaState; emotion: ZoyaEmotion; theme: any; isMobile: boolean }) {
   const isSurprised = emotion === "surprised";
   const isSmile = emotion === "happy" || emotion === "sassy";
   return (
@@ -194,7 +203,7 @@ function Mouth({ state, emotion, theme }: { state: ZoyaState; emotion: ZoyaEmoti
         className="bg-white/40 blur-[0.5px]"
       />
       <div className="flex items-center gap-[3px] h-5 my-1">
-        {[...Array(7)].map((_, i) => (
+        {[...Array(isMobile ? 4 : 7)].map((_, i) => (
           <motion.div
             key={i}
             animate={{
@@ -202,7 +211,7 @@ function Mouth({ state, emotion, theme }: { state: ZoyaState; emotion: ZoyaEmoti
               opacity: state === "speaking" ? 1 : 0.4,
             }}
             transition={{ duration: state === "speaking" ? 0.1 + i * 0.05 : 1, repeat: Infinity }}
-            className={`w-[3px] rounded-full ${theme.bg} shadow-sm`}
+            className={`${isMobile ? 'w-[4px]' : 'w-[3px]'} rounded-full ${theme.bg} shadow-sm`}
           />
         ))}
       </div>

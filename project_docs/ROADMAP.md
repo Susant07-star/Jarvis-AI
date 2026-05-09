@@ -40,26 +40,38 @@
 
 **Goal**: Allow J.A.R.V.I.S. to be controlled remotely via Telegram (text + voice) and integrate audio calling directly to Gemini.
 
-### 2.1 Telegram Integration (Must-Have)
-- **Text Command Bridge**
-  - Telegram Bot polls for user messages → forwards to Node `/chat` endpoint.
-  - Responses streamed back as Telegram messages.
-- **Telegram Audio Calling to Gemini** *(High Priority)*
-  - Establish WebRTC or Telegram Voice Call integration.
-  - Stream Telegram audio directly to the Gemini Live WebSocket.
-  - Allow real-time voice conversations through the Telegram app.
-- **Confirmation via Telegram**
-  - When `requires_confirmation: true`, send an inline button (Yes/No) to Telegram.
-- **Dropdown Thinking (Reasoning UI)** *(New Priority)*
-  - Implement a collapsible "Thinking..." dropdown in the React Chat and Telegram.
-  - Show the AI's internal steps, planning logic, and research progress live before the final answer.
+### 2.1 Telegram Integration (Must-Have) ✅
+- [x] **Text & Voice Command Bridge** — `server/telegramBot.ts`
+  - [x] Custom Manual Polling Loop with DNS-bypass.
+  - [x] Groq Whisper STT for transcribing voice notes.
+  - [x] Text messages routed through unified Intent Classifier.
+- [x] **Telegram Audio Calling to Gemini** — `src/components/jarvis/TelegramCallUI.tsx`
+  - [x] Implemented Telegram Web App (Mini App) for mobile voice calling.
+  - [x] Full 3D Zoya Avatar integration on phone screen.
+  - [x] Direct WebRTC/Microphone stream to Gemini Live WebSocket.
+- [x] **Proactive Notifications & Voice Reminders**
+  - [x] Implemented `triggerProactiveCall` backend endpoint.
+  - [x] JARVIS can autonomously send a "Join Call" button to the user when tasks finish.
 
 ### 2.2 Advanced Intelligence & File Generation (Must-Have)
+- **Dropdown Thinking (Reasoning UI)**
+  - Implement collapsible "Thinking..." dropdown in React Chat and Telegram.
+  - Show internal planning and research progress live before final answer.
 - **Deep Research Engine**
   - Expand Intelligent Search to perform multi-step, deep-dive research tasks autonomously.
 - **File Making & PDF Generation**
   - Node `fs` module to generate well-formatted PDFs, Markdown reports, or CSVs based on LLM outputs.
   - Automatically send generated PDFs back to the user via Telegram.
+- **Video Message Support**
+  - Extract audio from Telegram video messages (`.mp4`) and process them like voice notes.
+  - Explore Gemini Vision for direct visual analysis of video clips.
+
+### 2.3 Robust Persistence & Scheduling (Next Steps)
+- **Supabase/Postgres Persistence Layer**
+  - Migrate the Neural Scheduler from in-memory `setTimeout` to a persistent Supabase database.
+  - Ensures scheduled tasks (reminders, callbacks) survive server restarts or Render's free-tier sleep cycles.
+- **External Webhook Trigger (QStash/Cron)**
+  - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
 
 ---
 
@@ -102,4 +114,4 @@ These apply across **all phases** and should be maintained continuously.
 | Dynamic Key Rotation | `llmRouter.ts` | ✅ Active |
 | Visual Agent Screenshots | `planner.ts` → `logs/debug_screenshots/` | ✅ Active |
 
-*Last Updated: 2026-05-08 | Priorities shifted to Telegram/Audio Calling and PDF generation.*
+*Last Updated: 2026-05-09 | Phase 2.1 Complete. Telegram Audio Calling + Static Domain implemented.*

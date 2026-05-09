@@ -78,5 +78,22 @@ export const jarvisTools = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "schedule_action",
+      description: "Schedule a future call or message. Use this for 'Remind me in X', 'Call me at Y', etc. You MUST calculate delay_seconds relative to NOW.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["call", "message"], description: "Action type." },
+          content: { type: "string", description: "The message or call reason." },
+          delay_seconds: { type: "number", description: "TOTAL seconds to wait from now. 1 min = 60, 1 hour = 3600." },
+          confirmation_message: { type: "string", description: "Natural confirmation, e.g., 'Right away Boss, timer set for 60 seconds.'" }
+        },
+        required: ["type", "content", "delay_seconds", "confirmation_message"]
+      }
+    }
   }
 ];

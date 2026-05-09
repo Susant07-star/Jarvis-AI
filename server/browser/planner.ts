@@ -1,4 +1,5 @@
 import { callPlannerWithCascade } from '../llmRouter';
+import { ThreadMessage } from '../threadManager';
 import { BrowserAction, memory, tracker } from './executor';
 import { logger } from '../logger';
 import fs from 'fs';
@@ -7,7 +8,7 @@ import path from 'path';
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
 // Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
 // Validates JSON output, retries ONCE on parse failure, logs raw output.
-async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; tokens: number; model: string; provider: string }> {
+async function callPlannerLLM(systemPrompt: string, imageBase64?: string): Promise<{ parsed: any; tokens: number; model: string; provider: string }> {
     const MAX_ATTEMPTS = 2;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -17,7 +18,8 @@ async function callPlannerLLM(systemPrompt: string): Promise<{ parsed: any; toke
         let provider = 'unknown';
 
         try {
-            const result = await callPlannerWithCascade(systemPrompt);
+            const messages: ThreadMessage[] = [{ role: 'system', content: systemPrompt }];
+            const result = await callPlannerWithCascade(messages, imageBase64);
             rawOutput = result.content;
             tokens = result.tokens;
             model = result.model;
@@ -88,6 +90,8 @@ Available actions:
 - "type_secure" (requires "selector", "text")
 - "serp_api_search" (requires "query")
 - "media_control" (requires "action": "play"|"pause"|"skip_forward"|"skip_backward")
+- "schedule_call" (requires "delay_seconds", "reason")
+- "schedule_message" (requires "delay_seconds", "text")
 
 ${memoryContext}
 
@@ -147,6 +151,8 @@ Available actions:
 - "youtube_comment" (requires "text")
 - "serp_api_search" (requires "query")
 - "media_control" (requires "command": "play"|"pause"|"skip_forward"|"skip_backward")
+- "schedule_call" (requires "delay_seconds", "reason")
+- "schedule_message" (requires "delay_seconds", "text")
 
 CRITICAL JSON RULE: For "media_control" steps, you MUST use the key "command" (NOT "action") for the sub-action.
 Correct:   { "action": "media_control", "command": "play" }

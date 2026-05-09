@@ -39,7 +39,9 @@ export function useZoyaVoice() {
     let interval: ReturnType<typeof setInterval>;
     if (isSessionActive) {
       const start = Date.now();
-      interval = setInterval(() => setSessionSeconds(Math.floor((Date.now() - start) / 1000)), 1000);
+      interval = setInterval(() => {
+        setSessionSeconds(Math.floor((Date.now() - start) / 1000));
+      }, 1000);
     } else {
       setSessionSeconds(0);
     }
@@ -60,7 +62,7 @@ export function useZoyaVoice() {
     setThoughts((prev) => [...prev, { id: `t-${Date.now()}-${Math.random()}`, text }]);
   }, []);
 
-  const startSession = useCallback(async (timezone?: string) => {
+  const startSession = useCallback(async (timezone?: string, chatId?: number) => {
     if (serviceRef.current) {
       serviceRef.current.stop();
       serviceRef.current = null;
@@ -72,6 +74,7 @@ export function useZoyaVoice() {
     const svc = new ZoyaLiveService();
     svc.isMuted = isMuted;
     svc.currentTimezone = timezone;
+    svc.currentChatId = chatId;
     serviceRef.current = svc;
 
     svc.onStateChange = (state, err) => {

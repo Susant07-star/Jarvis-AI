@@ -2,10 +2,11 @@ import { Message } from '../components/jarvis/ChatWindow';
 
 export async function sendChatMessage(
   message: string, 
-  history: Message[] = [],
+  history: Message[] = [], // kept for API compatibility, no longer sent to server
   onChunk?: (chunk: string) => void,
-  onMetadata?: (meta: { model: string, provider: string }) => void,
-  signal?: AbortSignal
+  onMetadata?: (meta: { model: string, provider: string, tokens?: number, usedResearch?: boolean }) => void,
+  signal?: AbortSignal,
+  threadId: string = 'default_chat'
 ): Promise<{ reply: string, command?: any, browser_commands?: any[], model?: string, provider?: string }> {
   try {
     const res = await fetch('/api/chat', {
@@ -13,7 +14,9 @@ export async function sendChatMessage(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         message,
-        history: history.slice(-5).map(m => ({ role: m.role, content: m.content }))
+        thread_id: threadId
+        // NOTE: History is no longer sent from the browser.
+        // The server manages conversation state via ThreadManager.
       }),
       signal
     });
