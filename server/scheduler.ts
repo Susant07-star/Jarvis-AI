@@ -39,7 +39,7 @@ class JarvisScheduler {
       const now = new Date();
       const timeContext = `Current Time Context: Timezone=${tz}, Date=${now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" })}, Time=${now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}`;
 
-      const systemPrompt = `You are J.A.R.V.I.S., the ultimate Stark assistant.
+      const systemPrompt = `You are J.A.R.V.I.S., the ultimate Susant assistant.
 Your job is to parse a user's scheduling/alarm/reminder request into structured JSON.
 
 ABSOLUTE RULE — You MUST return ONLY a valid JSON object with the following fields:
@@ -69,7 +69,7 @@ Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
       const taskId = this.schedule(chatId, parsed.type, parsed.content, parsed.delay_seconds);
 
       // Generate a witty J.A.R.V.I.S. confirmation message
-      const confirmSystem = `You are J.A.R.V.I.S., the wittily sarcastic AI butler created by Tony Stark.
+      const confirmSystem = `You are J.A.R.V.I.S., the wittily sarcastic AI butler created by Susant, your boss.
 Draft a classy, witty, and highly reassuring confirmation message.
 Confirm that you have scheduled a "${parsed.type}" action to: "${parsed.content}" in exactly ${Math.round(parsed.delay_seconds / 60)} minute(s).
 Keep it under 60 words.`;
@@ -120,7 +120,7 @@ Keep it under 60 words.`;
    */
   public async init() {
     if (!supabase) return;
-    
+
     try {
       const { data, error } = await supabase
         .from("tasks")
@@ -138,7 +138,7 @@ Keep it under 60 words.`;
 
         for (const record of data) {
           const delayMs = Math.max(0, Number(record.execution_time) - now);
-          
+
           const timer = setTimeout(() => {
             this.execute(record.task_id);
           }, delayMs);
@@ -181,6 +181,12 @@ Keep it under 60 words.`;
       this.execute(id);
     }, delaySeconds * 1000);
 
+    // Instantly notify MacroDroid to set the native Android alarm
+    if (type === "alarm" && delaySeconds > 0) {
+      logger.info("Scheduler", `[ACTION] Pre-triggering MacroDroid to set native Android alarm for ${delaySeconds}s from now.`);
+      this.triggerMacrodroid(delaySeconds);
+    }
+
     this.tasks.set(id, { id, chatId: targetChatId, type, content, executionTime, timer });
 
     // Persist to Supabase
@@ -217,16 +223,16 @@ Keep it under 60 words.`;
           await triggerProactiveCall(task.chatId);
         } else if (task.type === "alarm") {
           logger.info("Scheduler", `[ACTION] Triggering Omega Alarm Protocol via MacroDroid & Telegram`);
-          
+
           // 1. Ring the physical phone via MacroDroid Webhook
           await this.triggerMacrodroid();
 
           // 2. Generate a highly custom, witty morning briefing from JARVIS using LLM
           let morningBrief = `🌅 **GOOD MORNING, BOSS!**\n\nTime to rise and shine! Here is your morning directive:\n🎯 *"${task.content}"*`;
-          
+
           try {
-            const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Tony Stark.
-Draft an elegant, highly motivating, wittily sarcastic (classic JARVIS style) morning briefing for the Boss.
+            const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Susant, your boss.
+You are directly speaking to him right now to wake him up.
 The time is 5:00 AM.
 Your objective is to:
 1. Command him to get out of bed in a witty, classy manner.
@@ -253,7 +259,7 @@ Keep your response under 120 words. Do not use generic placeholders.`;
 
           // 4. Setup sleep-watchdog loop (checking every 2 minutes for response)
           const watchdogId = `watchdog_${task.chatId}`;
-          
+
           // Clear any prior active watchdog for safety
           const existing = this.activeWatchdogs.get(watchdogId);
           if (existing) clearTimeout(existing.timer);
@@ -302,12 +308,12 @@ Keep your response under 120 words. Do not use generic placeholders.`;
       clearTimeout(active.timer);
       this.activeWatchdogs.delete(watchdogId);
       logger.info("Scheduler", `🚨 Omega Alarm Protocol disarmed for ChatID ${chatId}`);
-      
+
       const token = process.env.TELEGRAM_BOT_TOKEN;
       if (token) {
         await this.sendTelegramMessage(
-          token, 
-          chatId, 
+          token,
+          chatId,
           `✅ **OMEGA ALARM PROTOCOL DISARMED**\n\nGood morning, Boss! Sleep watchdog cleared. I'm glad you are awake and ready. Let's conquer the day! 🚀`
         );
       }
@@ -327,8 +333,8 @@ Keep your response under 120 words. Do not use generic placeholders.`;
 
     if (token) {
       await this.sendTelegramMessage(
-        token, 
-        active.chatId, 
+        token,
+        active.chatId,
         `🚨 **WAKE UP WARNING #${active.attempts}**\n\nBoss, you have NOT confirmed you are awake! Ringing your physical phone again.\n\n_Reply "woke up", "i'm awake", or "dismiss" to silence me._`
       );
     }
@@ -353,15 +359,27 @@ Keep your response under 120 words. Do not use generic placeholders.`;
     }, 120000); // 2 minutes
   }
 
-  private async triggerMacrodroid(): Promise<boolean> {
+  private async triggerMacrodroid(delaySeconds: number = 0): Promise<boolean> {
     if (!this.macrodroidWebhookUrl) {
       logger.warn("Scheduler", "MacroDroid Webhook URL not configured. Skipping physical ring.");
       return false;
     }
-    
+
     try {
-      logger.info("Scheduler", `[API] Hitting MacroDroid Webhook: ${this.macrodroidWebhookUrl}`);
-      const res = await fetch(this.macrodroidWebhookUrl);
+      let url = this.macrodroidWebhookUrl;
+
+      // If passing a delay to set a native alarm, calculate the target time
+      if (delaySeconds > 0) {
+        const targetDate = new Date(Date.now() + (delaySeconds * 1000));
+        const hour = targetDate.getHours();
+        const minute = targetDate.getMinutes();
+        
+        url += url.includes('?') ? `&hour=${hour}&minute=${minute}` : `?hour=${hour}&minute=${minute}`;
+        logger.info("Scheduler", `[API] Passing target time to MacroDroid: ${hour}:${minute.toString().padStart(2, '0')}`);
+      }
+
+      logger.info("Scheduler", `[API] Hitting MacroDroid Webhook: ${url}`);
+      const res = await fetch(url);
       logger.info("Scheduler", `[API] MacroDroid response status: ${res.status}`);
       return res.ok;
     } catch (err: any) {
@@ -407,7 +425,7 @@ Keep your response under 120 words. Do not use generic placeholders.`;
       clearTimeout(task.timer);
       this.tasks.delete(id);
       logger.info("Scheduler", `Cancelled task ${id}`);
-      
+
       if (supabase) {
         supabase.from("tasks").update({ status: "cancelled" }).eq("task_id", id).then();
       }
