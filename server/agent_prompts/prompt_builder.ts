@@ -172,7 +172,7 @@ export function buildPrompt(agentName: string): string {
   }
 
   console.log(
-    `[PromptBuilder] Built "${agentName}" prompt: ${config.modules.length} modules, ~${approxTokens} tokens | Time: ${timeStr}`
+    `[PromptBuilder] Built "${agentName}" prompt: ${config.modules.length} modules, ~${approxTokens} tokens`
   );
 
   return finalPrompt;
