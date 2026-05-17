@@ -129,11 +129,8 @@ export class ZoyaLiveService {
   public onModelChange: (model: string) => void = () => { };
 
   constructor() {
-    const rawKey = process.env.GEMINI_API_KEY || "";
-    const keys = rawKey.split(",").map(k => k.trim()).filter(Boolean);
-    const apiKey = keys.length > 0 ? keys[Math.floor(Math.random() * keys.length)] : "";
-    if (!apiKey) console.error("[ZoyaLive] GEMINI_API_KEY is not set!");
-    this.ai = new GoogleGenAI({ apiKey });
+    // We will initialize the AI instance with the key fetched dynamically in start()
+    this.ai = new GoogleGenAI({ apiKey: "pending" });
   }
 
   // ── Start session with model cascade ─────────────────────────────────────
@@ -151,14 +148,28 @@ export class ZoyaLiveService {
     this.onModelChange(this.currentModel);
 
     try {
-      const rawKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
-        (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '') ||
-        "";
+      let rawKey = "";
+      try {
+        const keyRes = await fetch("/api/config/keys");
+        if (keyRes.ok) {
+           const keyData = await keyRes.json();
+           rawKey = keyData.key;
+        }
+      } catch (err) {
+        console.warn("[ZoyaLive] Could not fetch keys from backend", err);
+      }
+      
+      // Fallback to build-time env if backend fetch fails
+      if (!rawKey) {
+        rawKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
+          (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '') || "";
+      }
+
       // Remove any literal quotes that might be wrapping the string or individual keys
       const cleanRawKey = rawKey.replace(/^["']|["']$/g, '');
       const keys = cleanRawKey.split(",").map((k: string) => k.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       const apiKey = keys.length > 0 ? keys[Math.floor(Math.random() * keys.length)] : "";
-      if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+      if (!apiKey) throw new Error("GEMINI_API_KEY is missing. Please add it to Render Environment Variables.");
 
       // Re-initialize this.ai to ensure it uses the correct key resolved at runtime
       this.ai = new GoogleGenAI({ apiKey });

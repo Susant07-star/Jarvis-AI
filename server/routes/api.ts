@@ -27,6 +27,10 @@ router.get("/config/voice-prompt", async (req, res) => {
   }
 });
 
+router.get("/config/keys", (req, res) => {
+  res.json({ key: process.env.GEMINI_API_KEY || "" });
+});
+
 router.get("/session-context", async (req, res) => {
   try {
     const context = await getSessionContextSummary();
