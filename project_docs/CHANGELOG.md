@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### [2026-05-17] Unified Brain Memory & Planner Hardening
+- **Feature — Unified Brain Memory**: Connected all memory channels (Browser Voice, Browser Chat, Telegram Bot Voice, Telegram Bot Chat) into a single omnipresent consciousness. Telegram interactions now sync directly to the global `session_memory.json`, and Browser Chat dynamically merges into the active Telegram `ThreadManager` history.
+- **Fix — Telegram Chat ID Caching**: Fixed a bug where Browser Voice reminders failed to route to Telegram. The system now caches the user's Telegram Chat ID upon their first interaction and uses it as a seamless fallback for all browser-initiated voice tasks (`Target: 0` error resolved).
+- **Fix — Planner JSON Hallucinations**: Addressed recency bias in lightweight models (like Gemini Flash Lite) by injecting a strict JSON output anchor constraint directly into the user prompt. This decisively stops the LLM from inventing arbitrary schemas and forces compliance with the `steps` array structure.
+- **Fix — Orchestrator Timeout Loops**: Implemented the `USE_BROWSER_AGENT` environment toggle to completely bypass the Python backend dependency when deployed to the cloud, eliminating the 7-second `ECONNREFUSED` timeout that caused SSE connection failures.
+- **Feature — Gemini SDK v2 Support**: Upgraded `llmRouter.ts` syntax to support the new Google GenAI SDK (replacing deprecated object paths) and removed outdated prompt injections to stop generic software planning hallucinations.
+
 ### [2026-05-08] Phase 2.1: Telegram Bridge & DNS-Bypass Networking
 - **Feature — Telegram Bot Integration**: Full remote interaction via `server/telegramBot.ts`. JARVIS can now handle text and voice commands (via Groq Whisper STT) from any Telegram client.
 - **Critical Fix — DNS-Bypass Networking**: Implemented a "Direct-Tunnel" HTTPS requester that connects to Telegram's IP (`149.154.167.220`) with a manual `Host` header. This completely bypasses ISP-level DNS poisoning (AggregateError) common on Windows/Nepali networks.

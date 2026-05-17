@@ -2,11 +2,10 @@
 
 ## 1. Conversational Intelligence Layer
 
-### Stateful Thread Management (`ThreadManager.ts`)
-We have moved away from stateless history transmission to a **Persistent, Disk-Based Thread System**.
-- **Location**: `data/threads/{threadId}.json`
-- **Benefit**: Reduces token overhead by ~80% by only sending necessary message deltas instead of the entire chat history in every request.
-- **Persistence**: Conversation state survives server restarts and is shared across Web and Telegram.
+### Unified Brain Memory (`ThreadManager.ts` & `memory.ts`)
+J.A.R.V.I.S. operates on a single, omnipresent consciousness that spans across all interfaces (Web Chat, Web Voice, Telegram Chat, Telegram Voice).
+- **Global Session Memory**: All Telegram bot interactions instantly sync to `session_memory.json`, allowing the Browser Voice UI (Zoya) to retain full context of mobile conversations.
+- **Unified Thread ID**: Web Chat dynamically maps its thread identifier to `tg_${adminChatId}` (the user's cached Telegram Chat ID), merging both chat environments into the exact same persistent file (`data/threads/{threadId}.json`).
 
 ### Modular Prompt Assembly (`prompt_builder.ts`)
 The system uses a **"Soul vs. Skills"** architecture for system instructions.
@@ -21,7 +20,7 @@ The system uses a **"Soul vs. Skills"** architecture for system instructions.
 ### Shared Context API
 The Frontend (Zoya Gemini Live) and Backend (Node.js/Telegram) are now synchronized via:
 - **`GET /api/config/voice-prompt`**: Dynamically pulls the "Soul" from the server to ensure personality consistency.
-- **`GET /api/session-context`**: Injects shared chat/voice history into the Gemini Live session so Zoya "remembers" what was said in text chat.
+- **`GET /api/session-context`**: Injects shared chat/voice history (including synced Telegram interactions) into the Gemini Live session so Zoya "remembers" what was said in any medium.
 
 ---
 

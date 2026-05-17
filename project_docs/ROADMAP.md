@@ -114,4 +114,4 @@ These apply across **all phases** and should be maintained continuously.
 | Dynamic Key Rotation | `llmRouter.ts` | ✅ Active |
 | Visual Agent Screenshots | `planner.ts` → `logs/debug_screenshots/` | ✅ Active |
 
-*Last Updated: 2026-05-09 | Phase 2.1 Complete. Telegram Audio Calling + Static Domain implemented.*
+*Last Updated: 2026-05-17 | Phase 2.1 Complete. Unified Brain Memory + Proactive Telegram Linking implemented.*
