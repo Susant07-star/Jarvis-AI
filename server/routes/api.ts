@@ -13,6 +13,7 @@ import { MetricsTracker } from "../utils/metrics";
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
 import { callChatWithCascade, callResearchWithCascade } from "../llmRouter";
 import { ThreadManager } from "../threadManager";
+import { setTimezone, getTimezone } from "../timezoneStore";
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -29,6 +30,45 @@ router.get("/config/voice-prompt", async (req, res) => {
 
 router.get("/config/keys", (req, res) => {
   res.json({ key: process.env.GEMINI_API_KEY || "" });
+});
+
+// ── Timezone Sync ──
+router.get("/config/timezone", (req, res) => {
+  res.json({ timezone: getTimezone() });
+});
+
+router.post("/config/timezone", (req, res) => {
+  const { timezone } = req.body;
+  if (!timezone) return res.status(400).json({ error: "Missing timezone" });
+  setTimezone(timezone);
+  res.json({ success: true, timezone: getTimezone() });
+});
+
+// ── Butler Queue (Async Background Tasks) ──
+router.post("/butler/dispatch", async (req, res) => {
+  try {
+    const { type, query, chatId } = req.body;
+    if (!type || !query) return res.status(400).json({ error: "Missing type or query" });
+
+    const { butlerQueue } = await import("../butlerQueue");
+    const taskId = butlerQueue.dispatch(type, query, chatId || 0);
+
+    logger.info("API", `[Butler] Dispatched ${type} task: "${query}" → ${taskId}`);
+    res.json({ success: true, taskId, status: "accepted" });
+  } catch (error: any) {
+    logger.error("API", "Butler dispatch error", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/butler/results", async (req, res) => {
+  try {
+    const { butlerQueue } = await import("../butlerQueue");
+    const completed = butlerQueue.collectCompleted();
+    res.json({ results: completed });
+  } catch (error: any) {
+    res.json({ results: [] });
+  }
 });
 
 // ── Remote Debugging Endpoint ──

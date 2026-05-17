@@ -31,6 +31,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
+import { getTimeContextBlock } from "../timezoneStore";
 
 // ─── PATHS ────────────────────────────────────────────────────────────────────
 
@@ -155,15 +156,8 @@ export function buildPrompt(agentName: string): string {
   const assembled = parts.join("\n\n");
 
   // ── Inject Real-Time Date/Time Context (computed fresh every call) ──────
-  // This is NEVER cached. Every single LLM call gets the exact current time.
-  const TIMEZONE = "Asia/Kathmandu";
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-US", { timeZone: TIMEZONE, weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-US", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-
-  const timeBlock = `\n\n### 📅 CURRENT CONTEXT (REAL-TIME — ALWAYS ACCURATE):\n- Timezone: ${TIMEZONE}\n- Date: ${dateStr}\n- Time: ${timeStr}`;
-
-  const finalPrompt = assembled + timeBlock;
+  // Uses the user's selected timezone from the UI dropdown (via timezoneStore).
+  const finalPrompt = assembled + getTimeContextBlock();
 
   // Approximate token count (roughly 4 chars per token)
   const approxTokens = Math.ceil(finalPrompt.length / 4);

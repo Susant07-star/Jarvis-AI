@@ -4,14 +4,15 @@ import { BrowserAction, memory, tracker } from './executor';
 import { logger } from '../logger';
 import fs from 'fs';
 import path from 'path';
+import { getTimezone } from '../timezoneStore';
 
 // ── Real-time context injected into every planner call (NEVER cached) ─────────
 function getPlannerTimeContext(): string {
-    const TIMEZONE = "Asia/Kathmandu";
+    const tz = getTimezone();
     const now = new Date();
-    const dateStr = now.toLocaleDateString("en-US", { timeZone: TIMEZONE, weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    const timeStr = now.toLocaleTimeString("en-US", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-    return `\nCURRENT TIME CONTEXT (use for scheduling calculations):\n- Timezone: ${TIMEZONE}\n- Date: ${dateStr}\n- Time: ${timeStr}`;
+    const dateStr = now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const timeStr = now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    return `\nCURRENT TIME CONTEXT (use for scheduling calculations):\n- Timezone: ${tz}\n- Date: ${dateStr}\n- Time: ${timeStr}`;
 }
 
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────

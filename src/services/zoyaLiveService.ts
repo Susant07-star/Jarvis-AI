@@ -116,6 +116,7 @@ export class ZoyaLiveService {
   public manuallyStopped = false;
   public currentTimezone?: string;
   public currentChatId?: number;
+  private butlerPollInterval: any = null;
 
   // ── Public callbacks ──────────────────────────────────────────────────────
 
@@ -364,6 +365,7 @@ export class ZoyaLiveService {
             // Cancel the connect-timeout guard since we're open
             if (connectTimeoutId) { clearTimeout(connectTimeoutId); connectTimeoutId = null; }
             this.onStateChange("listening");
+            this._startButlerResultPolling();
           },
           onmessage: async (message: LiveServerMessage) => {
             await this._handleMessage(message);
@@ -581,13 +583,17 @@ export class ZoyaLiveService {
       }
     } else if (call.name === "intelligent_search") {
       const { query } = call.args as any;
-      this.onThought(`🔍 J.A.R.V.I.S. Deep Research: "${query}"`);
+      this.onThought(`🔍 Butler Queue: "${query}"`);
       
       try {
-        const res = await fetch("/api/intelligent-search", {
+        const res = await fetch("/api/butler/dispatch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query }),
+          body: JSON.stringify({
+            type: "research",
+            query,
+            chatId: this.currentChatId || 0
+          }),
         });
 
         const data = await res.json();
@@ -596,20 +602,20 @@ export class ZoyaLiveService {
           functionResponses: [{
             name: call.name,
             id: call.id,
-            response: { result: data.answer || "I'm sorry, I couldn't find information on that topic right now." },
+            response: { 
+              result: `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready, and we can continue talking in the meantime.` 
+            },
           }],
         });
 
-        if (data.answer) {
-          this.onThought("✅ Research complete.");
-        }
+        this.onThought(`✅ Research task delegated to background.`);
       } catch (err: any) {
-        this.onThought("❌ Research engine failed.");
+        this.onThought("❌ Background delegate failed.");
         session.sendToolResponse({
           functionResponses: [{
             name: call.name,
             id: call.id,
-            response: { result: "Research engine is currently offline. Please try again in a moment." },
+            response: { result: "Background worker dispatch failed. Please try again." },
           }],
         });
       }
@@ -753,6 +759,7 @@ export class ZoyaLiveService {
     this.isSocketOpen = false;
     this.isSetupComplete = false;
     this.clearSessionTimer();
+    this._stopButlerResultPolling();
     this.processor?.disconnect();
     this.processor = null;
     this.source?.disconnect();
@@ -777,6 +784,40 @@ export class ZoyaLiveService {
     if (this.sessionTimer) {
       clearTimeout(this.sessionTimer);
       this.sessionTimer = null;
+    }
+  }
+
+  private _startButlerResultPolling() {
+    if (this.butlerPollInterval) return;
+    console.log("[ZoyaLive] Starting Asynchronous Butler Result polling...");
+    this.butlerPollInterval = setInterval(async () => {
+      if (!this.isActive || !this.isSocketOpen) return;
+      try {
+        const res = await fetch("/api/butler/results");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+          for (const item of data.results) {
+            console.log(`[ZoyaLive] Background task result received for: "${item.query}"`);
+            this.onThought(`✅ Task done: "${item.query}"`);
+            
+            // Construct instruction to Gemini Live to speak the results
+            const instruction = `[SYSTEM INSTRUCTION: You just received the completed background research result for: "${item.query}". Proactively tell the user about it in a natural, elegant, and helpful way. Let them know the results are ready, give a very brief summary of the findings, and ask if they would like you to explain it now or remind them in some time. Completed result: "${item.result}"]`;
+            
+            this.sendText(instruction);
+          }
+        }
+      } catch (err) {
+        console.warn("[ZoyaLive] Butler polling error:", err);
+      }
+    }, 4000); // check every 4 seconds
+  }
+
+  private _stopButlerResultPolling() {
+    if (this.butlerPollInterval) {
+      console.log("[ZoyaLive] Stopping Asynchronous Butler Result polling.");
+      clearInterval(this.butlerPollInterval);
+      this.butlerPollInterval = null;
     }
   }
 

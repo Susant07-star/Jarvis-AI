@@ -21,6 +21,16 @@ export default function App() {
   const zoya = useZoyaVoice();
   const [memoryStats, setMemoryStats] = useState({ messageCount: 0, estimatedTokens: 0, maxMessages: 50 });
 
+  // Sync timezone to server whenever it changes
+  const handleTimezoneChange = useCallback((tz: string) => {
+    setTimezone(tz);
+    fetch("/api/config/timezone", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ timezone: tz })
+    }).catch(err => console.warn("[App] Failed to sync timezone to server:", err));
+  }, []);
+
   // Refresh memory stats whenever messages change (with a slight delay to allow backend to save)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -285,7 +295,7 @@ export default function App() {
           <div className="w-px h-6 bg-cyan-900/50 mx-1"></div>
           
           {/* Timezone Clock */}
-          <TimezoneClock timezone={timezone} onTimezoneChange={setTimezone} />
+          <TimezoneClock timezone={timezone} onTimezoneChange={handleTimezoneChange} />
         </div>
       </header>
 
