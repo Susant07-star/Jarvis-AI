@@ -61,7 +61,6 @@ Reply with EXACTLY one word: "task" or "chat".`;
   } catch {}
 
   // --- Final Safety Fallback ---
-  const lower = text.toLowerCase();
   const chatKeywords = ["hey", "hi", "hello", "who are you", "who created you", "can you hear me", "you there"];
   if (chatKeywords.some(k => lower.includes(k))) return "chat";
 
