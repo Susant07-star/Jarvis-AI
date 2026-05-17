@@ -108,7 +108,7 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
   ]
 }`;
 
-    const userPrompt = `User goal: "${goal}"`;
+    const userPrompt = `User goal: "${goal}"\n\nCRITICAL: You MUST reply with ONLY a valid JSON object matching the EXACT "REQUIRED OUTPUT FORMAT" from the system instructions. Do NOT invent your own JSON keys or structure.`;
 
     try {
         const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, userPrompt);
@@ -221,7 +221,7 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
   ]
 }`;
 
-    const userPrompt = `User goal: "${goal}"`;
+    const userPrompt = `User goal: "${goal}"\n\nCRITICAL: You MUST reply with ONLY a valid JSON object matching the EXACT "REQUIRED OUTPUT FORMAT" from the system instructions. Do NOT invent your own JSON keys or structure.`;
 
     try {
         const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, userPrompt);
@@ -278,7 +278,7 @@ REQUIRED OUTPUT FORMAT:
   ]
 }`;
 
-    const userPrompt = `User goal: "${goal}"`;
+    const userPrompt = `User goal: "${goal}"\n\nCRITICAL: You MUST reply with ONLY a valid JSON object matching the EXACT "REQUIRED OUTPUT FORMAT" from the system instructions. Do NOT invent your own JSON keys or structure.`;
 
     try {
         // Use the new imageBase64 parameter we added to the LLM Router
