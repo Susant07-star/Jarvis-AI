@@ -31,6 +31,18 @@ router.get("/config/keys", (req, res) => {
   res.json({ key: process.env.GEMINI_API_KEY || "" });
 });
 
+// ── Remote Debugging Endpoint ──
+router.get("/logs", (req, res) => {
+  const logPath = path.resolve(process.cwd(), 'logs', 'debug.log');
+  if (fs.existsSync(logPath)) {
+    res.setHeader('Content-Type', 'text/plain');
+    const logStream = fs.createReadStream(logPath);
+    logStream.pipe(res);
+  } else {
+    res.status(404).send("No debug.log found yet.");
+  }
+});
+
 router.get("/session-context", async (req, res) => {
   try {
     const context = await getSessionContextSummary();
