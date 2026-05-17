@@ -154,23 +154,34 @@ export function buildPrompt(agentName: string): string {
 
   const assembled = parts.join("\n\n");
 
+  // ── Inject Real-Time Date/Time Context (computed fresh every call) ──────
+  // This is NEVER cached. Every single LLM call gets the exact current time.
+  const TIMEZONE = "Asia/Kathmandu";
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", { timeZone: TIMEZONE, weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("en-US", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+
+  const timeBlock = `\n\n### 📅 CURRENT CONTEXT (REAL-TIME — ALWAYS ACCURATE):\n- Timezone: ${TIMEZONE}\n- Date: ${dateStr}\n- Time: ${timeStr}`;
+
+  const finalPrompt = assembled + timeBlock;
+
   // Approximate token count (roughly 4 chars per token)
-  const approxTokens = Math.ceil(assembled.length / 4);
+  const approxTokens = Math.ceil(finalPrompt.length / 4);
   const maxTokens = config.max_tokens_hint || Infinity;
 
   if (approxTokens > maxTokens) {
     console.warn(
       `[PromptBuilder] ⚠️ WARNING: Assembled prompt for "${agentName}" exceeds max_tokens_hint!`
     );
-    console.warn(`[PromptBuilder] Expected < ${maxTokens} tokens, but got ~${approxTokens} (${assembled.length} chars).`);
+    console.warn(`[PromptBuilder] Expected < ${maxTokens} tokens, but got ~${approxTokens} (${finalPrompt.length} chars).`);
     console.warn(`[PromptBuilder] Consider removing modules or shrinking documentation to avoid API cost bloat.`);
   }
 
   console.log(
-    `[PromptBuilder] Built "${agentName}" prompt: ${config.modules.length} modules, ~${approxTokens} tokens`
+    `[PromptBuilder] Built "${agentName}" prompt: ${config.modules.length} modules, ~${approxTokens} tokens | Time: ${timeStr}`
   );
 
-  return assembled;
+  return finalPrompt;
 }
 
 /**

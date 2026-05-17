@@ -5,6 +5,15 @@ import { logger } from '../logger';
 import fs from 'fs';
 import path from 'path';
 
+// ── Real-time context injected into every planner call (NEVER cached) ─────────
+function getPlannerTimeContext(): string {
+    const TIMEZONE = "Asia/Kathmandu";
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", { timeZone: TIMEZONE, weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const timeStr = now.toLocaleTimeString("en-US", { timeZone: TIMEZONE, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    return `\nCURRENT TIME CONTEXT (use for scheduling calculations):\n- Timezone: ${TIMEZONE}\n- Date: ${dateStr}\n- Time: ${timeStr}`;
+}
+
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
 // Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
 // Validates JSON output, retries ONCE on parse failure, logs raw output.
@@ -95,6 +104,7 @@ Available actions:
 - "schedule_message" (requires "delay_seconds", "text")
 
 ${memoryContext}
+${getPlannerTimeContext()}
 
 SECURITY RULE: Set "requires_confirmation": true if actions include: youtube_comment, youtube_subscribe, youtube_like, type_secure, opening untrusted URLs, OR total steps > 3. Trusted domains: youtube.com, google.com, daraz.pk, facebook.com.
 
@@ -209,6 +219,7 @@ ANTI-HALLUCINATION RULE: If the user asks to click something NOT in the DOM elem
 YOUTUBE SEARCH RULE: After using "youtube_search", you MUST click a video before using "media_control". Do NOT use "media_control" immediately after "youtube_search" without clicking first.
 
 SECURITY RULE: Set "requires_confirmation": true if: youtube_comment, youtube_subscribe, youtube_like, type_secure are used, OR total steps > 3.
+${getPlannerTimeContext()}
 
 REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
 {
@@ -268,6 +279,7 @@ CRITICAL RULES:
 1. ONLY use "jarvis_id" numbers that you can clearly see in the screenshot.
 2. If you need to search Google or YouTube, you can use "open_url" or "youtube_search" directly without clicking the search bar.
 3. Keep your plans very short. Since the screen changes after every click, usually 1 or 2 steps is best.
+${getPlannerTimeContext()}
 
 REQUIRED OUTPUT FORMAT:
 {
