@@ -14,6 +14,14 @@ interface ScheduledTask {
 
 class JarvisScheduler {
   private tasks: Map<string, ScheduledTask> = new Map();
+  private cachedAdminChatId: number = 0;
+
+  public setAdminChatId(id: number) {
+    if (id !== 0 && this.cachedAdminChatId !== id) {
+      this.cachedAdminChatId = id;
+      logger.info("Scheduler", `Cached Admin Chat ID updated to: ${id}`);
+    }
+  }
 
   /**
    * Initializes the scheduler by pulling pending tasks from Supabase (if available).
@@ -63,23 +71,33 @@ class JarvisScheduler {
    * Schedule a new task (call or message)
    */
   public schedule(chatId: number, type: "call" | "message", content: string, delaySeconds: number): string {
+    let targetChatId = chatId;
+    if (!targetChatId || targetChatId === 0) {
+      targetChatId = this.cachedAdminChatId || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || "0");
+    }
+
+    if (targetChatId === 0) {
+      logger.error("Scheduler", `Cannot schedule ${type}: No valid Telegram Chat ID found. Please send a message to the Telegram bot first to link your account.`);
+      return "failed_no_chat_id";
+    }
+
     const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const executionTime = Date.now() + (delaySeconds * 1000);
 
     logger.info("Scheduler", `[NEURAL START] 🕒 Task Registered: ${id}`);
-    logger.info("Scheduler", `[NEURAL START] 🕒 Action: ${type.toUpperCase()} | Delay: ${delaySeconds}s | Target: ${chatId}`);
+    logger.info("Scheduler", `[NEURAL START] 🕒 Action: ${type.toUpperCase()} | Delay: ${delaySeconds}s | Target: ${targetChatId}`);
 
     const timer = setTimeout(() => {
       this.execute(id);
     }, delaySeconds * 1000);
 
-    this.tasks.set(id, { id, chatId, type, content, executionTime, timer });
+    this.tasks.set(id, { id, chatId: targetChatId, type, content, executionTime, timer });
 
     // Persist to Supabase
     if (supabase) {
       supabase.from("tasks").insert({
         task_id: id,
-        chat_id: chatId,
+        chat_id: targetChatId,
         type,
         content,
         execution_time: executionTime,

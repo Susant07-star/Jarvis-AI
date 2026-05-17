@@ -311,6 +311,11 @@ async function handleUpdate(token: string, update: any): Promise<void> {
   const chatId: number = msg.chat.id;
   const webAppUrl = process.env.WEB_APP_URL;
 
+  // Cache the chat ID so browser-initiated voice tasks know who to call
+  import("./scheduler").then(({ jarvisScheduler }) => {
+    jarvisScheduler.setAdminChatId(chatId);
+  }).catch(() => {});
+
   if (msg.text === "/start") {
     const name = msg.from?.first_name || "Boss";
     const text = `Welcome back, ${name}. I am J.A.R.V.I.S. (Just A Rather Very Intelligent System).\n\nAll neural pathways are active. You can:\n• Send me a text message\n• Send me a voice note 🎙\n• Ask me anything — research, coding, general knowledge\n\nHow can I assist you today?`;
