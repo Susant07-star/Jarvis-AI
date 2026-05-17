@@ -342,8 +342,8 @@ export class ZoyaLiveService {
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
-                      type: { type: Type.STRING, description: "Action type: 'call' or 'message'." },
-                      content: { type: Type.STRING, description: "The message or call reason." },
+                      type: { type: Type.STRING, description: "Action type: 'call', 'message', or 'alarm'." },
+                      content: { type: Type.STRING, description: "The message, call reason, or alarm note." },
                       delay_seconds: { type: Type.NUMBER, description: "TOTAL seconds to wait from now. 1 min = 60, 1 hour = 3600." }
                     },
                     required: ["type", "content", "delay_seconds"],

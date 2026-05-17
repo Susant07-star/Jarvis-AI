@@ -823,4 +823,52 @@ router.post("/scheduler/register", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/alarm/ack
+ * Allows the MacroDroid phone app or dynamic curls to acknowledge wake up, disarming active sleep watchdogs.
+ */
+router.post("/alarm/ack", async (req, res) => {
+  try {
+    const { chatId } = req.body;
+    const { jarvisScheduler } = await import("../scheduler");
+    
+    const targetChatId = chatId || jarvisScheduler.getAdminChatId();
+    if (!targetChatId || targetChatId === 0) {
+      return res.status(400).json({ error: "No active Telegram Chat ID resolved." });
+    }
+    
+    await jarvisScheduler.ackAlarm(targetChatId);
+    res.json({ success: true, message: "Omega Alarm watchdog successfully cleared." });
+  } catch (err: any) {
+    logger.error("API", "Alarm ACK Error", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET/POST /api/config/macrodroid
+ * Exposes dynamic configuration for MacroDroid triggers.
+ */
+router.get("/config/macrodroid", async (req, res) => {
+  try {
+    const { jarvisScheduler } = await import("../scheduler");
+    res.json({ webhookUrl: jarvisScheduler.getMacrodroidUrl() });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/config/macrodroid", async (req, res) => {
+  try {
+    const { webhookUrl } = req.body;
+    if (!webhookUrl) return res.status(400).json({ error: "Missing webhookUrl" });
+    
+    const { jarvisScheduler } = await import("../scheduler");
+    jarvisScheduler.setMacrodroidUrl(webhookUrl);
+    res.json({ success: true, webhookUrl: jarvisScheduler.getMacrodroidUrl() });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

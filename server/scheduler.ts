@@ -2,19 +2,30 @@ import { logger } from "./logger";
 import { triggerProactiveCall } from "./telegramBot";
 import https from "https";
 import { supabase } from "./supabaseClient";
+import { callChatWithCascade } from "./llmRouter";
 
 interface ScheduledTask {
   id: string;
   chatId: number;
-  type: "call" | "message";
+  type: "call" | "message" | "alarm";
   content: string;
   executionTime: number;
   timer: NodeJS.Timeout;
 }
 
+interface ActiveWatchdog {
+  taskId: string;
+  chatId: number;
+  content: string;
+  attempts: number;
+  timer: NodeJS.Timeout;
+}
+
 class JarvisScheduler {
   private tasks: Map<string, ScheduledTask> = new Map();
+  private activeWatchdogs: Map<string, ActiveWatchdog> = new Map();
   private cachedAdminChatId: number = 0;
+  private macrodroidWebhookUrl: string = process.env.MACRODROID_WEBHOOK_URL || "";
 
   public setAdminChatId(id: number) {
     if (id !== 0 && this.cachedAdminChatId !== id) {
@@ -25,6 +36,15 @@ class JarvisScheduler {
 
   public getAdminChatId(): number {
     return this.cachedAdminChatId;
+  }
+
+  public getMacrodroidUrl(): string {
+    return this.macrodroidWebhookUrl;
+  }
+
+  public setMacrodroidUrl(url: string) {
+    this.macrodroidWebhookUrl = url;
+    logger.info("Scheduler", `MacroDroid Webhook URL updated dynamically: ${url}`);
   }
 
   /**
@@ -59,7 +79,7 @@ class JarvisScheduler {
           this.tasks.set(record.task_id, {
             id: record.task_id,
             chatId: Number(record.chat_id),
-            type: record.type as "call" | "message",
+            type: record.type as "call" | "message" | "alarm",
             content: record.content,
             executionTime: Number(record.execution_time),
             timer
@@ -72,9 +92,9 @@ class JarvisScheduler {
   }
 
   /**
-   * Schedule a new task (call or message)
+   * Schedule a new task (call, message, or alarm)
    */
-  public schedule(chatId: number, type: "call" | "message", content: string, delaySeconds: number): string {
+  public schedule(chatId: number, type: "call" | "message" | "alarm", content: string, delaySeconds: number): string {
     let targetChatId = chatId;
     if (!targetChatId || targetChatId === 0) {
       targetChatId = this.cachedAdminChatId || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || "0");
@@ -124,6 +144,61 @@ class JarvisScheduler {
       if (task.type === "call") {
         logger.info("Scheduler", `[ACTION] Triggering Urgent Call UI for Telegram`);
         await triggerProactiveCall(task.chatId);
+      } else if (task.type === "alarm") {
+        logger.info("Scheduler", `[ACTION] Triggering Omega Alarm Protocol via MacroDroid & Telegram`);
+        
+        // 1. Ring the physical phone via MacroDroid Webhook
+        await this.triggerMacrodroid();
+
+        // 2. Generate a highly custom, witty morning briefing from JARVIS using LLM
+        let morningBrief = `🌅 **GOOD MORNING, BOSS!**\n\nTime to rise and shine! Here is your morning directive:\n🎯 *"${task.content}"*`;
+        
+        try {
+          const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Tony Stark.
+Draft an elegant, highly motivating, wittily sarcastic (classic JARVIS style) morning briefing for the Boss.
+The time is 5:00 AM.
+Your objective is to:
+1. Command him to get out of bed in a witty, classy manner.
+2. Present his scheduled morning directive/task clearly: "${task.content}".
+3. Give him a positive, tech-focused motivational punch.
+Keep your response under 120 words. Do not use generic placeholders.`;
+
+          const result = await callChatWithCascade([
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Good morning, J.A.R.V.I.S. Write my morning briefing." }
+          ]);
+          if (result && result.content) {
+            morningBrief = `🌅 **GOOD MORNING BRIEFING FROM J.A.R.V.I.S.**\n\n${result.content}\n\n_Reply "woke up", "i'm up", or "dismiss" to confirm you are awake._`;
+          }
+        } catch (err) {
+          logger.warn("Scheduler", "LLM cascade failed to generate morning brief. Using default template.");
+        }
+
+        // 3. Send morning brief to Telegram
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (token) {
+          await this.sendTelegramMessage(token, task.chatId, morningBrief);
+        }
+
+        // 4. Setup sleep-watchdog loop (checking every 2 minutes for response)
+        const watchdogId = `watchdog_${task.chatId}`;
+        
+        // Clear any prior active watchdog for safety
+        const existing = this.activeWatchdogs.get(watchdogId);
+        if (existing) clearTimeout(existing.timer);
+
+        const timer = setTimeout(() => {
+          this.runWatchdog(watchdogId);
+        }, 120000); // 2 minutes
+
+        this.activeWatchdogs.set(watchdogId, {
+          taskId: task.id,
+          chatId: task.chatId,
+          content: task.content,
+          attempts: 1,
+          timer
+        });
+
       } else {
         logger.info("Scheduler", `[ACTION] Sending Scheduled Message to Telegram: "${task.content}"`);
         const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -145,6 +220,81 @@ class JarvisScheduler {
       }
     } finally {
       this.tasks.delete(id);
+    }
+  }
+
+  public async ackAlarm(chatId: number) {
+    const watchdogId = `watchdog_${chatId}`;
+    const active = this.activeWatchdogs.get(watchdogId);
+    if (active) {
+      clearTimeout(active.timer);
+      this.activeWatchdogs.delete(watchdogId);
+      logger.info("Scheduler", `🚨 Omega Alarm Protocol disarmed for ChatID ${chatId}`);
+      
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      if (token) {
+        await this.sendTelegramMessage(
+          token, 
+          chatId, 
+          `✅ **OMEGA ALARM PROTOCOL DISARMED**\n\nGood morning, Boss! Sleep watchdog cleared. I'm glad you are awake and ready. Let's conquer the day! 🚀`
+        );
+      }
+    }
+  }
+
+  private async runWatchdog(watchdogId: string) {
+    const active = this.activeWatchdogs.get(watchdogId);
+    if (!active) return;
+
+    logger.warn("Scheduler", `[WATCHDOG] Boss failed to ACK alarm! Attempt #${active.attempts}. Ringing phone again...`);
+
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+
+    // Trigger MacroDroid Webhook again!
+    await this.triggerMacrodroid();
+
+    if (token) {
+      await this.sendTelegramMessage(
+        token, 
+        active.chatId, 
+        `🚨 **WAKE UP WARNING #${active.attempts}**\n\nBoss, you have NOT confirmed you are awake! Ringing your physical phone again.\n\n_Reply "woke up", "i'm awake", or "dismiss" to silence me._`
+      );
+    }
+
+    if (active.attempts >= 5) {
+      logger.error("Scheduler", `[WATCHDOG] Reached maximum wake-up attempts (5). Disarming watchdog.`);
+      this.activeWatchdogs.delete(watchdogId);
+      if (token) {
+        await this.sendTelegramMessage(
+          token,
+          active.chatId,
+          `⚠️ **WATCHDOG FORCE-DISARMED**\n\nBoss, I have tried waking you up 5 times. I am disarming the protocol now to avoid battery drain. Please don't oversleep!`
+        );
+      }
+      return;
+    }
+
+    // Reschedule next check in 2 minutes
+    active.attempts += 1;
+    active.timer = setTimeout(() => {
+      this.runWatchdog(watchdogId);
+    }, 120000); // 2 minutes
+  }
+
+  private async triggerMacrodroid(): Promise<boolean> {
+    if (!this.macrodroidWebhookUrl) {
+      logger.warn("Scheduler", "MacroDroid Webhook URL not configured. Skipping physical ring.");
+      return false;
+    }
+    
+    try {
+      logger.info("Scheduler", `[API] Hitting MacroDroid Webhook: ${this.macrodroidWebhookUrl}`);
+      const res = await fetch(this.macrodroidWebhookUrl);
+      logger.info("Scheduler", `[API] MacroDroid response status: ${res.status}`);
+      return res.ok;
+    } catch (err: any) {
+      logger.error("Scheduler", `Failed to trigger MacroDroid Webhook: ${err.message}`);
+      return false;
     }
   }
 

@@ -342,6 +342,13 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
     if (msg.text) {
       userText = msg.text;
+      
+      // Auto-disarm active watchdog if Boss responds awake
+      const lower = userText.toLowerCase();
+      if (lower.includes("woke up") || lower.includes("awake") || lower.includes("i'm up") || lower.includes("i am up") || lower.includes("dismiss")) {
+        const { jarvisScheduler } = await import("./scheduler");
+        jarvisScheduler.ackAlarm(chatId);
+      }
     } else if (msg.voice || msg.audio) {
       await sendTyping(token, chatId);
       const fileId = msg.voice?.file_id || msg.audio?.file_id;
