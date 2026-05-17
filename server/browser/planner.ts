@@ -8,7 +8,7 @@ import path from 'path';
 // ── Shared hardened Planner LLM call ─────────────────────────────────────────
 // Uses the multi-provider LLM cascade (GPT-4o → DeepSeek → Llama).
 // Validates JSON output, retries ONCE on parse failure, logs raw output.
-async function callPlannerLLM(systemPrompt: string, imageBase64?: string): Promise<{ parsed: any; tokens: number; model: string; provider: string }> {
+async function callPlannerLLM(systemPrompt: string, userPrompt?: string, imageBase64?: string): Promise<{ parsed: any; tokens: number; model: string; provider: string }> {
     const MAX_ATTEMPTS = 2;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -19,6 +19,7 @@ async function callPlannerLLM(systemPrompt: string, imageBase64?: string): Promi
 
         try {
             const messages: ThreadMessage[] = [{ role: 'system', content: systemPrompt }];
+            if (userPrompt) messages.push({ role: 'user', content: userPrompt });
             const result = await callPlannerWithCascade(messages, imageBase64);
             rawOutput = result.content;
             tokens = result.tokens;
@@ -105,12 +106,12 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
     { "action": "open_url", "url": "https://example.com" },
     { "action": "click", "selector": "#login-btn" }
   ]
-}
+}`;
 
-User goal: "${goal}"`;
+    const userPrompt = `User goal: "${goal}"`;
 
     try {
-        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt);
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, userPrompt);
         const actions: BrowserAction[] = parsed.steps || [];
         const requires_confirmation = parsed.requires_confirmation || false;
         const internal_steps: string[] = parsed.internal_steps || [];
@@ -190,7 +191,6 @@ You MUST ONLY return a valid JSON object. Do NOT include ANY explanation, reason
 
 CRITICAL: Map the element's "id" field to "jarvis_id" in your actions. NEVER use CSS selectors for jarvis_id.
 
-User goal: "${goal}"
 ${memoryContext}
 
 Available DOM Elements (current viewport):
@@ -221,8 +221,10 @@ REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
   ]
 }`;
 
+    const userPrompt = `User goal: "${goal}"`;
+
     try {
-        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt);
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, userPrompt);
         const actions: BrowserAction[] = parsed.steps || [];
         const requires_confirmation = parsed.requires_confirmation || false;
         const internal_steps: string[] = parsed.internal_steps || [];
@@ -248,8 +250,6 @@ export async function planWithVisualAgent(goal: string, imageBase64: string, ele
 
 ABSOLUTE RULE — JSON ONLY:
 You MUST ONLY return a valid JSON object. Do NOT include ANY explanation, reasoning, markdown code fences, sentences, or text outside the JSON object. Violations will cause a system crash.
-
-User goal: "${goal}"
 
 You have been provided with a screenshot of the current browser tab.
 Every interactive element on the screen has been marked with a red border and a red box containing an ID number.
@@ -278,9 +278,11 @@ REQUIRED OUTPUT FORMAT:
   ]
 }`;
 
+    const userPrompt = `User goal: "${goal}"`;
+
     try {
         // Use the new imageBase64 parameter we added to the LLM Router
-        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, imageBase64);
+        const { parsed, tokens, model, provider } = await callPlannerLLM(systemPrompt, userPrompt, imageBase64);
         
         // We still use BrowserAction format, but we will let the execution layer map jarvis_id to coordinates
         const actions: BrowserAction[] = parsed.steps || [];

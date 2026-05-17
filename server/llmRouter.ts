@@ -117,11 +117,6 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
         parts: [{ text: m.content }]
       }));
 
-      // Gemini requires at least one user content block
-      if (contents.length === 0) {
-        contents.push({ role: "user", parts: [{ text: "Please generate the JSON plan." }] });
-      }
-
       // Add image to the LAST user message if provided
       if (imageBase64 && contents.length > 0) {
         const lastMsg = contents[contents.length - 1];
