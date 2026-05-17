@@ -3,13 +3,22 @@ import { logger } from "./logger";
 import { GoogleGenAI } from "@google/genai";
 import { getRandomKey } from "./llmRouter";
 
-export type IntentType = "task" | "chat";
+export type IntentType = "task" | "chat" | "schedule";
 
 /**
- * Classifies user intent into "task" (agent mode) or "chat" (direct mode).
- * Tiers: Groq 8B -> Groq 70B -> SambaNova -> Gemini -> Safety Net.
+ * Classifies user intent into "task" (agent mode), "chat" (direct mode), or "schedule" (direct scheduler actions).
+ * Tiers: Local Guard -> Groq 8B -> Groq 70B -> SambaNova -> Gemini -> Safety Net.
  */
 export async function classifyIntent(text: string): Promise<IntentType> {
+  const lower = text.toLowerCase();
+  
+  // Local Guard: Instant, 100% accurate, zero-latency scheduling match
+  const scheduleKeywords = ["remind", "wake me up", "set alarm", "set alarm for", "timer for", "set a timer", "schedule a", "call me in", "message me in", "ping me in"];
+  if (scheduleKeywords.some(k => lower.includes(k))) {
+    logger.info("Classifier", `[LocalGuard] Match schedule intent: "${text}"`);
+    return "schedule";
+  }
+
   const prompt = `You are the J.A.R.V.I.S. Intent Gatekeeper. Your mission is to PREVENT unnecessary research tasks.
 
     - "chat": Default conversational mode.

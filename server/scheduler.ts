@@ -3,6 +3,7 @@ import { triggerProactiveCall } from "./telegramBot";
 import https from "https";
 import { supabase } from "./supabaseClient";
 import { callChatWithCascade } from "./llmRouter";
+import { getTimezone } from "./timezoneStore";
 
 interface ScheduledTask {
   id: string;
@@ -26,6 +27,72 @@ class JarvisScheduler {
   private activeWatchdogs: Map<string, ActiveWatchdog> = new Map();
   private cachedAdminChatId: number = 0;
   private macrodroidWebhookUrl: string = process.env.MACRODROID_WEBHOOK_URL || "";
+
+  /**
+   * High-precision LLM parser to extract alarm/reminder parameters and schedule them directly.
+   * Eliminates the need for visual browser agent planning for scheduling actions.
+   */
+  public async parseAndSchedule(userInput: string, chatId: number): Promise<{ success: boolean; message: string; taskId?: string }> {
+    try {
+      logger.info("Scheduler", `[DirectParse] Parsing scheduling request: "${userInput}"`);
+      const tz = getTimezone ? getTimezone() : "Asia/Kathmandu";
+      const now = new Date();
+      const timeContext = `Current Time Context: Timezone=${tz}, Date=${now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" })}, Time=${now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}`;
+
+      const systemPrompt = `You are J.A.R.V.I.S., the ultimate Stark assistant.
+Your job is to parse a user's scheduling/alarm/reminder request into structured JSON.
+
+ABSOLUTE RULE — You MUST return ONLY a valid JSON object with the following fields:
+- "type": Choose EXACTLY "alarm" (for wake up/alarm clock requests), "message" (for reminders to do tasks later), or "call" (for voice calls).
+- "content": A clean, concise summary of the action/work (e.g. "Drink water", "Read Chapter 4").
+- "delay_seconds": The number of seconds to wait from NOW before executing. Calculate this carefully based on the current time context.
+
+${timeContext}
+
+Example input: "remind me in 5 minutes to drink water"
+Example output: { "type": "message", "content": "Drink water", "delay_seconds": 300 }
+
+Example input: "wake me up at 5:00 AM to read" (if current time is 4:58 AM)
+Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
+
+      const { callChatWithCascade } = await import("./llmRouter");
+      const result = await callChatWithCascade([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Parse this scheduling request: "${userInput}"` }
+      ]);
+
+      const parsed = JSON.parse(result.content.trim());
+      if (!parsed.type || !parsed.content || parsed.delay_seconds === undefined) {
+        throw new Error("Parsed JSON is missing required fields.");
+      }
+
+      const taskId = this.schedule(chatId, parsed.type, parsed.content, parsed.delay_seconds);
+
+      // Generate a witty J.A.R.V.I.S. confirmation message
+      const confirmSystem = `You are J.A.R.V.I.S., the wittily sarcastic AI butler created by Tony Stark.
+Draft a classy, witty, and highly reassuring confirmation message.
+Confirm that you have scheduled a "${parsed.type}" action to: "${parsed.content}" in exactly ${Math.round(parsed.delay_seconds / 60)} minute(s).
+Keep it under 60 words.`;
+
+      const confirmResult = await callChatWithCascade([
+        { role: "system", content: confirmSystem },
+        { role: "user", content: "Good job. Write the confirmation reply." }
+      ]);
+
+      return {
+        success: true,
+        message: confirmResult.content || `Considered it done, sir! I've scheduled your reminder to: ${parsed.content}.`,
+        taskId
+      };
+
+    } catch (err: any) {
+      logger.error("Scheduler", `DirectParse failed: ${err.message}`);
+      return {
+        success: false,
+        message: `I apologize, Boss, but I encountered an error while trying to process that schedule request.`
+      };
+    }
+  }
 
   public setAdminChatId(id: number) {
     if (id !== 0 && this.cachedAdminChatId !== id) {
@@ -142,11 +209,8 @@ class JarvisScheduler {
     try {
       if (task.chatId === 0) {
         logger.info("Scheduler", `[ACTION] Local browser/voice reminder triggered: "${task.content}"`);
-        const { completedResults } = await import("./butlerQueue");
-        completedResults.push({
-          query: `Local Reminder`,
-          result: `Boss, here is your scheduled reminder: ${task.content}`
-        });
+        const { butlerQueue } = await import("./butlerQueue");
+        butlerQueue.pushLocalReminder(`Local Reminder`, `Boss, here is your scheduled reminder: ${task.content}`);
       } else {
         if (task.type === "call") {
           logger.info("Scheduler", `[ACTION] Triggering Urgent Call UI for Telegram`);

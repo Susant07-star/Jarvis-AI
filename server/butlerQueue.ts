@@ -71,6 +71,19 @@ class ButlerQueue {
     return results;
   }
 
+  /**
+   * Manually inject a completed result into the queue (e.g. for local browser/voice reminders).
+   */
+  public pushLocalReminder(query: string, result: string) {
+    this.completedResults.push({
+      taskId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      type: "reminder",
+      query,
+      result
+    });
+    logger.info("Butler", `[MANUAL INJECTION] Added local reminder to completed results.`);
+  }
+
   private async executeInBackground(task: ButlerTask) {
     task.status = "running";
     logger.info("Butler", `[RUNNING] Task ${task.id} started...`);

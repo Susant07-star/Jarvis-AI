@@ -430,6 +430,27 @@ router.post("/chat", async (req, res) => {
     }
 
     if (decision.mode === "direct") {
+      // Intercept direct scheduling intents to parse and execute natively without latency
+      if (decision.intent === "schedule") {
+        const { jarvisScheduler } = await import("../scheduler");
+        const targetChatId = jarvisScheduler.getAdminChatId() || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || "0");
+        
+        const scheduleResult = await jarvisScheduler.parseAndSchedule(message, targetChatId);
+        
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        res.write(`data: ${JSON.stringify({ content: scheduleResult.message })}\n\n`);
+        res.write(`data: [DONE]\n\n`);
+        
+        if (metrics) {
+          metrics.setExecutionResult(`Schedule success: ${scheduleResult.taskId || 'unknown'}`);
+          metrics.finalize();
+        }
+        return res.end();
+      }
+
       // Direct Conversational Mode using Cascading Brains
       const { jarvisScheduler } = await import("../scheduler");
       const adminChatId = jarvisScheduler.getAdminChatId();
