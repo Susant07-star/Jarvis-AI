@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Mic, MicOff, PhoneOff, Phone, Check, X } from 'lucide-react';
 import { useZoyaVoice } from '../../hooks/useZoyaVoice';
-import ZoyaAvatar from './ZoyaAvatar';
 
 // Define the Telegram WebApp type loosely
 declare global {
@@ -129,7 +128,7 @@ export function TelegramCallUI() {
       <div className="h-screen w-screen bg-cyan-950 flex flex-col items-center justify-between py-16 px-8 font-mono overflow-hidden">
         <div className="flex flex-col items-center mt-12">
           <div className="w-32 h-32 rounded-full bg-cyan-900 border-4 border-cyan-500 flex items-center justify-center mb-6 jarvis-glow animate-pulse">
-             <ZoyaAvatar state="idle" size="sm" />
+            <span className="text-4xl font-bold font-display tracking-widest text-white">J</span>
           </div>
           <h2 className="text-2xl font-bold text-white tracking-widest">J.A.R.V.I.S.</h2>
           <p className="text-cyan-500 mt-2 animate-pulse">INCOMING NEURAL LINK...</p>
@@ -200,8 +199,32 @@ export function TelegramCallUI() {
 
       {/* Main Avatar Area */}
       <div className="flex-1 flex flex-col items-center justify-center relative">
-        <div className="scale-125 mb-8">
-          <ZoyaAvatar state={appState} emotion={emotion} />
+        <div className="mb-12 relative flex items-center justify-center">
+          {/* Base Orb */}
+          <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center transition-all duration-500 ${
+            appState === 'speaking' ? 'bg-emerald-900 border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.5)]' :
+            appState === 'processing' ? 'bg-indigo-900 border-indigo-500 shadow-[0_0_40px_rgba(99,102,241,0.5)]' :
+            appState === 'listening' ? 'bg-cyan-900 border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.5)]' :
+            'bg-cyan-950 border-cyan-800'
+          }`}>
+            <span className="text-5xl font-bold font-display tracking-widest text-white transition-opacity">J</span>
+          </div>
+          
+          {/* Animated Rings based on State */}
+          {appState === 'listening' && (
+            <div className="absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping opacity-50"></div>
+          )}
+          
+          {appState === 'speaking' && (
+            <>
+              <div className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping opacity-60" style={{ animationDuration: '1.5s' }}></div>
+              <div className="absolute -inset-4 rounded-full border-2 border-emerald-500 animate-pulse opacity-40"></div>
+            </>
+          )}
+          
+          {appState === 'processing' && (
+            <div className="absolute -inset-2 rounded-full border-4 border-t-indigo-400 border-r-transparent border-b-indigo-600 border-l-transparent animate-spin"></div>
+          )}
         </div>
         
         {errorMessage && (
