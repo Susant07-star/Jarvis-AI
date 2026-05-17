@@ -188,17 +188,19 @@ router.post("/zoya-execute", async (req, res) => {
     // Get Marked Screenshot if available
     let base64Image = "";
     let elementsMap = [];
-    try {
-      const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
-        method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
-      });
-      const markData = await pythonRes.json();
-      if (markData.status === "success") {
-        base64Image = markData.image;
-        elementsMap = markData.elements || [];
+    if (process.env.USE_BROWSER_AGENT === "true") {
+      try {
+        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
+          method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
+        });
+        const markData = await pythonRes.json();
+        if (markData.status === "success") {
+          base64Image = markData.image;
+          elementsMap = markData.elements || [];
+        }
+      } catch(e) {
+        logger.warn("API", "Could not fetch marked screenshot for Zoya execute");
       }
-    } catch(e) {
-      logger.warn("API", "Could not fetch marked screenshot for Zoya execute");
     }
 
     let plannerResult;
@@ -243,6 +245,9 @@ router.post("/zoya-execute", async (req, res) => {
     // Execute Python actions
     const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
     if (browserActions.length > 0) {
+      if (process.env.USE_BROWSER_AGENT !== "true") {
+          return res.json({ success: false, error: "Browser execution is disabled on the cloud.", suggestion: "Cannot run browser tasks right now." });
+      }
       try {
           const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
             method: 'POST',
@@ -318,6 +323,9 @@ router.post("/chat", async (req, res) => {
         const browserActions = plan.actions.filter((s:any) => s.action !== 'serp_api_search');
         
         if (browserActions.length > 0) {
+          if (process.env.USE_BROWSER_AGENT !== "true") {
+             throw new Error("Browser agent is disabled on the cloud.");
+          }
           try {
             const response = await fetch('http://127.0.0.1:8000/execute', {
               method: 'POST',
@@ -433,17 +441,19 @@ router.post("/chat", async (req, res) => {
       // A. Extract Marked Screenshot
       let base64Image = "";
       let elementsMap = [];
-      try {
-        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
-            method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
-        });
-        const markData = await pythonRes.json();
-        if (markData.status === "success") {
-          base64Image = markData.image;
-          elementsMap = markData.elements || [];
+      if (process.env.USE_BROWSER_AGENT === "true") {
+        try {
+          const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
+              method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
+          });
+          const markData = await pythonRes.json();
+          if (markData.status === "success") {
+            base64Image = markData.image;
+            elementsMap = markData.elements || [];
+          }
+        } catch(e) {
+          logger.warn("API", "Could not fetch marked screenshot, running blind planner");
         }
-      } catch(e) {
-        logger.warn("API", "Could not fetch marked screenshot, running blind planner");
       }
 
       // Use normalized input to eliminate LLM confusion over chatty sentences
@@ -533,6 +543,16 @@ router.post("/chat", async (req, res) => {
 
       // E. Execute via Python Layer
       if (browserActions.length > 0) {
+        if (process.env.USE_BROWSER_AGENT !== "true") {
+            const failReply = `\n❌ Execution failed: Browser agent is disabled on this node.`;
+            saveToMemory('user', message);
+            saveToMemory('jarvis', failReply);
+            logInteraction('chat', goal, failReply);
+            res.write(`data: ${JSON.stringify({ content: failReply })}\n\n`);
+            res.write(`data: [DONE]\n\n`);
+            if (metrics) { metrics.setExecutionResult('Failure'); metrics.finalize(); }
+            return res.end();
+        }
         try {
             const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
               method: 'POST',
@@ -637,6 +657,9 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
  * Never initializes the browser; returns { alive: false } if not running.
  */
 router.get("/browser-status", async (_req, res) => {
+  if (process.env.USE_BROWSER_AGENT !== "true") {
+    return res.json({ alive: false, tabs: [] });
+  }
   try {
     const response = await fetch('http://127.0.0.1:8000/browser-status');
     if (!response.ok) {
