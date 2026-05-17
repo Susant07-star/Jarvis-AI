@@ -101,8 +101,7 @@ class JarvisScheduler {
     }
 
     if (targetChatId === 0) {
-      logger.error("Scheduler", `Cannot schedule ${type}: No valid Telegram Chat ID found. Please send a message to the Telegram bot first to link your account.`);
-      return "failed_no_chat_id";
+      logger.info("Scheduler", `No Telegram Chat ID active yet. Registering local browser/voice reminder...`);
     }
 
     const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -141,20 +140,28 @@ class JarvisScheduler {
     logger.info("Scheduler", `[TIMER] Executing ${task.type} for Boss (ChatID: ${task.chatId})`);
 
     try {
-      if (task.type === "call") {
-        logger.info("Scheduler", `[ACTION] Triggering Urgent Call UI for Telegram`);
-        await triggerProactiveCall(task.chatId);
-      } else if (task.type === "alarm") {
-        logger.info("Scheduler", `[ACTION] Triggering Omega Alarm Protocol via MacroDroid & Telegram`);
-        
-        // 1. Ring the physical phone via MacroDroid Webhook
-        await this.triggerMacrodroid();
+      if (task.chatId === 0) {
+        logger.info("Scheduler", `[ACTION] Local browser/voice reminder triggered: "${task.content}"`);
+        const { completedResults } = await import("./butlerQueue");
+        completedResults.push({
+          query: `Local Reminder`,
+          result: `Boss, here is your scheduled reminder: ${task.content}`
+        });
+      } else {
+        if (task.type === "call") {
+          logger.info("Scheduler", `[ACTION] Triggering Urgent Call UI for Telegram`);
+          await triggerProactiveCall(task.chatId);
+        } else if (task.type === "alarm") {
+          logger.info("Scheduler", `[ACTION] Triggering Omega Alarm Protocol via MacroDroid & Telegram`);
+          
+          // 1. Ring the physical phone via MacroDroid Webhook
+          await this.triggerMacrodroid();
 
-        // 2. Generate a highly custom, witty morning briefing from JARVIS using LLM
-        let morningBrief = `🌅 **GOOD MORNING, BOSS!**\n\nTime to rise and shine! Here is your morning directive:\n🎯 *"${task.content}"*`;
-        
-        try {
-          const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Tony Stark.
+          // 2. Generate a highly custom, witty morning briefing from JARVIS using LLM
+          let morningBrief = `🌅 **GOOD MORNING, BOSS!**\n\nTime to rise and shine! Here is your morning directive:\n🎯 *"${task.content}"*`;
+          
+          try {
+            const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Tony Stark.
 Draft an elegant, highly motivating, wittily sarcastic (classic JARVIS style) morning briefing for the Boss.
 The time is 5:00 AM.
 Your objective is to:
@@ -163,47 +170,48 @@ Your objective is to:
 3. Give him a positive, tech-focused motivational punch.
 Keep your response under 120 words. Do not use generic placeholders.`;
 
-          const result = await callChatWithCascade([
-            { role: "system", content: systemPrompt },
-            { role: "user", content: "Good morning, J.A.R.V.I.S. Write my morning briefing." }
-          ]);
-          if (result && result.content) {
-            morningBrief = `🌅 **GOOD MORNING BRIEFING FROM J.A.R.V.I.S.**\n\n${result.content}\n\n_Reply "woke up", "i'm up", or "dismiss" to confirm you are awake._`;
+            const result = await callChatWithCascade([
+              { role: "system", content: systemPrompt },
+              { role: "user", content: "Good morning, J.A.R.V.I.S. Write my morning briefing." }
+            ]);
+            if (result && result.content) {
+              morningBrief = `🌅 **GOOD MORNING BRIEFING FROM J.A.R.V.I.S.**\n\n${result.content}\n\n_Reply "woke up", "i'm up", or "dismiss" to confirm you are awake._`;
+            }
+          } catch (err) {
+            logger.warn("Scheduler", "LLM cascade failed to generate morning brief. Using default template.");
           }
-        } catch (err) {
-          logger.warn("Scheduler", "LLM cascade failed to generate morning brief. Using default template.");
-        }
 
-        // 3. Send morning brief to Telegram
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (token) {
-          await this.sendTelegramMessage(token, task.chatId, morningBrief);
-        }
+          // 3. Send morning brief to Telegram
+          const token = process.env.TELEGRAM_BOT_TOKEN;
+          if (token) {
+            await this.sendTelegramMessage(token, task.chatId, morningBrief);
+          }
 
-        // 4. Setup sleep-watchdog loop (checking every 2 minutes for response)
-        const watchdogId = `watchdog_${task.chatId}`;
-        
-        // Clear any prior active watchdog for safety
-        const existing = this.activeWatchdogs.get(watchdogId);
-        if (existing) clearTimeout(existing.timer);
+          // 4. Setup sleep-watchdog loop (checking every 2 minutes for response)
+          const watchdogId = `watchdog_${task.chatId}`;
+          
+          // Clear any prior active watchdog for safety
+          const existing = this.activeWatchdogs.get(watchdogId);
+          if (existing) clearTimeout(existing.timer);
 
-        const timer = setTimeout(() => {
-          this.runWatchdog(watchdogId);
-        }, 120000); // 2 minutes
+          const timer = setTimeout(() => {
+            this.runWatchdog(watchdogId);
+          }, 120000); // 2 minutes
 
-        this.activeWatchdogs.set(watchdogId, {
-          taskId: task.id,
-          chatId: task.chatId,
-          content: task.content,
-          attempts: 1,
-          timer
-        });
+          this.activeWatchdogs.set(watchdogId, {
+            taskId: task.id,
+            chatId: task.chatId,
+            content: task.content,
+            attempts: 1,
+            timer
+          });
 
-      } else {
-        logger.info("Scheduler", `[ACTION] Sending Scheduled Message to Telegram: "${task.content}"`);
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (token) {
-          await this.sendTelegramMessage(token, task.chatId, task.content);
+        } else {
+          logger.info("Scheduler", `[ACTION] Sending Scheduled Message to Telegram: "${task.content}"`);
+          const token = process.env.TELEGRAM_BOT_TOKEN;
+          if (token) {
+            await this.sendTelegramMessage(token, task.chatId, task.content);
+          }
         }
       }
 
