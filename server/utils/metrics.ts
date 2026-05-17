@@ -68,15 +68,28 @@ export class MetricsTracker {
       // Step 1: Append Token Detailed Log
       fs.appendFileSync(this.logFilePath, JSON.stringify(logEntry) + '\n');
       
-      // Step 5: Logger Improvement (log summary per request)
-      logger.info('MetricsTracker', `Request details:\n` +
-        `  Input: "${this.data.input}"\n` +
-        `  Intent: ${this.data.intent}\n` +
-        `  Mode: ${this.data.mode}\n` +
-        `  Planner Output: ${JSON.stringify(this.data.planner_output || 'N/A')}\n` +
-        `  Execution Result: ${this.data.execution_result || 'N/A'}\n` +
-        `  Token Usage: ${totalTokens} total\n` +
-        `  Latency: ${latency_ms}ms`
+      const divider = "─".repeat(60);
+      const modeUpper = this.data.mode.toUpperCase();
+      const intentUpper = this.data.intent.toUpperCase();
+      
+      let icon = "⚙️";
+      if (this.data.mode.includes("voice") || this.data.mode.includes("sync")) icon = "🎙️";
+      else if (this.data.intent.includes("search") || this.data.intent.includes("deep")) icon = "🔍";
+      else if (this.data.mode.includes("browser") || this.data.mode.includes("visual")) icon = "🌐";
+      else if (this.data.intent.includes("schedule")) icon = "🕒";
+
+      logger.info('MetricsTracker', 
+        `\n┌${divider}┐\n` +
+        `│ ${icon}  J.A.R.V.I.S. NEURAL METRICS TRACKER\n` +
+        `├${divider}┤\n` +
+        `│  📥 Input:     "${this.data.input}"\n` +
+        `│  🎯 Intent:    ${intentUpper}\n` +
+        `│  🤖 Mode:      ${modeUpper}\n` +
+        `│  📋 Planner:   ${JSON.stringify(this.data.planner_output || 'N/A')}\n` +
+        `│  ✅ Result:    ${this.data.execution_result || 'N/A'}\n` +
+        `│  ⚡ Latency:   ${latency_ms}ms\n` +
+        `│  🧠 Tokens:    ${totalTokens} total [C: ${this.data.tokens.classifier} | P: ${this.data.tokens.planner} | D: ${this.data.tokens.direct} | V: ${this.data.tokens.voice}]\n` +
+        `└${divider}┘\n`
       );
 
     } catch (err) {
