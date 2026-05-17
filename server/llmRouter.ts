@@ -144,11 +144,11 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
             temperature: forceJson ? 0 : 0.7,
           },
         });
-        content = result.response.text() ?? "";
+        content = result.text ?? "";
         
         return {
           content: content || (forceJson ? "{}" : ""),
-          tokens: result.response.usageMetadata?.totalTokenCount || 0,
+          tokens: result.usageMetadata?.totalTokenCount || 0,
           provider: name,
           model
         };
