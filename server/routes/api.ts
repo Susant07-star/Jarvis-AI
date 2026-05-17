@@ -391,7 +391,9 @@ router.post("/chat", async (req, res) => {
 
     if (decision.mode === "direct") {
       // Direct Conversational Mode using Cascading Brains
-      const threadId = req.body.thread_id || "default_chat";
+      const { jarvisScheduler } = await import("../scheduler");
+      const adminChatId = jarvisScheduler.getAdminChatId();
+      const threadId = adminChatId ? `tg_${adminChatId}` : (req.body.thread_id || "default_chat");
       const history = await ThreadManager.getHistory(threadId, 20);
       
       const systemPrompt = buildPrompt("voice"); 

@@ -23,6 +23,10 @@ class JarvisScheduler {
     }
   }
 
+  public getAdminChatId(): number {
+    return this.cachedAdminChatId;
+  }
+
   /**
    * Initializes the scheduler by pulling pending tasks from Supabase (if available).
    * This ensures tasks survive server restarts.

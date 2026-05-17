@@ -368,6 +368,11 @@ async function handleUpdate(token: string, update: any): Promise<void> {
     // DEEP DEBUGGING: Log the actual content being sent back to the user
     logger.info("TelegramBot", `Full AI Response for ${chatId}: "${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}"`);
 
+    // Sync to global session memory for Voice UI and Browser Chat
+    const { saveToMemory } = await import("./memory");
+    saveToMemory("user", userText);
+    saveToMemory("jarvis", result.content);
+
     // Send the clean reply without technical metadata
     await sendReply(token, chatId, result.content);
 
