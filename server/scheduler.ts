@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { triggerProactiveCall } from "./telegramBot";
 import https from "https";
+import { supabase } from "./supabaseClient";
 
 interface ScheduledTask {
   id: string;
@@ -15,11 +16,51 @@ class JarvisScheduler {
   private tasks: Map<string, ScheduledTask> = new Map();
 
   /**
+   * Initializes the scheduler by pulling pending tasks from Supabase (if available).
+   * This ensures tasks survive server restarts.
+   */
+  public async init() {
+    if (!supabase) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("status", "pending");
+
+      if (error) {
+        logger.error("Scheduler", `Failed to load pending tasks from Supabase`, error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        logger.info("Scheduler", `Found ${data.length} pending tasks in Supabase. Resuming timers...`);
+        const now = Date.now();
+
+        for (const record of data) {
+          const delayMs = Math.max(0, Number(record.execution_time) - now);
+          
+          const timer = setTimeout(() => {
+            this.execute(record.task_id);
+          }, delayMs);
+
+          this.tasks.set(record.task_id, {
+            id: record.task_id,
+            chatId: Number(record.chat_id),
+            type: record.type as "call" | "message",
+            content: record.content,
+            executionTime: Number(record.execution_time),
+            timer
+          });
+        }
+      }
+    } catch (err) {
+      logger.error("Scheduler", `Error initializing scheduler from Supabase`, err);
+    }
+  }
+
+  /**
    * Schedule a new task (call or message)
-   * @param chatId Telegram Chat ID
-   * @param type 'call' or 'message'
-   * @param content The message content (for calls, it's the intent/greeting)
-   * @param delaySeconds How many seconds from now to execute
    */
   public schedule(chatId: number, type: "call" | "message", content: string, delaySeconds: number): string {
     const id = `task_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -33,6 +74,21 @@ class JarvisScheduler {
     }, delaySeconds * 1000);
 
     this.tasks.set(id, { id, chatId, type, content, executionTime, timer });
+
+    // Persist to Supabase
+    if (supabase) {
+      supabase.from("tasks").insert({
+        task_id: id,
+        chat_id: chatId,
+        type,
+        content,
+        execution_time: executionTime,
+        status: "pending"
+      }).then(({ error }) => {
+        if (error) logger.error("Scheduler", `Failed to save task to Supabase`, error);
+      });
+    }
+
     return id;
   }
 
@@ -53,8 +109,18 @@ class JarvisScheduler {
           await this.sendTelegramMessage(token, task.chatId, task.content);
         }
       }
+
+      // Mark as completed in Supabase
+      if (supabase) {
+        supabase.from("tasks").update({ status: "completed" }).eq("task_id", id).then();
+      }
+
     } catch (err: any) {
       logger.error("Scheduler", `Task execution failed: ${err.message}`);
+      // Mark as failed
+      if (supabase) {
+        supabase.from("tasks").update({ status: "failed" }).eq("task_id", id).then();
+      }
     } finally {
       this.tasks.delete(id);
     }
@@ -74,8 +140,7 @@ class JarvisScheduler {
             "Content-Length": Buffer.byteLength(payload),
             "Host": "api.telegram.org"
           },
-          // Using the same DNS bypass strategy if needed
-          agent: false // Standard agent for simplicity unless user specifically needs bypass here too
+          agent: false
         },
         (res) => {
           logger.info("Scheduler", `[API] Telegram response status: ${res.statusCode}`);
@@ -98,6 +163,10 @@ class JarvisScheduler {
       clearTimeout(task.timer);
       this.tasks.delete(id);
       logger.info("Scheduler", `Cancelled task ${id}`);
+      
+      if (supabase) {
+        supabase.from("tasks").update({ status: "cancelled" }).eq("task_id", id).then();
+      }
     }
   }
 

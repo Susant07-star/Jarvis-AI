@@ -9,6 +9,7 @@ import http from "http";
 import apiRoutes from "./server/routes/api";
 import { setupWebSocketServer } from "./server/websocket";
 import { startTelegramBot } from "./server/telegramBot";
+import { jarvisScheduler } from "./server/scheduler";
 
 async function startServer() {
   const app = express();
@@ -51,6 +52,9 @@ async function startServer() {
 
   // Start Telegram bot (non-blocking, runs in background)
   startTelegramBot();
+
+  // Initialize Scheduler from Supabase
+  await jarvisScheduler.init();
 
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);

@@ -261,7 +261,7 @@ router.post("/chat", async (req, res) => {
     if (decision.mode === "direct") {
       // Direct Conversational Mode using Cascading Brains
       const threadId = req.body.thread_id || "default_chat";
-      const history = ThreadManager.getHistory(threadId, 20);
+      const history = await ThreadManager.getHistory(threadId, 20);
       
       const systemPrompt = buildPrompt("voice"); 
       const messages = [
@@ -273,8 +273,8 @@ router.post("/chat", async (req, res) => {
       const result = await callChatWithCascade(messages as any);
 
       // Save to persistent thread memory
-      ThreadManager.appendMessage(threadId, { role: "user", content: message });
-      ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+      await ThreadManager.appendMessage(threadId, { role: "user", content: message });
+      await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');

@@ -9,10 +9,11 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "start": "node server.ts"
+    "start": "npx tsx server.ts"
   },
   "dependencies": {
     "@google/genai": "^1.47.0",
+    "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.1.14",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.4",

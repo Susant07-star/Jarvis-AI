@@ -236,7 +236,7 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
     }
   }
 
-  const history = ThreadManager.getHistory(threadId, 20);
+  const history = await ThreadManager.getHistory(threadId, 20);
   const systemPrompt = buildPrompt("voice");
   
   const messages: ThreadMessage[] = [
@@ -249,8 +249,8 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
     const result = await callChatWithCascade(messages);
     
     // Persist the conversation
-    ThreadManager.appendMessage(threadId, { role: "user", content: userText });
-    ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+    await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+    await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
     
     logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${result.model}] | Time: ${Date.now() - startTime}ms | Tokens: ${result.tokens}`);
     return result;
