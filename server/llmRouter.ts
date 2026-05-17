@@ -132,9 +132,9 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
       try {
         const result = await genAI.models.generateContent({
           model,
-          systemInstruction: systemMsg?.content,
           contents,
           config: {
+            systemInstruction: systemMsg?.content,
             responseMimeType: forceJson ? "application/json" : "text/plain",
             temperature: forceJson ? 0 : 0.7,
           },
@@ -154,42 +154,6 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
         }
         throw err;
       }
-    },
-  };
-}
-
-function createGeminiChatProvider(name: string, model: string, envVarName: string): Provider {
-  return {
-    name,
-    model,
-    isAvailable: () => !!process.env[envVarName],
-    keyCount: () => getKeyCount(process.env[envVarName]),
-    call: async (fullPrompt: string, _forceJson: boolean = false, imageBase64?: string): Promise<PlannerResponse> => {
-      const apiKey = getRandomKey(process.env[envVarName]);
-      const genAI = new GoogleGenAI({ apiKey });
-
-      // Parse the pre-built prompt into system + message parts
-      const sysMatch = fullPrompt.match(/^(.*?)\n\nConversation Context:.*?\n\nUser: (.*)$/s);
-      const systemInstruction = sysMatch?.[1] ?? "";
-      const userMessage = sysMatch?.[2] ?? fullPrompt;
-
-      const response = await genAI.models.generateContent({
-        model,
-        contents: [{ role: "user", parts: [{ text: userMessage }] }],
-        config: {
-          systemInstruction,
-          responseMimeType: "text/plain",
-          temperature: 0.7,
-        },
-      });
-
-      const content = response.text ?? "";
-      return {
-        content: content || "",
-        tokens: response.usageMetadata?.totalTokenCount || 0,
-        provider: name,
-        model,
-      };
     },
   };
 }
@@ -215,10 +179,6 @@ const cerebrasLlama70B = createOpenAICompatibleProvider("Cerebras", "llama3.1-70
 const gemini31FlashLite = createGeminiProvider("Google", "gemini-3.1-flash-lite-preview", "GEMINI_API_KEY");
 const gemini25Flash = createGeminiProvider("Google", "gemini-2.5-flash", "GEMINI_API_KEY");
 
-// GEMINI POOL (Chat - uses systemInstruction for proper prompt separation)
-const gemini31FlashLiteChat = createGeminiChatProvider("Google", "gemini-3.1-flash-lite-preview", "GEMINI_API_KEY");
-const gemini25FlashChat = createGeminiChatProvider("Google", "gemini-2.5-flash", "GEMINI_API_KEY");
-
 // ── Model Priority Cascade ────────────────────────────────────────────────────
 
 const PROVIDER_PRIORITY: Provider[] = [
@@ -230,8 +190,8 @@ const CHAT_PROVIDER_PRIORITY: Provider[] = [
   groqLlama70B,           // ⚡ PRIMARY: 800 t/s, sub-second for chat
   cerebrasLlama70B,       // ⚡ FALLBACK-1: Also very fast
   sambaNovaV32,           // FALLBACK-2: Reliable mid-speed
-  gemini31FlashLiteChat,  // FALLBACK-3: Gemini (slower)
-  gemini25FlashChat,      // FALLBACK-4: Quality but slowest
+  gemini31FlashLite,      // FALLBACK-3: Gemini (slower)
+  gemini25Flash,          // FALLBACK-4: Quality but slowest
   sambaNovaV31,
 ];
 
@@ -273,6 +233,7 @@ export async function callChatWithCascade(messages: ThreadMessage[]): Promise<Pl
       try {
         return await provider.call(messages, false);
       } catch (err: any) {
+        logger.warn("LLMRouter", `[Chat] ${provider.name} (${provider.model}) attempt ${attempt + 1} failed: ${err.message}`);
         if (attempt < keyRetries - 1) {
           attempt++;
           continue;
