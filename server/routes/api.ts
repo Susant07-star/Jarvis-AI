@@ -84,15 +84,22 @@ router.get("/logs", (req, res) => {
         .replace(/'/g, "&#039;");
     }
 
+    let renderedLineCount = 0;
+    
     async function fetchLogs() {
       try {
         const res = await fetch('/api/logs/raw');
         const text = await res.text();
         const lines = text.split('\\n');
         
+        if (lines.length === renderedLineCount) return;
+        
+        const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
         let html = '';
-        for(let line of lines) {
-           if(!line.trim()) continue;
+        
+        for(let i = renderedLineCount; i < lines.length; i++) {
+           const line = lines[i];
+           if(!line.trim() && i === lines.length - 1) continue;
            const match = line.match(/^\\[(.*?)\\] \\[(.*?)\\] \\[(.*?)\\] (.*)$/);
            if(match) {
               const [_, time, level, tag, msg] = match;
@@ -107,9 +114,10 @@ router.get("/logs", (req, res) => {
            }
         }
         
-        const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
-        container.innerHTML = html;
-        if(autoscroll.checked) {
+        container.insertAdjacentHTML('beforeend', html);
+        renderedLineCount = lines.length;
+        
+        if(autoscroll.checked && isAtBottom) {
           container.scrollTop = container.scrollHeight;
         }
       } catch(e) {
@@ -193,7 +201,14 @@ router.post("/zoya-execute", async (req, res) => {
       logger.warn("API", "Could not fetch marked screenshot for Zoya execute");
     }
 
-    const { actions: plannedSteps, tokens: plannerTokens, errorFallback, model, provider } = await planWithVisualAgent(decision.normalizedInput || intent, base64Image, elementsMap) as any;
+    let plannerResult;
+    if (base64Image) {
+      plannerResult = await planWithVisualAgent(decision.normalizedInput || intent, base64Image, elementsMap);
+    } else {
+      const { createPlan } = await import("../browser/planner");
+      plannerResult = await createPlan(decision.normalizedInput || intent);
+    }
+    const { actions: plannedSteps, tokens: plannerTokens, errorFallback, model, provider } = plannerResult as any;
 
     if (metrics) {
       metrics.addTokens('planner', plannerTokens || 0);
@@ -440,7 +455,14 @@ router.post("/chat", async (req, res) => {
       }
 
       // B. Create Strict JSON Plan
-      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
+      let plannerResult;
+      if (base64Image) {
+        plannerResult = await planWithVisualAgent(goal, base64Image, elementsMap);
+      } else {
+        const { createPlan } = await import("../browser/planner");
+        plannerResult = await createPlan(goal);
+      }
+      const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = plannerResult as any;
       
       // Send model metadata
       res.write(`data: ${JSON.stringify({ metadata: { model, provider, tokens: plannerTokens } })}\n\n`);
