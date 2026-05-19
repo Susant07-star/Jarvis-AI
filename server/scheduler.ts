@@ -59,9 +59,15 @@ Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
       const result = await callChatWithCascade([
         { role: "system", content: systemPrompt },
         { role: "user", content: `Parse this scheduling request: "${userInput}"` }
-      ], true); // Force JSON response!
+      ]);
 
-      const parsed = JSON.parse(result.content.trim());
+      // Extract JSON from the response (LLM may wrap it in markdown or conversational text)
+      let jsonStr = result.content.trim();
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON object found in LLM response.");
+      jsonStr = jsonMatch[0];
+
+      const parsed = JSON.parse(jsonStr);
       if (!parsed.type || !parsed.content || parsed.delay_seconds === undefined) {
         throw new Error("Parsed JSON is missing required fields.");
       }
@@ -221,34 +227,37 @@ Keep it under 60 words.`;
           // 1. Ring the physical phone via MacroDroid Webhook
           await this.triggerMacrodroid();
 
-          // 2. Generate a highly custom, witty morning briefing from JARVIS using LLM
-          let morningBrief = `🌅 **GOOD MORNING, BOSS!**\n\nTime to rise and shine! Here is your morning directive:\n🎯 *"${task.content}"*`;
+          // 2. Generate a highly custom, witty alarm briefing from JARVIS using LLM
+          const tz = getTimezone ? getTimezone() : "Asia/Kathmandu";
+          const now = new Date();
+          const currentTime = now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: true });
+          
+          let alarmBrief = `🚨 **J.A.R.V.I.S. ALARM PROTOCOL**\n\nBoss, it is ${currentTime}. Here is your directive:\n🎯 *"${task.content}"*`;
 
           try {
             const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Susant, your boss.
-You are directly speaking to him right now to wake him up.
-The time is 5:00 AM.
+You are directly speaking to him right now because an alarm is ringing.
+The current time is ${currentTime}.
 Your objective is to:
-1. Command him to get out of bed in a witty, classy manner.
-2. Present his scheduled morning directive/task clearly: "${task.content}".
-3. Give him a positive, tech-focused motivational punch.
-Keep your response under 120 words. Do not use generic placeholders.`;
+1. Alert him to his scheduled directive/task: "${task.content}".
+2. Be witty, classy, and highly motivational (classic JARVIS style). If the task is a wake-up call, command him to get out of bed. If it's a general reminder, urge him to complete it immediately.
+3. Keep your response under 100 words. Do not use generic placeholders.`;
 
             const result = await callChatWithCascade([
               { role: "system", content: systemPrompt },
-              { role: "user", content: "Good morning, J.A.R.V.I.S. Write my morning briefing." }
+              { role: "user", content: "The alarm is ringing. Write my briefing based on the directive." }
             ]);
             if (result && result.content) {
-              morningBrief = `🌅 **GOOD MORNING BRIEFING FROM J.A.R.V.I.S.**\n\n${result.content}\n\n_Reply "woke up", "i'm up", or "dismiss" to confirm you are awake._`;
+              alarmBrief = `🚨 **J.A.R.V.I.S. ALARM PROTOCOL**\n\n${result.content}\n\n_Reply to confirm you have received this._`;
             }
           } catch (err) {
-            logger.warn("Scheduler", "LLM cascade failed to generate morning brief. Using default template.");
+            logger.warn("Scheduler", "LLM cascade failed to generate alarm brief. Using default template.");
           }
 
-          // 3. Send morning brief to Telegram
+          // 3. Send alarm brief to Telegram
           const token = process.env.TELEGRAM_BOT_TOKEN;
           if (token) {
-            await this.sendTelegramMessage(token, task.chatId, morningBrief);
+            await this.sendTelegramMessage(token, task.chatId, alarmBrief);
           }
 
           // 4. Setup sleep-watchdog loop (checking every 2 minutes for response)
@@ -301,14 +310,14 @@ Keep your response under 120 words. Do not use generic placeholders.`;
     if (active) {
       clearTimeout(active.timer);
       this.activeWatchdogs.delete(watchdogId);
-      logger.info("Scheduler", `🚨 Omega Alarm Protocol disarmed for ChatID ${chatId}`);
+      logger.info("Scheduler", `🚨 Alarm watchdog disarmed for ChatID ${chatId}`);
 
       const token = process.env.TELEGRAM_BOT_TOKEN;
       if (token) {
         await this.sendTelegramMessage(
           token,
           chatId,
-          `✅ **OMEGA ALARM PROTOCOL DISARMED**\n\nGood morning, Boss! Sleep watchdog cleared. I'm glad you are awake and ready. Let's conquer the day! 🚀`
+          `✅ **J.A.R.V.I.S. ALARM DISARMED**\n\nWatchdog cleared for task: "${active.content}". I've silenced the alarm loop, Boss! 🚀`
         );
       }
     }
@@ -329,7 +338,7 @@ Keep your response under 120 words. Do not use generic placeholders.`;
       await this.sendTelegramMessage(
         token,
         active.chatId,
-        `🚨 **WAKE UP WARNING #${active.attempts}**\n\nBoss, you have NOT confirmed you are awake! Ringing your physical phone again.\n\n_Reply "woke up", "i'm awake", or "dismiss" to silence me._`
+        `🚨 **ALARM WARNING #${active.attempts}**\n\nBoss, you have not acknowledged the alarm for: "${active.content}"! Ringing your physical phone again.\n\n_Send any message to this chat to silence the alarm._`
       );
     }
 
