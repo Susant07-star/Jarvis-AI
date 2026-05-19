@@ -59,7 +59,7 @@ Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
       const result = await callChatWithCascade([
         { role: "system", content: systemPrompt },
         { role: "user", content: `Parse this scheduling request: "${userInput}"` }
-      ]);
+      ], true); // Force JSON response!
 
       const parsed = JSON.parse(result.content.trim());
       if (!parsed.type || !parsed.content || parsed.delay_seconds === undefined) {
