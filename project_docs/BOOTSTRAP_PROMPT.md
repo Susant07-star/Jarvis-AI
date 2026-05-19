@@ -7,7 +7,7 @@ J.A.R.V.I.S. is an advanced AI assistant system equipped with intelligent browse
 The system operates across three main layers:
 - **React Frontend:** The user-facing interface handling UI rendering and real-time voice/text input.
 - **Node.js Backend:** The central "brain" and orchestrator. It listens via WebSockets, parses intents, summarizes memory, plans browser tasks, and controls agent execution.
-- **Python Playwright Agent:** The execution layer that interacts directly with the browser DOM, executing actions defined by the Node backend.
+- **Python Selenium Agent:** The execution layer that interacts directly with the browser DOM, executing actions defined by the Node backend.
 
 **Execution Flow:**
 User → Orchestrator → Mode (Direct vs. Agent) → Planner → Agent → Result
@@ -23,7 +23,7 @@ User → Orchestrator → Mode (Direct vs. Agent) → Planner → Agent → Resu
 
 ## 4. SYSTEM MODES
 - **Direct Mode:** Used for simple conversational queries, Q&A, or idle chatter. It provides fast, direct LLM responses directly back to the user without attempting browser execution.
-- **Agent Mode:** Used for browser or multi-step physical tasks. It uses a structured LLM Planner working with the Python Playwright agent to execute commands.
+- **Agent Mode:** Used for browser or multi-step physical tasks. It uses a structured LLM Planner working with the Python Selenium (undetected-chromedriver) agent to execute commands.
 
 ## 5. CURRENT FEATURES
 - Chat system & Voice pipeline (WebSocket + Wake/Sleep state machine)
@@ -42,7 +42,7 @@ User → Orchestrator → Mode (Direct vs. Agent) → Planner → Agent → Resu
 ## 7. PROJECT STRUCTURE
 - `src/` → Frontend React code and UI components
 - `server/` → Backend Node.js logic and orchestrator pipelines
-- `python_agent/` → Python Playwright execution layer for Web automation
+- `python_agent/` → Python Selenium execution layer for Web automation
 - `logs/` → Metrics, debugging logs, CSV reports, and token trackers
 - `project_docs/` → Documentation (including this file, architectures, and statuses)
 
