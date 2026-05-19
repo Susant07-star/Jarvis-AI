@@ -32,6 +32,32 @@ class JarvisScheduler {
    * High-precision LLM parser to extract alarm/reminder parameters and schedule them directly.
    * Eliminates the need for visual browser agent planning for scheduling actions.
    */
+  /**
+   * Returns all active pending tasks for a given chatId as a readable summary.
+   */
+  public getActiveTasks(chatId: number): ScheduledTask[] {
+    const result: ScheduledTask[] = [];
+    for (const task of this.tasks.values()) {
+      if (task.chatId === chatId) result.push(task);
+    }
+    return result;
+  }
+
+  /**
+   * Cancels a specific task by ID, clears its timer, and marks it as cancelled in Supabase.
+   */
+  public cancelTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId);
+    if (!task) return false;
+    clearTimeout(task.timer);
+    this.tasks.delete(taskId);
+    logger.info("Scheduler", `[CANCEL] Task ${taskId} ("${task.content}") cancelled.`);
+    if (supabase) {
+      supabase.from("tasks").update({ status: "cancelled" }).eq("task_id", taskId).then();
+    }
+    return true;
+  }
+
   public async parseAndSchedule(userInput: string, chatId: number): Promise<{ success: boolean; message: string; taskId?: string }> {
     try {
       logger.info("Scheduler", `[DirectParse] Parsing scheduling request: "${userInput}"`);
@@ -39,21 +65,35 @@ class JarvisScheduler {
       const now = new Date();
       const timeContext = `Current Time Context: Timezone=${tz}, Date=${now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" })}, Time=${now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}`;
 
+      // Build active tasks context so LLM can cancel/modify existing ones
+      const activeTasks = this.getActiveTasks(chatId);
+      const activeTasksSummary = activeTasks.length > 0
+        ? `\n\nACTIVE TASKS (Boss currently has these scheduled):\n${activeTasks.map(t =>
+            `- ID: "${t.id}" | Type: ${t.type} | Content: "${t.content}" | Fires in: ${Math.round((t.executionTime - Date.now()) / 1000)}s`
+          ).join("\n")}`
+        : `\n\nACTIVE TASKS: None currently scheduled.`;
+
       const systemPrompt = `You are J.A.R.V.I.S., the ultimate Susant assistant.
 Your job is to parse a user's scheduling/alarm/reminder request into structured JSON.
 
 ABSOLUTE RULE — You MUST return ONLY a valid JSON object with the following fields:
-- "type": Choose EXACTLY "alarm" (for wake up/alarm clock requests), "message" (for reminders to do tasks later), or "call" (for voice calls).
-- "content": A clean, concise summary of the action/work (e.g. "Drink water", "Read Chapter 4").
-- "delay_seconds": The number of seconds to wait from NOW before executing. Calculate this carefully based on the current time context.
+- "action": Choose EXACTLY "create" (new task), "cancel" (cancel an existing task), or "modify" (cancel and replace an existing task).
+- "type": Choose EXACTLY "alarm", "message", or "call". Required for "create" and "modify".
+- "content": A clean, concise summary of the reminder. Required for "create" and "modify".
+- "delay_seconds": Seconds from NOW before executing. Required for "create" and "modify". Calculate carefully.
+- "target_task_id": The ID of the existing task to cancel. Required ONLY for "cancel" and "modify".
 
-${timeContext}
+${timeContext}${activeTasksSummary}
 
-Example input: "remind me in 5 minutes to drink water"
-Example output: { "type": "message", "content": "Drink water", "delay_seconds": 300 }
+Examples:
+Input: "remind me in 5 minutes to drink water"
+Output: { "action": "create", "type": "message", "content": "Drink water", "delay_seconds": 300 }
 
-Example input: "wake me up at 5:00 AM to read" (if current time is 4:58 AM)
-Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
+Input: "cancel my drink water alarm" (assuming active task with id task_123)
+Output: { "action": "cancel", "target_task_id": "task_123" }
+
+Input: "change my drink water alarm to a message in 3 minutes" (assuming active task with id task_123)
+Output: { "action": "modify", "target_task_id": "task_123", "type": "message", "content": "Drink water", "delay_seconds": 180 }`;
 
       const { callChatWithCascade } = await import("./llmRouter");
       const result = await callChatWithCascade([
@@ -68,21 +108,43 @@ Example output: { "type": "alarm", "content": "Read", "delay_seconds": 120 }`;
       jsonStr = jsonMatch[0];
 
       const parsed = JSON.parse(jsonStr);
+      const action = parsed.action || "create";
+
+      // --- CANCEL action ---
+      if (action === "cancel") {
+        if (!parsed.target_task_id) throw new Error("cancel action requires target_task_id.");
+        const cancelled = this.cancelTask(parsed.target_task_id);
+        const cancelledTask = activeTasks.find(t => t.id === parsed.target_task_id);
+        const msg = cancelled
+          ? `✅ Considered it cancelled, Boss. The scheduled task "${cancelledTask?.content ?? parsed.target_task_id}" has been removed from my queue.`
+          : `⚠️ I couldn't find that task in my active queue, Boss. It may have already executed or never existed.`;
+        return { success: cancelled, message: msg };
+      }
+
+      // --- MODIFY action ---
+      if (action === "modify") {
+        if (!parsed.target_task_id) throw new Error("modify action requires target_task_id.");
+        this.cancelTask(parsed.target_task_id);
+        // Fall through to create the replacement task below
+      }
+
+      // --- CREATE (or replacement after MODIFY) ---
       if (!parsed.type || !parsed.content || parsed.delay_seconds === undefined) {
-        throw new Error("Parsed JSON is missing required fields.");
+        throw new Error("Parsed JSON is missing required fields for create/modify.");
       }
 
       const taskId = this.schedule(chatId, parsed.type, parsed.content, parsed.delay_seconds);
 
       // Generate a witty J.A.R.V.I.S. confirmation message
+      const isModify = action === "modify";
       const confirmSystem = `You are J.A.R.V.I.S., the wittily sarcastic AI butler created by Susant, your boss.
 Draft a classy, witty, and highly reassuring confirmation message.
-Confirm that you have scheduled a "${parsed.type}" action to: "${parsed.content}" in exactly ${Math.round(parsed.delay_seconds / 60)} minute(s).
+${isModify ? "Confirm that you have MODIFIED an existing task and" : "Confirm that you have"} scheduled a "${parsed.type}" action to: "${parsed.content}" in exactly ${Math.round(parsed.delay_seconds / 60)} minute(s).
 Keep it under 60 words.`;
 
       const confirmResult = await callChatWithCascade([
         { role: "system", content: confirmSystem },
-        { role: "user", content: "Good job. Write the confirmation reply." }
+        { role: "user", content: "Write the confirmation reply." }
       ]);
 
       return {

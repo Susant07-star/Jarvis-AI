@@ -13,7 +13,19 @@ export async function classifyIntent(text: string): Promise<IntentType> {
   const lower = text.toLowerCase();
   
   // Local Guard: Instant, 100% accurate, zero-latency scheduling match
-  const scheduleKeywords = ["remind", "wake me up", "set alarm", "set alarm for", "timer for", "set a timer", "schedule a", "call me in", "message me in", "ping me in"];
+  const scheduleKeywords = [
+    // Create
+    "remind", "wake me up", "set alarm", "set alarm for", "timer for", "set a timer",
+    "schedule a", "call me in", "message me in", "ping me in", "alarm for", "alert me",
+    // Cancel
+    "cancel alarm", "cancel my alarm", "cancel reminder", "cancel my reminder",
+    "cancel the alarm", "cancel the reminder", "remove alarm", "remove reminder",
+    "delete alarm", "delete reminder", "stop alarm", "turn off alarm",
+    // Modify
+    "change my alarm", "change my reminder", "change the alarm", "update my alarm",
+    "update my reminder", "modify alarm", "reschedule alarm", "reschedule reminder",
+    "move my alarm", "postpone alarm",
+  ];
   if (scheduleKeywords.some(k => lower.includes(k))) {
     logger.info("Classifier", `[LocalGuard] Match schedule intent: "${text}"`);
     return "schedule";
