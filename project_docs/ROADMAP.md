@@ -61,6 +61,9 @@
   - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
 - [ ] **External Webhook Trigger (QStash/Cron)**
   - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
+- [ ] **Recurring & Daily Schedules (Cron Work)**
+  - Support syntax for repeating tasks (e.g., *"every day at 8:00 AM"*, *"every Sunday at 9:00 PM"*).
+  - Automatically calculate the next execution time and reschedule the task after it runs successfully.
 
 ---
 
