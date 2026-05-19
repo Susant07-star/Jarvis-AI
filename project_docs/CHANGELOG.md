@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### [2026-05-19] Time-Aware Scheduler and Dynamic Task Management
+- **Feature — Dynamic Alarm/Reminder Cancellation & Modification**: Enabled full voice/text task editing. Users can now say "cancel my alarm" or "change my drink water alarm to a message in 5 minutes". The scheduler injects active task metadata into the LLM parser, matches target task IDs, and dynamically deletes/reschedules tasks.
+- **Feature — Time-Aware Alarm Briefings**: Replaced hardcoded wake-up briefings with a dynamic prompt context that reads user timezone and current time, adjusting output instructions based on whether the task is a wake-up call or a generic reminder.
+- **Fix — Double-Reply Interception**: Configured the Telegram Bot message handler to intercept alarm disarm requests, silences the sleep watchdog loop, and early-returns before passing the text to the chat AI, preventing double-reply messages.
+- **Fix — Scheduler Strict JSON Mode**: Enforced clean JSON extraction from the LLM parser to eliminate crashes on conversational text wrappers.
+
 ### [2026-05-17] Unified Brain Memory & Planner Hardening
 - **Feature — Unified Brain Memory**: Connected all memory channels (Browser Voice, Browser Chat, Telegram Bot Voice, Telegram Bot Chat) into a single omnipresent consciousness. Telegram interactions now sync directly to the global `session_memory.json`, and Browser Chat dynamically merges into the active Telegram `ThreadManager` history.
 - **Fix — Telegram Chat ID Caching**: Fixed a bug where Browser Voice reminders failed to route to Telegram. The system now caches the user's Telegram Chat ID upon their first interaction and uses it as a seamless fallback for all browser-initiated voice tasks (`Target: 0` error resolved).

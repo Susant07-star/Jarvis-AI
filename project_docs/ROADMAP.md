@@ -70,6 +70,8 @@
 - **Supabase/Postgres Persistence Layer**
   - Migrate the Neural Scheduler from in-memory `setTimeout` to a persistent Supabase database.
   - Ensures scheduled tasks (reminders, callbacks) survive server restarts or Render's free-tier sleep cycles.
+- [x] **Dynamic Task Cancellation & Modification**
+  - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
 - **External Webhook Trigger (QStash/Cron)**
   - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
 

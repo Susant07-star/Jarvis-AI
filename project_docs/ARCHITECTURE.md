@@ -64,9 +64,10 @@ For mobile remote access, J.A.R.V.I.S. utilizes a **Telegram Web App Interface**
 
 ### Neural Scheduler (`scheduler.ts`)
 A background execution engine for time-delayed tasks.
-- **Delayed Trigger Flow**: Uses high-precision Node.js `setTimeout` in-memory timers to track `delay_seconds` for future events. When the time expires, it fires a MacroDroid webhook to instantly ring the physical phone and sends a custom LLM-generated morning briefing to Telegram.
-- **Omega Watchdog Loop**: Once triggered, J.A.R.V.I.S. checks back every 2 minutes. If the user hasn't interacted with Telegram (text or voice note), it sends another alert and fires the physical phone webhook again to prevent oversleeping.
-- **Auto-Disarm**: Any incoming text message or voice note sent by the user to the Telegram bot immediately satisfies and disarms the active watchdog loop.
+- **Delayed Trigger Flow**: Uses high-precision Node.js `setTimeout` in-memory timers to track `delay_seconds` for future events. When the time expires, it fires a MacroDroid webhook to instantly ring the physical phone and sends a dynamic, time-aware LLM-generated briefing to Telegram.
+- **Dynamic Context Briefing**: The scheduler dynamically fetches your active timezone and current time to formulate real-time, context-aware instructions for the LLM. It automatically adjusts its personality and prompts: if the task is a wake-up call, it commands you to get out of bed; if it's a general reminder (e.g. "drink water"), it prompts you to perform the task immediately.
+- **Omega Watchdog Loop & Auto-Disarm**: Once triggered, J.A.R.V.I.S. checks back every 2 minutes. If the user has not interacted with Telegram, it fires the MacroDroid webhook again and sends a warning containing the exact task content. Any text or voice note sent to the Telegram bot immediately satisfies and disarms the active watchdog loop, returning early to prevent double-replies from the chat AI.
+- **Dynamic Task Cancellation & Modification**: The scheduler injects active pending tasks into the LLM system prompt. The user can say "cancel my alarm" or "change my drink water alarm to a message in 2 minutes," and the scheduler will dynamically cancel, update, or reschedule tasks by their IDs.
 - **Future Migration (Supabase)**: Because Render free-tier restarts wipe in-memory `setTimeout` objects, the architecture will migrate to a persistent Supabase/Postgres queue or Upstash QStash webhook trigger to ensure indestructible task scheduling.
 
 ### Deep Trace Logging
