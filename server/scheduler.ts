@@ -304,7 +304,7 @@ Your objective is to:
     }
   }
 
-  public async ackAlarm(chatId: number) {
+  public async ackAlarm(chatId: number): Promise<boolean> {
     const watchdogId = `watchdog_${chatId}`;
     const active = this.activeWatchdogs.get(watchdogId);
     if (active) {
@@ -320,7 +320,9 @@ Your objective is to:
           `✅ **J.A.R.V.I.S. ALARM DISARMED**\n\nWatchdog cleared for task: "${active.content}". I've silenced the alarm loop, Boss! 🚀`
         );
       }
+      return true;
     }
+    return false;
   }
 
   private async runWatchdog(watchdogId: string) {

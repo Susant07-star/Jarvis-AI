@@ -340,7 +340,11 @@ async function handleUpdate(token: string, update: any): Promise<void> {
   try {
     // Auto-disarm active watchdog if Boss responds in ANY way (they are awake!)
     const { jarvisScheduler } = await import("./scheduler");
-    jarvisScheduler.ackAlarm(chatId);
+    const wasAlarmActive = await jarvisScheduler.ackAlarm(chatId);
+    if (wasAlarmActive) {
+      // Alarm was active and successfully disarmed. Don't reply with generic chat responses.
+      return;
+    }
 
     let userText = "";
 
