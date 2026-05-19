@@ -50,8 +50,8 @@ export async function determineOrchestrationMode(userInput: string): Promise<Orc
   let mode: OrchestratorMode;
   let requiresPlanning = false;
 
-  if (classification === "task") {
-    // Action required in browser
+  if (classification === "task" || classification === "schedule") {
+    // Action required in browser or scheduler
     mode = "agent";
     requiresPlanning = true;
   } else {
