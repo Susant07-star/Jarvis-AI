@@ -1,6 +1,6 @@
 # J.A.R.V.I.S. Browser Agent — Developer Guide
 
-> Last updated: 2026-03-23
+> Last updated: 2026-05-19
 
 ---
 
@@ -28,27 +28,29 @@ User Goal (natural language)
   └──────────┘     └────────────────┘
        │                    │
        ▼                    ▼
-  Playwright          data/memory/
-  (browser)           data/tasks/
+ Playwright /         data/memory/
+ Python Selenium      data/tasks/
+ (browser layers)
 ```
 
 ---
 
 ## File Reference
 
-| File | Purpose |
-|------|---------|
-| `browserManager.ts` | Launches persistent Chromium context (`./browser-data`) |
-| `actions.ts` | All browser actions (legacy, YouTube, universal) |
-| `executor.ts` | Orchestrates plans with retry, memory, task tracking |
-| `planner.ts` | LLM-based goal→action conversion (memory-aware) |
-| `domExtractor.ts` | Extracts visible interactable elements from any page |
-| `memoryManager.ts` | Dual-layer storage (operational + LLM summaries) |
-| `taskTracker.ts` | Task lifecycle: create → track → retry → resume |
-| `errorLogger.ts` | Per-task error logs with sensitive data redaction |
-| `encryption.ts` | AES-256-CBC encrypt/decrypt for sensitive memory |
-| `dashboard.ts` | CLI tool for inspecting tasks, memory, and errors |
-| `supabaseAdapter.ts` | Storage adapter stub for future cloud migration |
+| File / Component | Purpose |
+|------------------|---------|
+| `browserManager.ts` | Launches persistent Node-based Chromium context (`./browser-data`) via Playwright. |
+| `actions.ts` | Node-side Playwright browser actions (legacy, YouTube, universal). |
+| `executor.ts` | Node-side orchestrator that runs plans with retry, memory, and task tracking. |
+| `planner.ts` | LLM-based goal→action conversion (memory-aware). |
+| `domExtractor.ts` | Node-side scraper of visible interactive elements. |
+| `memoryManager.ts` | Dual-layer storage (operational + LLM summaries). |
+| `taskTracker.ts` | Task lifecycle: create → track → retry → resume. |
+| `errorLogger.ts` | Per-task error logs with sensitive data redaction. |
+| `encryption.ts` | AES-256-CBC encrypt/decrypt for sensitive memory. |
+| `dashboard.ts` | CLI tool for inspecting tasks, memory, and errors. |
+| `supabaseAdapter.ts` | Storage adapter stub for future cloud migration. |
+| `python_agent/youtube_agent.py` | Python-based FastAPI agent utilizing undetected-chromedriver (Selenium) for stealth/YouTube tasks. |
 
 ---
 
@@ -306,9 +308,9 @@ When ready to move to cloud storage:
 - If you need concurrency, implement file-level locking or move to Supabase
 
 ### 7. CAPTCHA & Bot Detection
-- Some sites block Playwright via bot detection
-- The `humanPreAction()` wrapper adds random delays and mouse movements to reduce detection
-- If blocked, try: longer delays, different user-agent strings, or residential proxies
+- Some sites block Playwright via bot detection.
+- The `humanPreAction()` wrapper in Playwright adds random delays and mouse movements to reduce detection.
+- **Stealth Fallback**: For bot-sensitive sites (e.g., YouTube, Google Search), J.A.R.V.I.S. routes actions to the FastAPI Python agent (`youtube_agent.py`), which boots `undetected-chromedriver` (Selenium) to successfully bypass advanced anti-bot challenges.
 
 ### 8. Production Encryption Key
 - **CRITICAL**: Set `JARVIS_ENCRYPTION_KEY` in production (min 32 chars)
