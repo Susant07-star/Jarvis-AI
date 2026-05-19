@@ -36,11 +36,11 @@
 
 ---
 
-## Phase 2: Telegram & Remote Voice (CURRENT PRIORITY 🔴)
+## Phase 2: Telegram & Remote Voice ✅ (Completed)
 
 **Goal**: Allow J.A.R.V.I.S. to be controlled remotely via Telegram (text + voice) and integrate audio calling directly to Gemini.
 
-### 2.1 Telegram Integration (Must-Have) ✅
+### 2.1 Telegram Integration ✅
 - [x] **Text & Voice Command Bridge** — `server/telegramBot.ts`
   - [x] Custom Manual Polling Loop with DNS-bypass.
   - [x] Groq Whisper STT for transcribing voice notes.
@@ -53,41 +53,86 @@
   - [x] Implemented `triggerProactiveCall` backend endpoint.
   - [x] JARVIS can autonomously send a "Join Call" button to the user when tasks finish.
 
-### 2.2 Advanced Intelligence & File Generation (Must-Have)
+### 2.2 Robust Persistence & Scheduling
+- [ ] **Supabase/Postgres Persistence Layer**
+  - Migrate the Neural Scheduler from in-memory `setTimeout` to a persistent Supabase database.
+  - Ensures scheduled tasks (reminders, callbacks) survive server restarts or Render's free-tier sleep cycles.
+- [x] **Dynamic Task Cancellation & Modification**
+  - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
+- [ ] **External Webhook Trigger (QStash/Cron)**
+  - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
+
+---
+
+## Phase 3: Advanced Intelligence & Document Synthesis (CURRENT PRIORITY 🔴)
+
+**Goal**: Power J.A.R.V.I.S. with complex document creation, deep reasoning traces, and multimodal media support.
+
+### 3.1 Advanced Intelligence & Reasoning UI
 - **Dropdown Thinking (Reasoning UI)**
   - Implement collapsible "Thinking..." dropdown in React Chat and Telegram.
   - Show internal planning and research progress live before final answer.
 - **Deep Research Engine**
   - Expand Intelligent Search to perform multi-step, deep-dive research tasks autonomously.
-- **File Making & PDF Generation**
-  - Node `fs` module to generate well-formatted PDFs, Markdown reports, or CSVs based on LLM outputs.
-  - Automatically send generated PDFs back to the user via Telegram.
 - **Video Message Support**
   - Extract audio from Telegram video messages (`.mp4`) and process them like voice notes.
   - Explore Gemini Vision for direct visual analysis of video clips.
 
-### 2.3 Robust Persistence & Scheduling (Next Steps)
-- **Supabase/Postgres Persistence Layer**
-  - Migrate the Neural Scheduler from in-memory `setTimeout` to a persistent Supabase database.
-  - Ensures scheduled tasks (reminders, callbacks) survive server restarts or Render's free-tier sleep cycles.
-- [x] **Dynamic Task Cancellation & Modification**
-  - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
-- **External Webhook Trigger (QStash/Cron)**
-  - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
+### 3.2 File Generation & Document Synthesis
+- **File Making & PDF Generation**
+  - Node `fs` module to generate well-formatted PDFs, Markdown reports, or CSVs based on LLM outputs.
+  - Automatically send generated PDFs/CSVs back to the user via Telegram.
 
 ---
 
-## Phase 3: Advanced Browser Automation (SECOND PRIORITY 🟡)
+## Phase 4: Security Hardening & Owner Authentication (Third Priority 🔒)
+
+**Goal**: Harden J.A.R.V.I.S. access control to prevent unauthorized use, locking replies and system control solely to the primary administrator.
+
+### 4.1 Owner Access Locking
+- **Telegram Admin Whitelist**
+  - Restrict the Telegram bot listener to strictly reply only to verified user IDs (stored in env/database).
+  - Silently ignore or send a warning to any unauthorized user attempting to message J.A.R.V.I.S.
+- **Session Auth Keys**
+  - Implement token-based query validation on the WebUI routes to prevent arbitrary access to the HUD dashboard.
+
+### 4.2 Credentials & Encryption Isolation
+- **Encrypted Local Enclaves**
+  - Ensure all database tables and local thread logs containing personal data are fully AES-256 encrypted using runtime keys.
+  - Mask dynamic credentials in system processes to ensure external inspection shows only sanitized data.
+
+---
+
+## Phase 5: Full Computer & OS Environment Control (Fourth Priority 🖥️)
+
+**Goal**: Expand J.A.R.V.I.S. beyond the browser to orchestrate the entire host operating system.
+
+### 5.1 Host OS Automation
+- **System Keyboard & Mouse Control**
+  - Integrate tools like PyAutoGUI or robotJS to click, type, and navigate desktop applications outside Chromium.
+  - Allow J.A.R.V.I.S. to launch local apps, manage files, and interact with the host system directly.
+- **File System Operations**
+  - Enable native file creation, deletion, moving, and indexing across specified directories.
+
+### 5.2 Local Environment Telemetry
+- **Hardware Telemetry**
+  - Expose system metrics (CPU, RAM usage, storage availability, active tasks) to J.A.R.V.I.S.'s tool context for diagnostic queries.
+- **Environment Syncing**
+  - Sync settings, bookmarks, and commands across physical desktop environments dynamically.
+
+---
+
+## Phase 6: Advanced Browser Automation (Fifth Priority 🟡)
 
 **Goal**: Polish and scale the autonomous Multi-Modal Set-of-Mark browser agent.
 
-### 3.1 Multi-Agent Architecture
+### 6.1 Multi-Agent Architecture
 - **Task Priority Queue**
   - Node maintains an ordered queue of pending browser tasks.
 - **Parallel Execution** *(optional)*
   - Spawn multiple Python agent processes for concurrent tab automation.
 
-### 3.2 Complex Visual Navigation
+### 6.2 Complex Visual Navigation
 - **Scrolling & Context Memory**
   - Teach the visual agent to scroll to find elements off-screen and remember their state.
 - **CAPTCHA & Anti-Bot Evasion**
@@ -95,11 +140,11 @@
 
 ---
 
-## Phase 4: Voice Interaction & Advanced UX
+## Phase 7: Voice Interaction & Advanced UX (Sixth Priority 🎙️)
 
 **Goal**: Make J.A.R.V.I.S. feel like a real conversational assistant with natural voice UX across all devices.
 
-### 4.1 Real-Time Task Handling
+### 7.1 Real-Time Task Handling
 - Live progress updates streamed during multi-step execution.
 - Interruption support: user can say "stop" mid-execution → `AbortController` signal fires.
 
