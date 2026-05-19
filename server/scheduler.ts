@@ -181,12 +181,6 @@ Keep it under 60 words.`;
       this.execute(id);
     }, delaySeconds * 1000);
 
-    // Instantly notify MacroDroid to set the native Android alarm
-    if (type === "alarm" && delaySeconds > 0) {
-      logger.info("Scheduler", `[ACTION] Pre-triggering MacroDroid to set native Android alarm for ${delaySeconds}s from now.`);
-      this.triggerMacrodroid(delaySeconds);
-    }
-
     this.tasks.set(id, { id, chatId: targetChatId, type, content, executionTime, timer });
 
     // Persist to Supabase
