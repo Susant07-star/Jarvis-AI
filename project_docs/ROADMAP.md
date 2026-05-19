@@ -54,9 +54,9 @@
   - [x] JARVIS can autonomously send a "Join Call" button to the user when tasks finish.
 
 ### 2.2 Robust Persistence & Scheduling
-- [ ] **Supabase/Postgres Persistence Layer**
-  - Migrate the Neural Scheduler from in-memory `setTimeout` to a persistent Supabase database.
-  - Ensures scheduled tasks (reminders, callbacks) survive server restarts or Render's free-tier sleep cycles.
+- [x] **Supabase/Postgres Persistence Layer**
+  - [x] Implemented `jarvisScheduler.init()` on startup to query pending database tasks and resume active timers.
+  - [x] Automatically saves scheduled tasks to Supabase and updates their status to `completed`/`failed`/`cancelled` on lifecycle events.
 - [x] **Dynamic Task Cancellation & Modification**
   - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
 - [ ] **External Webhook Trigger (QStash/Cron)**
