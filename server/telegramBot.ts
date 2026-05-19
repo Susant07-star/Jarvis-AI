@@ -218,13 +218,11 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
         logger.info("TelegramBot", `[TOOL] Scheduler registered: ${sa.action} (TaskID: ${taskId}) in ${sa.delay_seconds}s`);
       }
 
+      // FIX: If all actions were schedule actions, the scheduler already sent its own Telegram message(s).
+      // Do NOT generate a second chat confirmation — that causes double messages. Return empty string.
       if (plan.actions.length > 0 && scheduleActions.length === plan.actions.length) {
-        const result = await callChatWithCascade([
-          { role: "system", content: "You just successfully scheduled a task for the user. Confirm it to them in a witty, JARVIS-style way." },
-          { role: "user", content: userText }
-        ]);
-        logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${result.model}] | Time: ${Date.now() - startTime}ms | Tokens: ${result.tokens}`);
-        return result;
+        logger.info("TelegramBot", `[NEURAL END] All actions were scheduler tasks. Scheduler handles confirmation. Suppressing chat reply.`);
+        return { content: "", tokens: 0, provider: "Scheduler", model: "N/A" };
       }
 
       const result = await callResearchWithCascade(userText);
@@ -237,7 +235,12 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
   }
 
   const history = await ThreadManager.getHistory(threadId, 20);
-  const systemPrompt = buildPrompt("voice");
+  const basePrompt = buildPrompt("voice");
+  // Enforce strict brevity for Telegram — no essays, just sharp responses
+  const systemPrompt = basePrompt + `
+
+[TELEGRAM CONCISENESS PROTOCOL]
+You are responding via Telegram. Keep ALL replies under 40 words. Be direct, sharp, and witty — like the real JARVIS. No essays. No padding. No restating the question. One or two punchy sentences maximum.`;
   
   const messages: ThreadMessage[] = [
     { role: "system", content: systemPrompt },
@@ -379,7 +382,13 @@ async function handleUpdate(token: string, update: any): Promise<void> {
     // Sync to global session memory for Voice UI and Browser Chat
     const { saveToMemory } = await import("./memory");
     saveToMemory("user", userText);
-    saveToMemory("jarvis", result.content);
+    if (result.content) saveToMemory("jarvis", result.content);
+
+    // FIX: If the scheduler already sent the reply (empty content), skip sending another message.
+    if (!result.content) {
+      logger.info("TelegramBot", `[SKIP REPLY] Content is empty — scheduler already handled response. No duplicate message sent.`);
+      return;
+    }
 
     // Send the clean reply without technical metadata
     await sendReply(token, chatId, result.content);

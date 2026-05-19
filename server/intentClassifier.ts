@@ -17,6 +17,7 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     // Create
     "remind", "wake me up", "set alarm", "set alarm for", "timer for", "set a timer",
     "schedule a", "call me in", "message me in", "ping me in", "alarm for", "alert me",
+    "set a reminder", "alarm at", "alarm to", "regarding alarm", "alarm set",
     // Cancel
     "cancel alarm", "cancel my alarm", "cancel reminder", "cancel my reminder",
     "cancel the alarm", "cancel the reminder", "remove alarm", "remove reminder",
@@ -73,7 +74,12 @@ Reply with EXACTLY one word: "task" or "chat".`;
   } catch {}
 
   // --- Final Safety Fallback ---
-  const chatKeywords = ["hey", "hi", "hello", "who are you", "who created you", "can you hear me", "you there"];
+  // Vague/ambiguous phrases should default to chat, not trigger the browser agent
+  const chatKeywords = [
+    "hey", "hi", "hello", "who are you", "who created you", "can you hear me", "you there",
+    "do one thing", "do something", "help me", "can you help", "i need help",
+    "what can you do", "tell me", "explain", "what do you think",
+  ];
   if (chatKeywords.some(k => lower.includes(k))) return "chat";
 
   const taskKeywords = ["search", "research", "news", "weather", "price", "latest", "find"];
