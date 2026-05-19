@@ -64,9 +64,9 @@ For mobile remote access, J.A.R.V.I.S. utilizes a **Telegram Web App Interface**
 
 ### Neural Scheduler (`scheduler.ts`)
 A background execution engine for time-delayed tasks.
-- **Current State (MVP)**: Uses high-precision Node.js `setTimeout` in-memory timers to track `delay_seconds` for future events.
-- **Actions**: Supports native Telegram messages and `triggerProactiveCall` (Urgent Ringing).
-- **Tooling**: Integrated into the Planner as `schedule_action` and into the Voice Session via the `/api/scheduler/register` bridge.
+- **Delayed Trigger Flow**: Uses high-precision Node.js `setTimeout` in-memory timers to track `delay_seconds` for future events. When the time expires, it fires a MacroDroid webhook to instantly ring the physical phone and sends a custom LLM-generated morning briefing to Telegram.
+- **Omega Watchdog Loop**: Once triggered, J.A.R.V.I.S. checks back every 2 minutes. If the user hasn't interacted with Telegram (text or voice note), it sends another alert and fires the physical phone webhook again to prevent oversleeping.
+- **Auto-Disarm**: Any incoming text message or voice note sent by the user to the Telegram bot immediately satisfies and disarms the active watchdog loop.
 - **Future Migration (Supabase)**: Because Render free-tier restarts wipe in-memory `setTimeout` objects, the architecture will migrate to a persistent Supabase/Postgres queue or Upstash QStash webhook trigger to ensure indestructible task scheduling.
 
 ### Deep Trace Logging
