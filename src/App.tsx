@@ -352,54 +352,116 @@ export default function App() {
           />
         </div>
 
-        {/* Right: Task Panel */}
+        {/* Right: Task Panel (Sidebar on desktop, slide-out drawer on mobile) */}
         {showTaskPanel && (
-          <div className="hidden md:flex flex-col w-72 glass-panel rounded-xl p-3 overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-mono text-cyan-400 tracking-widest uppercase font-bold">Task Monitor</span>
-              <button onClick={() => setShowTaskPanel(false)} className="text-cyan-700 hover:text-cyan-400 transition-colors">
-                <X className="w-3.5 h-3.5" />
-              </button>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowTaskPanel(false)} />
+        )}
+        <div className={`
+          fixed md:relative top-0 md:top-auto right-0 md:right-auto h-full md:h-auto z-50 md:z-auto
+          w-72 max-w-[85vw] flex-shrink-0 flex flex-col glass-panel rounded-l-xl md:rounded-xl p-3 overflow-hidden
+          transition-all duration-300 ease-in-out
+          ${showTaskPanel ? 'translate-x-0 opacity-100 flex' : 'translate-x-full md:translate-x-0 opacity-0 md:opacity-100 hidden md:flex'}
+        `}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-mono text-cyan-400 tracking-widest uppercase font-bold">Task Monitor</span>
+            <button onClick={() => setShowTaskPanel(false)} className="text-cyan-700 hover:text-cyan-400 transition-colors cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono">
+            <div className="task-item-completed p-2 rounded">
+              <div className="text-emerald-400">✓ Browser Control</div>
+              <div className="text-cyan-700">Playwright initialized</div>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono">
-              <div className="task-item-completed p-2 rounded">
-                <div className="text-emerald-400">✓ Browser Control</div>
-                <div className="text-cyan-700">Playwright initialized</div>
-              </div>
-              <div className="task-item-completed p-2 rounded">
-                <div className="text-emerald-400">✓ Memory System</div>
-                <div className="text-cyan-700">Encrypted + Task Tracker</div>
-              </div>
-              <div className="task-item-completed p-2 rounded">
-                <div className="text-emerald-400">✓ Universal DOM</div>
-                <div className="text-cyan-700">Context-aware planning</div>
-              </div>
-              <div className="task-item-active p-2 rounded">
-                <div className="text-cyan-400 animate-pulse">● Voice Pipeline</div>
-                <div className="text-cyan-700">{appState === 'listening' ? 'Listening...' : appState === 'processing' ? 'Processing...' : 'Ready'}</div>
-              </div>
+            <div className="task-item-completed p-2 rounded">
+              <div className="text-emerald-400">✓ Memory System</div>
+              <div className="text-cyan-700">Encrypted + Task Tracker</div>
             </div>
-            <div className="mt-2 pt-2 border-t border-cyan-900/30 text-[9px] font-mono text-cyan-700">
-              <span>Dashboard: </span>
-              <span className="text-cyan-500">npx tsx server/browser/dashboard.ts tasks</span>
+            <div className="task-item-completed p-2 rounded">
+              <div className="text-emerald-400">✓ Universal DOM</div>
+              <div className="text-cyan-700">Context-aware planning</div>
+            </div>
+            <div className="task-item-active p-2 rounded">
+              <div className="text-cyan-400 animate-pulse">● Voice Pipeline</div>
+              <div className="text-cyan-700">{appState === 'listening' ? 'Listening...' : appState === 'processing' ? 'Processing...' : 'Ready'}</div>
             </div>
           </div>
-        )}
+          <div className="mt-2 pt-2 border-t border-cyan-900/30 text-[9px] font-mono text-cyan-700">
+            <span>Dashboard: </span>
+            <span className="text-cyan-500 break-all select-all">npx tsx server/browser/dashboard.ts tasks</span>
+          </div>
+        </div>
       </main>
 
       {/* Bottom Status Bar */}
-      <footer className="mt-3 glass-panel rounded-lg px-4 py-1.5 flex justify-between items-center text-cyan-700 font-mono text-[9px] tracking-widest">
+      <footer className="mt-3 glass-panel rounded-lg px-3 md:px-4 py-1.5 flex flex-col sm:flex-row justify-between items-center gap-1.5 sm:gap-4 text-cyan-700 font-mono text-[9px] tracking-widest text-center sm:text-left">
         <div className="flex items-center gap-2">
           <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
           <span className={statusColor}>{appState.toUpperCase()}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap justify-center items-center gap-3">
           <span>KEY_POOL: ROTATING</span>
-          <span>MEM: ENCRYPTED</span>
-          <span>PROTOCOL: OMEGA</span>
+          <span className="hidden sm:inline">MEM: ENCRYPTED</span>
+          <span className="hidden sm:inline">PROTOCOL: OMEGA</span>
         </div>
-        <div>STARK INDUSTRIES // AI DIV</div>
+        <div className="uppercase">STARK INDUSTRIES // AI DIV</div>
       </footer>
+
+      {/* Holographic Voice Call Overlay (Mobile & Tablet only) */}
+      {zoya.isSessionActive && (
+        <div className="lg:hidden fixed inset-0 z-50 hologram-overlay flex flex-col items-center justify-between p-6 overflow-hidden">
+          {/* Hologram scanlines */}
+          <div className="holo-scanline" />
+          
+          {/* Top Info HUD */}
+          <div className="w-full flex justify-between items-center border-b border-cyan-500/20 pb-3 relative z-20">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="font-mono text-xs tracking-widest text-cyan-400 font-bold uppercase">ZOYA_VOICE_LINK</span>
+            </div>
+            <span className="font-mono text-[9px] text-cyan-600 tracking-wider">ESTABLISHED // ENC_3.1</span>
+          </div>
+          
+          {/* Center holographic avatar */}
+          <div className="flex-1 flex flex-col items-center justify-center relative z-20 my-6">
+            {/* Decorative scanning rings */}
+            <div className="absolute w-64 h-64 holo-ring pointer-events-none" />
+            <div className="absolute w-72 h-72 holo-ring-reverse pointer-events-none" />
+            <div className="absolute w-80 h-80 border border-cyan-500/5 rounded-full pointer-events-none animate-pulse" />
+            
+            <div className="scale-125 md:scale-150 transition-all duration-300 relative z-30">
+              <ZoyaAvatar state={appState} emotion={zoya.emotion} />
+            </div>
+            
+            <div className="text-center mt-12 max-w-xs relative z-30">
+              <div className="h-6">
+                {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse tracking-widest uppercase">Awaiting Input...</span>}
+                {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse tracking-widest uppercase">Analyzing...</span>}
+                {appState === 'speaking' && <span className="text-emerald-400 font-mono text-sm tracking-widest uppercase">Transmitting...</span>}
+                {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-sm tracking-widest uppercase">Standby</span>}
+              </div>
+              
+              {error && (
+                <div className="text-red-400 text-[10px] font-mono mt-3 border border-red-500/30 bg-red-950/30 p-2 rounded">
+                  <span className="font-bold">ERR:</span> {error}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Bottom Visualizer and Controls */}
+          <div className="w-full flex flex-col items-center gap-6 relative z-20 pb-4">
+            <VoiceVisualizer 
+              appState={appState} 
+              onToggle={zoya.stopSession} 
+              disabled={!hasRecognition}
+            />
+            <p className="text-cyan-700/60 text-[9px] font-mono tracking-widest uppercase">
+              Tap visualizer to close connection
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Terminal, Cpu, ThumbsUp, ThumbsDown, Check, Mic, MicOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Terminal, Cpu, ThumbsUp, ThumbsDown, Check, Mic, MicOff, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { playSound } from '../../utils/soundEffects';
 
 export interface Message {
@@ -45,6 +45,157 @@ function ThoughtDropdown({ thoughts }: { thoughts: string[] }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Inline styles helper: parses **bold**, `inline code`, and text
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  const tokens = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return tokens.map((token, idx) => {
+    if (token.startsWith('**') && token.endsWith('**')) {
+      return <strong key={idx} className="text-cyan-300 font-bold">{token.slice(2, -2)}</strong>;
+    }
+    if (token.startsWith('`') && token.endsWith('`')) {
+      return <code key={idx} className="px-1.5 py-0.5 mx-0.5 font-mono text-xs rounded bg-black/40 border border-cyan-900/30 text-cyan-300">{token.slice(1, -1)}</code>;
+    }
+    return token;
+  });
+}
+
+// Custom markdown renderer helper
+function RenderMarkdown({ content }: { content: string }) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    playSound.click();
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  if (!content) return null;
+
+  // Split by code blocks
+  const parts = content.split(/(```[\s\S]*?```)/g);
+
+  return (
+    <div className="space-y-2 select-text w-full">
+      {parts.map((part, index) => {
+        if (part.startsWith('```')) {
+          const match = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
+          const lang = match ? match[1] || 'code' : 'code';
+          const code = match ? match[2].trim() : part.slice(3, -3).trim();
+          const blockId = `code-${index}`;
+
+          return (
+            <div key={blockId} className="my-3 border border-cyan-800/40 rounded-sm overflow-hidden bg-black/50 glass-panel w-full">
+              {/* Code block Header */}
+              <div className="flex justify-between items-center px-3 py-1.5 bg-cyan-950/40 border-b border-cyan-900/30 text-[10px] font-mono text-cyan-500 tracking-wider">
+                <span className="uppercase font-bold">{lang}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(code, blockId)}
+                  className="flex items-center gap-1 hover:text-cyan-300 transition-colors cursor-pointer active:scale-95"
+                >
+                  {copiedId === blockId ? (
+                    <span className="text-emerald-400 font-bold">COPIED!</span>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>COPY</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              {/* Code block Content */}
+              <pre className="p-3 text-[11px] font-mono text-cyan-300 overflow-x-auto leading-relaxed max-w-full custom-scrollbar whitespace-pre">
+                <code>{code}</code>
+              </pre>
+            </div>
+          );
+        }
+
+        const lines = part.split('\n');
+        let tableRows: string[][] = [];
+        const renderedLines: React.ReactNode[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+
+          // Check if this line is a table row
+          if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+            const cells = line.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+            const isSeparator = cells.every(c => c.startsWith('-') || c === '');
+            if (!isSeparator) {
+              tableRows.push(cells);
+            }
+            
+            const nextLine = lines[i + 1];
+            const nextIsTable = nextLine && nextLine.trim().startsWith('|') && nextLine.trim().endsWith('|');
+            
+            if (!nextIsTable) {
+              const currentTableRows = [...tableRows];
+              tableRows = [];
+              
+              renderedLines.push(
+                <div key={`table-${i}`} className="overflow-x-auto my-3 max-w-full custom-scrollbar">
+                  <table className="markdown-table">
+                    <thead>
+                      <tr>
+                        {currentTableRows[0]?.map((cell, cIdx) => (
+                          <th key={`th-${cIdx}`}>{parseInlineMarkdown(cell)}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentTableRows.slice(1).map((row, rIdx) => (
+                        <tr key={`tr-${rIdx}`}>
+                          {row.map((cell, cIdx) => (
+                            <td key={`td-${cIdx}`}>{parseInlineMarkdown(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            }
+            continue;
+          }
+
+          // Bullet lists
+          if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+            const cleanText = line.trim().slice(2);
+            const listItems = [cleanText];
+            while (i + 1 < lines.length && (lines[i + 1].trim().startsWith('- ') || lines[i + 1].trim().startsWith('* '))) {
+              i++;
+              listItems.push(lines[i].trim().slice(2));
+            }
+            
+            renderedLines.push(
+              <ul key={`list-${i}`} className="markdown-list">
+                {listItems.map((item, lIdx) => (
+                  <li key={`li-${lIdx}`}>{parseInlineMarkdown(item)}</li>
+                ))}
+              </ul>
+            );
+            continue;
+          }
+
+          if (line.trim() === '') {
+            renderedLines.push(<div key={`empty-${i}`} className="h-2" />);
+          } else {
+            renderedLines.push(
+              <p key={`p-${i}`} className="my-0.5 leading-relaxed break-words text-left">
+                {parseInlineMarkdown(line)}
+              </p>
+            );
+          }
+        }
+
+        return <div key={`text-block-${index}`} className="w-full">{renderedLines}</div>;
+      })}
     </div>
   );
 }
@@ -235,11 +386,11 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   {msg.thoughts && msg.thoughts.length > 0 && (
                     <ThoughtDropdown thoughts={msg.thoughts} />
                   )}
-                  <div>
-                    {msg.content}
+                  <div className="w-full">
+                    <RenderMarkdown content={msg.content} />
                     {/* Typing cursor */}
                     {msg.role === 'jarvis' && msg.id === messages[messages.length - 1]?.id && isProcessing && (
-                      <span className="inline-block w-1.5 h-4 ml-1 bg-cyan-400 animate-pulse align-middle rounded-sm" />
+                      <span className="inline-block w-1.5 h-4 mt-1 bg-cyan-400 animate-pulse align-middle rounded-sm" />
                     )}
                   </div>
                 </div>
@@ -356,10 +507,10 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               type="button"
               onClick={() => { playSound.click(); onVoiceToggle(); }}
               onMouseEnter={playSound.tick}
-              className={`lg:hidden p-2.5 rounded-lg transition-all cursor-pointer ${
+              className={`lg:hidden p-2.5 rounded-lg transition-all cursor-pointer border ${
                 isListening 
-                  ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50 jarvis-box-glow' 
-                  : 'bg-slate-800/50 text-cyan-700 border border-cyan-800/30 hover:text-cyan-400'
+                  ? 'bg-red-950/40 text-red-400 border-red-500/55 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse' 
+                  : 'bg-cyan-950/20 text-cyan-500 border-cyan-800/40 hover:text-cyan-300 hover:border-cyan-500/50'
               }`}
             >
               {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
