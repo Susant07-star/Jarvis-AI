@@ -8,6 +8,8 @@ import { sendChatMessage } from './services/api';
 import { Activity, Cpu, Database, Wifi, Shield, ChevronRight, X } from 'lucide-react';
 import { tts } from './utils/tts';
 import { TimezoneClock } from './components/jarvis/TimezoneClock';
+import { NeuralCanvas } from './components/jarvis/NeuralCanvas';
+import { playSound } from './utils/soundEffects';
 
 type AppState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -79,6 +81,7 @@ export default function App() {
   useEffect(() => {
     if (browserProbed) return;
     setBrowserProbed(true);
+    playSound.uplink();
 
     const probe = async () => {
       // Base greeting always shows immediately
@@ -219,7 +222,8 @@ export default function App() {
   const statusDot = appState === 'idle' ? 'bg-cyan-800' : appState === 'listening' ? 'bg-cyan-400 animate-pulse' : appState === 'processing' ? 'bg-indigo-400 animate-pulse' : 'bg-emerald-400 animate-pulse';
 
   return (
-    <div className="h-screen flex flex-col p-3 md:p-6 overflow-hidden">
+    <div className="h-screen flex flex-col p-3 md:p-6 overflow-hidden relative">
+      <NeuralCanvas />
       <BrowserAgent />
       
       {/* Top HUD Bar */}
@@ -287,8 +291,9 @@ export default function App() {
 
           {/* Task Panel Toggle */}
           <button 
-            onClick={() => setShowTaskPanel(!showTaskPanel)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all"
+            onClick={() => { playSound.click(); setShowTaskPanel(!showTaskPanel); }}
+            onMouseEnter={playSound.tick}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
           >
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>

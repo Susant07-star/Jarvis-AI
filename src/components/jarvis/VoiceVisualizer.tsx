@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { MicOff, Loader2 } from 'lucide-react';
+import { playSound } from '../../utils/soundEffects';
 
 interface VoiceVisualizerProps {
   appState: 'idle' | 'listening' | 'processing' | 'speaking';
@@ -95,7 +96,8 @@ export function VoiceVisualizer({ appState, onToggle, disabled }: VoiceVisualize
 
       {/* Center Button */}
       <button
-        onClick={onToggle}
+        onClick={() => { playSound.click(); onToggle(); }}
+        onMouseEnter={playSound.tick}
         disabled={disabled}
         className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500
           ${isListening 

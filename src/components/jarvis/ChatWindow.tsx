@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Terminal, Cpu, ThumbsUp, ThumbsDown, Check, Mic, MicOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { playSound } from '../../utils/soundEffects';
 
 export interface Message {
   id: string;
@@ -21,8 +22,9 @@ function ThoughtDropdown({ thoughts }: { thoughts: string[] }) {
   return (
     <div className="mb-2.5 border border-cyan-800/40 rounded-sm overflow-hidden bg-cyan-950/30">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-cyan-400 hover:bg-cyan-900/10 active:bg-cyan-900/20 transition-colors"
+        onClick={() => { playSound.click(); setIsOpen(!isOpen); }}
+        onMouseEnter={playSound.tick}
+        className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-cyan-400 hover:bg-cyan-900/10 active:bg-cyan-900/20 transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-1.5">
           <Cpu className="w-3 h-3 text-cyan-400 animate-pulse" />
@@ -248,16 +250,18 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                 <div className="mt-1.5 flex flex-col items-start gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <button 
-                      onClick={() => handleFeedback(msg, 'up', index)}
+                      onClick={() => { playSound.click(); handleFeedback(msg, 'up', index); }}
+                      onMouseEnter={playSound.tick}
                       disabled={feedbackState[msg.id]?.submitted}
-                      className={`p-1 rounded transition-all ${feedbackState[msg.id]?.rating === 'up' ? 'text-green-400 bg-green-900/20' : 'text-cyan-700 hover:text-cyan-400 hover:bg-cyan-900/20'} disabled:opacity-40`}
+                      className={`p-1 rounded transition-all cursor-pointer ${feedbackState[msg.id]?.rating === 'up' ? 'text-green-400 bg-green-900/20' : 'text-cyan-700 hover:text-cyan-400 hover:bg-cyan-900/20'} disabled:opacity-40`}
                     >
                       <ThumbsUp className="w-3 h-3" />
                     </button>
                     <button 
-                      onClick={() => handleFeedback(msg, 'down', index)}
+                      onClick={() => { playSound.click(); handleFeedback(msg, 'down', index); }}
+                      onMouseEnter={playSound.tick}
                       disabled={feedbackState[msg.id]?.submitted}
-                      className={`p-1 rounded transition-all ${feedbackState[msg.id]?.rating === 'down' ? 'text-red-400 bg-red-900/20' : 'text-cyan-700 hover:text-cyan-400 hover:bg-cyan-900/20'} disabled:opacity-40`}
+                      className={`p-1 rounded transition-all cursor-pointer ${feedbackState[msg.id]?.rating === 'down' ? 'text-red-400 bg-red-900/20' : 'text-cyan-700 hover:text-cyan-400 hover:bg-cyan-900/20'} disabled:opacity-40`}
                     >
                       <ThumbsDown className="w-3 h-3" />
                     </button>
@@ -350,8 +354,9 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
           {onVoiceToggle && hasRecognition && (
             <button
               type="button"
-              onClick={onVoiceToggle}
-              className={`lg:hidden p-2.5 rounded-lg transition-all ${
+              onClick={() => { playSound.click(); onVoiceToggle(); }}
+              onMouseEnter={playSound.tick}
+              className={`lg:hidden p-2.5 rounded-lg transition-all cursor-pointer ${
                 isListening 
                   ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50 jarvis-box-glow' 
                   : 'bg-slate-800/50 text-cyan-700 border border-cyan-800/30 hover:text-cyan-400'
@@ -367,6 +372,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onFocus={playSound.tick}
               placeholder="Enter command..."
               disabled={isProcessing}
               className="w-full bg-black/40 border border-cyan-800/40 rounded-lg py-3 pl-8 pr-12 text-cyan-50 font-mono text-sm focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60"
@@ -374,7 +380,9 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
             <button
               type="submit"
               disabled={!input.trim() || isProcessing}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-cyan-950/40 rounded text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-30 transition-all"
+              onClick={() => playSound.click()}
+              onMouseEnter={playSound.tick}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-cyan-950/40 rounded text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-30 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>
