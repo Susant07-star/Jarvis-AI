@@ -64,6 +64,9 @@
 - [ ] **Recurring & Daily Schedules (Cron Work)**
   - Support syntax for repeating tasks (e.g., *"every day at 8:00 AM"*, *"every Sunday at 9:00 PM"*).
   - Automatically calculate the next execution time and reschedule the task after it runs successfully.
+- [ ] **Universal Watchdog Tooling**
+  - Generalize the alarm watchdog into a flexible agent tool (`schedule_watchdog`).
+  - Enable J.A.R.V.I.S. to monitor any background task, specifying custom check intervals (gaps), conditions, and retry limits.
 
 ---
 
@@ -85,6 +88,14 @@
 - **File Making & PDF Generation**
   - Node `fs` module to generate well-formatted PDFs, Markdown reports, or CSVs based on LLM outputs.
   - Automatically send generated PDFs/CSVs back to the user via Telegram.
+
+### 3.3 Autonomous Log Analyzer & Fail-Safe Injection
+- **Real-Time Log Monitor**
+  - Run a lightweight background process/LLM to monitor error logs and verify whether scheduled tasks/actions executed successfully.
+- **Fail-Safe Live/Chat Injection**
+  - If a background task fails, J.A.R.V.I.S. automatically injects the error context into the live voice mode (Gemini Live) or active chat thread so the user is immediately notified.
+- **Offline Issue Registry**
+  - Write details about failed runs to a persistent `logs/debug_issues.json` file to make debugging offline simple.
 
 ---
 
