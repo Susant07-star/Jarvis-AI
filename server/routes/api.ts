@@ -541,8 +541,7 @@ router.post("/chat", async (req, res) => {
       res.write(`data: ${JSON.stringify({ metadata: { model, provider, tokens: plannerTokens } })}\n\n`);
 
       if (internal_steps && internal_steps.length > 0) {
-        const reasoning = internal_steps.map((s: string) => `> _${s}_`).join('\n');
-        res.write(`data: ${JSON.stringify({ content: `${reasoning}\n\n` })}\n\n`);
+        res.write(`data: ${JSON.stringify({ thoughts: internal_steps })}\n\n`);
       }
       
       if (metrics) {

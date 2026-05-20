@@ -362,8 +362,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       logger.info("WS", `Planner output: ${JSON.stringify(plannedSteps)}`);
 
       if (internal_steps && internal_steps.length > 0) {
-          const reasoning = internal_steps.map((s: string) => `> _${s}_`).join('\n');
-          ws.send(JSON.stringify({ type: 'llm_chunk', text: `${reasoning}\n\n` }));
+          ws.send(JSON.stringify({ type: 'thoughts', thoughts: internal_steps }));
       }
 
       if (!plannedSteps || plannedSteps.length === 0) {

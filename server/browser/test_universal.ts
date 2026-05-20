@@ -20,8 +20,8 @@ async function runUniversalTest() {
         // Execute the contextual extraction planner
         const { actions: plan } = await planWithVisualAgent(goal, "", domElements);
         
-        if (plan && plan.actions.length > 0) {
-            await executePlan(plan.actions);
+        if (plan && plan.length > 0) {
+            await executePlan(plan);
             console.log("Universal DOM layer working");
             process.exit(0);
         } else {

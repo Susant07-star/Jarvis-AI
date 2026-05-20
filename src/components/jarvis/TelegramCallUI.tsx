@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Mic, MicOff, PhoneOff, Phone, Check, X } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Phone, Check, X, ChevronDown, ChevronUp, Cpu } from 'lucide-react';
 import { useZoyaVoice } from '../../hooks/useZoyaVoice';
 
 // Define the Telegram WebApp type loosely
@@ -16,6 +16,7 @@ export function TelegramCallUI() {
   const [isTelegram, setIsTelegram] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isRinging, setIsRinging] = useState(false);
+  const [showThoughts, setShowThoughts] = useState(false);
   const [ringtone] = useState(new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')); // Sci-fi alert
 
   useEffect(() => {
@@ -233,6 +234,32 @@ export function TelegramCallUI() {
           </div>
         )}
       </div>
+
+      {/* Thoughts Dropdown */}
+      {zoya.thoughts.length > 0 && (
+        <div className="mx-6 mb-4 border border-cyan-800/60 rounded-xl overflow-hidden bg-cyan-950/40 backdrop-blur-md relative z-20">
+          <button
+            onClick={() => setShowThoughts(!showThoughts)}
+            className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-mono text-cyan-400 hover:bg-cyan-900/20 active:bg-cyan-900/40 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Cpu className="w-3.5 h-3.5 animate-pulse text-cyan-400" />
+              THOUGHT_PROCESS.log ({zoya.thoughts.length})
+            </span>
+            {showThoughts ? <ChevronUp className="w-4 h-4 text-cyan-500" /> : <ChevronDown className="w-4 h-4 text-cyan-500" />}
+          </button>
+          
+          {showThoughts && (
+            <div className="max-h-36 overflow-y-auto px-4 pb-3 pt-1 border-t border-cyan-800/40 font-mono text-[10px] text-cyan-200/80 space-y-1.5 custom-scrollbar text-left">
+              {[...zoya.thoughts].reverse().map((t) => (
+                <div key={t.id} className="leading-relaxed border-l-2 border-cyan-500/30 pl-2 py-0.5">
+                  {t.text}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Controls Footer */}
       <div className="h-32 bg-cyan-900/40 rounded-t-3xl border-t border-cyan-800 flex items-center justify-center gap-8 px-6 pb-6">

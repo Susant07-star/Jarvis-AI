@@ -190,6 +190,13 @@ async function transcribeFile(filePath: string): Promise<string> {
   return "";
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // ── JARVIS Brain ──────────────────────────────────────────────────────────────
 
 async function processMessage(userText: string, chatId: number): Promise<PlannerResponse> {
@@ -226,6 +233,7 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
       }
 
       const result = await callResearchWithCascade(userText);
+      result.internal_steps = plan.internal_steps;
       logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${result.model}] | Time: ${Date.now() - startTime}ms | Tokens: ${result.tokens}`);
       return result;
     } catch (err: any) {
@@ -265,17 +273,19 @@ You are responding via Telegram. Keep ALL replies under 40 words. Be direct, sha
 
 // ── Send reply with long-message splitting ────────────────────────────────────
 
-async function sendReply(token: string, chatId: number, text: string, replyMarkup?: any): Promise<void> {
+async function sendReply(token: string, chatId: number, text: string, replyMarkup?: any, parseMode?: string): Promise<void> {
   const MAX = 4000;
   if (text.length <= MAX) {
     const payload: any = { chat_id: chatId, text };
     if (replyMarkup) payload.reply_markup = replyMarkup;
+    if (parseMode) payload.parse_mode = parseMode;
     await telegramPost(token, "sendMessage", payload);
   } else {
     for (let i = 0; i < text.length; i += MAX) {
       const isLast = i + MAX >= text.length;
       const payload: any = { chat_id: chatId, text: text.slice(i, i + MAX) };
       if (isLast && replyMarkup) payload.reply_markup = replyMarkup;
+      if (parseMode) payload.parse_mode = parseMode;
       await telegramPost(token, "sendMessage", payload);
     }
   }
@@ -390,8 +400,18 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       return;
     }
 
+    let replyText = result.content;
+    let parseMode: string | undefined = undefined;
+
+    if (result.internal_steps && result.internal_steps.length > 0) {
+      const escapedContent = escapeHtml(result.content);
+      const escapedSteps = result.internal_steps.map(step => escapeHtml(step)).join('\n');
+      replyText = `${escapedContent}\n\n<blockquote expandable>🧠 <b>Thought Process:</b>\n${escapedSteps}</blockquote>`;
+      parseMode = "HTML";
+    }
+
     // Send the clean reply without technical metadata
-    await sendReply(token, chatId, result.content);
+    await sendReply(token, chatId, replyText, undefined, parseMode);
 
   } catch (err: any) {
     logger.error("TelegramBot", `Unhandled error: ${err.message}`);

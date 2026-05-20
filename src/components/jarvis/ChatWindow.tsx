@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Terminal, Cpu, ThumbsUp, ThumbsDown, Check, Mic, MicOff } from 'lucide-react';
+import { Send, Terminal, Cpu, ThumbsUp, ThumbsDown, Check, Mic, MicOff, ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface Message {
   id: string;
@@ -12,6 +12,39 @@ export interface Message {
   tokens?: number; // How many tokens were used
   usedResearch?: boolean; // If web research was triggered
   emotion?: 'neutral' | 'sassy' | 'happy' | 'thoughtful' | 'angry' | 'surprised';
+  thoughts?: string[];
+}
+
+function ThoughtDropdown({ thoughts }: { thoughts: string[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mb-2.5 border border-cyan-800/40 rounded-sm overflow-hidden bg-cyan-950/30">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-cyan-400 hover:bg-cyan-900/10 active:bg-cyan-900/20 transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          <Cpu className="w-3 h-3 text-cyan-400 animate-pulse" />
+          SYSTEM_THOUGHTS ({thoughts.length})
+        </span>
+        {isOpen ? (
+          <ChevronUp className="w-3.5 h-3.5 text-cyan-500" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 text-cyan-500" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="max-h-32 overflow-y-auto px-3 pb-2 pt-0.5 border-t border-cyan-900/30 font-mono text-[9px] text-cyan-300/80 space-y-1 custom-scrollbar">
+          {thoughts.map((thought, idx) => (
+            <div key={idx} className="border-l border-cyan-500/20 pl-1.5 py-0.5 leading-normal text-left">
+              {thought}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface ChatWindowProps {
@@ -196,12 +229,17 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   <div className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[linear-gradient(rgba(0,240,255,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.3)_1px,transparent_1px)] bg-[size:8px_8px]" />
                 )}
                 
-                <div className="relative z-10">
-                  {msg.content}
-                  {/* Typing cursor */}
-                  {msg.role === 'jarvis' && msg.id === messages[messages.length - 1]?.id && isProcessing && (
-                    <span className="inline-block w-1.5 h-4 ml-1 bg-cyan-400 animate-pulse align-middle rounded-sm" />
+                <div className="relative z-10 flex flex-col gap-2">
+                  {msg.thoughts && msg.thoughts.length > 0 && (
+                    <ThoughtDropdown thoughts={msg.thoughts} />
                   )}
+                  <div>
+                    {msg.content}
+                    {/* Typing cursor */}
+                    {msg.role === 'jarvis' && msg.id === messages[messages.length - 1]?.id && isProcessing && (
+                      <span className="inline-block w-1.5 h-4 ml-1 bg-cyan-400 animate-pulse align-middle rounded-sm" />
+                    )}
+                  </div>
                 </div>
               </div>
 

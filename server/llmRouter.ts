@@ -10,6 +10,7 @@ export interface PlannerResponse {
   provider: string;
   model: string;
   usedResearch?: boolean;
+  internal_steps?: string[];
 }
 
 interface Provider {

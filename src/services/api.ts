@@ -4,7 +4,7 @@ export async function sendChatMessage(
   message: string, 
   history: Message[] = [], // kept for API compatibility, no longer sent to server
   onChunk?: (chunk: string) => void,
-  onMetadata?: (meta: { model: string, provider: string, tokens?: number, usedResearch?: boolean }) => void,
+  onMetadata?: (meta: { model?: string, provider?: string, tokens?: number, usedResearch?: boolean, thoughts?: string[] }) => void,
   signal?: AbortSignal,
   threadId: string = 'default_chat'
 ): Promise<{ reply: string, command?: any, browser_commands?: any[], model?: string, provider?: string }> {
@@ -29,7 +29,7 @@ export async function sendChatMessage(
       }
       throw new Error(errorData.error || 'Failed to communicate with J.A.R.V.I.S.');
     }
-
+ 
     const contentType = res.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       const text = await res.text();
@@ -64,6 +64,8 @@ export async function sendChatMessage(
               if (onChunk) onChunk(parsed.content);
             } else if (parsed.metadata) {
               if (onMetadata) onMetadata(parsed.metadata);
+            } else if (parsed.thoughts) {
+              if (onMetadata) onMetadata({ thoughts: parsed.thoughts });
             } else if (parsed.error) {
               throw new Error(parsed.error);
             }

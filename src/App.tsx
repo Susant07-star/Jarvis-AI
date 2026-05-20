@@ -170,9 +170,10 @@ export default function App() {
           setMessages(prev => prev.map(msg => 
             msg.id === jarvisMsgId ? { 
               ...msg, 
-              model: meta.model, 
-              tokens: meta.tokens, 
-              usedResearch: meta.usedResearch 
+              model: meta.model !== undefined ? meta.model : msg.model, 
+              tokens: meta.tokens !== undefined ? meta.tokens : msg.tokens, 
+              usedResearch: meta.usedResearch !== undefined ? meta.usedResearch : msg.usedResearch,
+              thoughts: meta.thoughts !== undefined ? meta.thoughts : msg.thoughts
             } : msg
           ));
         }
