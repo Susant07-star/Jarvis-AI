@@ -50,6 +50,7 @@ const dnsBypassAgent = new https.Agent({
 // 'Host' header so Telegram's servers know we want api.telegram.org.
 
 const TELEGRAM_IP = "149.154.167.220";
+const telegramHttpsAgent = new https.Agent({ keepAlive: true, rejectUnauthorized: false, maxSockets: 50 });
 
 function telegramGet(token: string, method: string, params: Record<string, any> = {}): Promise<any> {
   const query = new URLSearchParams(params as any).toString();
@@ -65,8 +66,8 @@ function telegramGet(token: string, method: string, params: Record<string, any> 
         headers: {
           "Host": "api.telegram.org"
         },
-        // We still use an agent for connection pooling
-        agent: new https.Agent({ keepAlive: true, rejectUnauthorized: false })
+        // Use shared agent to prevent connection pool exhaustion and memory leaks
+        agent: telegramHttpsAgent
       },
       (res) => {
         let data = "";
@@ -101,7 +102,7 @@ function telegramPost(token: string, method: string, body: Record<string, any>):
           "Content-Type": "application/json", 
           "Content-Length": Buffer.byteLength(payload) 
         },
-        agent: new https.Agent({ keepAlive: true, rejectUnauthorized: false })
+        agent: telegramHttpsAgent
       },
       (res) => {
         let data = "";
@@ -143,7 +144,7 @@ async function downloadTelegramFile(token: string, fileId: string): Promise<stri
         port: 443,
         path: urlPath, 
         headers: { "Host": "api.telegram.org" },
-        agent: new https.Agent({ keepAlive: true, rejectUnauthorized: false })
+        agent: telegramHttpsAgent
       },
       (res) => {
         res.pipe(dest);
