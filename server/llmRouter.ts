@@ -188,10 +188,10 @@ const PROVIDER_PRIORITY: Provider[] = [
 ];
 
 const CHAT_PROVIDER_PRIORITY: Provider[] = [
-  groqLlama70B,           // ⚡ PRIMARY: 800 t/s, sub-second for chat
-  cerebrasLlama70B,       // ⚡ FALLBACK-1: Also very fast
-  sambaNovaV32,           // FALLBACK-2: Reliable mid-speed
-  gemini31FlashLite,      // FALLBACK-3: Gemini (slower)
+  gemini31FlashLite,      // ⚡ PRIMARY: Main Gemini 3.1 Flash Lite
+  groqLlama70B,           // ⚡ FALLBACK-1: 800 t/s, sub-second for chat
+  cerebrasLlama70B,       // FALLBACK-2: Also very fast
+  sambaNovaV32,           // FALLBACK-3: Reliable mid-speed
   gemini25Flash,          // FALLBACK-4: Quality but slowest
   sambaNovaV31,
 ];

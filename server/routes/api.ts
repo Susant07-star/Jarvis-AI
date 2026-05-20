@@ -606,14 +606,43 @@ router.post("/chat", async (req, res) => {
       // E. Execute via Python Layer
       if (browserActions.length > 0) {
         if (process.env.USE_BROWSER_AGENT !== "true") {
-            const failReply = `\n❌ Execution failed: Browser agent is disabled on this node.`;
-            saveToMemory('user', message);
-            saveToMemory('jarvis', failReply);
-            logInteraction('chat', goal, failReply);
-            res.write(`data: ${JSON.stringify({ content: failReply })}\n\n`);
-            res.write(`data: [DONE]\n\n`);
-            if (metrics) { metrics.setExecutionResult('Failure'); metrics.finalize(); }
-            return res.end();
+             logger.info("API", "Browser agent is disabled. Falling back to direct conversational response.");
+             
+             const threadId = req.body.thread_id || "default_chat";
+             const history = await ThreadManager.getHistory(threadId, 20);
+             const systemPrompt = buildPrompt("voice"); 
+             const messages = [
+               { role: "system", content: systemPrompt },
+               ...history,
+               { role: "user", content: message }
+             ];
+
+             const result = await callChatWithCascade(messages as any);
+
+             // Save to persistent thread memory
+             await ThreadManager.appendMessage(threadId, { role: "user", content: message });
+             await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+
+             // Send model metadata first
+             res.write(`data: ${JSON.stringify({ metadata: { model: result.model, provider: result.provider, tokens: result.tokens } })}\n\n`);
+
+             // Send helpful fallback message notice
+             const fallbackNotice = `*(Notice: Browser automation is currently offline/disabled. Here is an answer based on my general knowledge)*\n\n`;
+             res.write(`data: ${JSON.stringify({ content: fallbackNotice })}\n\n`);
+
+             // Stream reply with realistic typing flow
+             const words = result.content.split(' ');
+             for (const w of words) {
+               res.write(`data: ${JSON.stringify({ content: w + ' ' })}\n\n`);
+               await new Promise(r => setTimeout(r, 12));
+             }
+             res.write(`data: [DONE]\n\n`);
+
+             if (metrics) {
+               metrics.setExecutionResult('Success (Direct Fallback)');
+               metrics.finalize();
+             }
+             return res.end();
         }
         try {
             const pythonRes = await fetch('http://127.0.0.1:8000/execute', {

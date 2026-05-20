@@ -424,6 +424,50 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
       // E. Execute via Python Layer
       if (browserActions.length > 0) {
+        if (process.env.USE_BROWSER_AGENT !== "true") {
+           logger.info("WS", "Browser agent is disabled. Falling back to direct conversational response.");
+           
+           const fallbackNotice = `*(Notice: Browser automation is currently offline/disabled. Here is an answer based on my general knowledge)*\n\n`;
+           ws.send(JSON.stringify({ type: 'llm_chunk', text: fallbackNotice }));
+           
+           const { ThreadManager } = await import("./threadManager");
+           const { callChatWithCascade } = await import("./llmRouter");
+           
+           const threadId = (ws as any).threadId || "ws_client";
+           const history = await ThreadManager.getHistory(threadId, 20);
+           
+           const systemPrompt = buildPrompt("voice"); 
+           const messages = [
+             { role: "system", content: systemPrompt },
+             ...history,
+             { role: "user", content: userText }
+           ];
+
+           const result = await callChatWithCascade(messages as any);
+           
+           ws.send(JSON.stringify({ 
+             type: 'metadata', 
+             metadata: { model: result.model, provider: result.provider } 
+           }));
+           
+           ws.send(JSON.stringify({ type: 'llm_chunk', text: result.content }));
+           const ttsAudio = await generateTTS(result.content);
+           if (ttsAudio && ws.readyState === ws.OPEN) {
+             ws.send(ttsAudio);
+           }
+           
+           await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+           await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+           
+           ws.send(JSON.stringify({ type: 'done' }));
+           if (metrics) {
+             metrics.setExecutionResult('Success (Direct Fallback)');
+             metrics.finalize();
+           }
+           state.isProcessing = false;
+           return;
+        }
+
         const execMsg = `Executing ${browserActions.length} step${browserActions.length > 1 ? 's' : ''}.`;
         ws.send(JSON.stringify({ type: 'llm_chunk', text: execMsg + " " }));
         const execAudio = await generateTTS(execMsg);
