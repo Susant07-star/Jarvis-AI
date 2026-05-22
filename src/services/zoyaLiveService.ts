@@ -52,7 +52,9 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
   3. **Analyze Webpages**: Use 'readWebpage' to read and summarize any URL link the Boss provides.
   4. **Save Files**: Use 'saveFile' to pin documents, links, or articles directly to the HUD files panel.
   5. **Schedule Alarms & Reminders**: Use 'schedule_action' to schedule future alerts, calls, or reminders relative to current time.
-  6. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
+  6. **List Scheduled Tasks**: Use 'get_scheduled_tasks' to check all active pending tasks, alarms, reminders, messages, or calls.
+  7. **Cancel Scheduled Task**: Use 'cancel_scheduled_task' to cancel/remove a specific pending task by its ID.
+  8. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
   2. Cannot execute local computer/server OS shell commands directly from audio.
@@ -370,6 +372,25 @@ export class ZoyaLiveService {
                     required: ["type", "content", "delay_seconds"],
                   },
                 },
+                {
+                  name: "get_scheduled_tasks",
+                  description: "Retrieve all currently active (pending) scheduled tasks, alarms, reminders, messages, or calls. Use this when the user asks what tasks are pending, what alarms are set, or wants to check scheduled messages/calls.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: "cancel_scheduled_task",
+                  description: "Cancel and remove a specific scheduled task, alarm, reminder, message, or call using its unique ID. Get the ID by first calling get_scheduled_tasks.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, description: "The unique ID of the scheduled task to cancel." }
+                    },
+                    required: ["id"],
+                  },
+                },
               ],
             },
           ],
@@ -684,6 +705,71 @@ export class ZoyaLiveService {
         this.onThought("❌ Failed to schedule task.");
         session.sendToolResponse({
           functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not connect to the scheduling system." } }],
+        });
+      }
+    } else if (call.name === "get_scheduled_tasks") {
+      this.onThought("Retrieving scheduled tasks...");
+      try {
+        const res = await fetch("/api/tasks");
+        if (res.ok) {
+          const data = await res.json();
+          session.sendToolResponse({
+            functionResponses: [{
+              name: call.name,
+              id: call.id,
+              response: { result: JSON.stringify(data.tasks || []) }
+            }],
+          });
+          this.onThought(`✅ Retrieved ${data.tasks?.length || 0} scheduled tasks.`);
+        } else {
+          throw new Error("Failed to fetch scheduled tasks");
+        }
+      } catch (err: any) {
+        this.onThought("❌ Failed to fetch scheduled tasks.");
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: "Error: Could not retrieve scheduled tasks from backend." }
+          }],
+        });
+      }
+    } else if (call.name === "cancel_scheduled_task") {
+      const { id } = call.args as any;
+      this.onThought(`Cancelling scheduled task: ${id}`);
+      try {
+        const res = await fetch(`/api/tasks/${id}`, {
+          method: "DELETE"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          session.sendToolResponse({
+            functionResponses: [{
+              name: call.name,
+              id: call.id,
+              response: { result: `SUCCESS: ${data.message || 'Task cancelled.'}` }
+            }],
+          });
+          this.onThought(`✅ Task ${id} cancelled successfully.`);
+        } else {
+          const data = await res.json();
+          session.sendToolResponse({
+            functionResponses: [{
+              name: call.name,
+              id: call.id,
+              response: { result: `FAILURE: ${data.error || 'Failed to cancel task.'}` }
+            }],
+          });
+          this.onThought(`❌ Failed to cancel task ${id}.`);
+        }
+      } catch (err: any) {
+        this.onThought(`❌ Error cancelling task ${id}.`);
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: "Error: Could not connect to backend to cancel the task." }
+          }],
         });
       }
     }

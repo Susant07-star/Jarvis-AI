@@ -20,7 +20,9 @@ Links: Use EXACT URLs from Search/Grounding. NEVER guess URLs. If no link exists
   3. **Analyze Webpages**: Use 'readWebpage' to read and summarize any URL link the Boss provides.
   4. **Save Files**: Use 'saveFile' to pin documents, links, or articles directly to the HUD files panel.
   5. **Schedule Alarms & Reminders**: Use 'schedule_action' to schedule future alerts, calls, or reminders relative to current time.
-  6. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
+  6. **List Scheduled Tasks**: Use 'get_scheduled_tasks' to check all active pending tasks, alarms, reminders, messages, or calls.
+  7. **Cancel Scheduled Task**: Use 'cancel_scheduled_task' to cancel/remove a specific pending task by its ID.
+  8. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
   2. Cannot execute local computer/server OS shell commands directly from audio/chat.
@@ -174,6 +176,38 @@ export class LiveSessionManager {
                     },
                     required: ["title", "url"]
                   }
+                },
+                {
+                  name: "schedule_action",
+                  description: "Schedule a future call or message. Use this for 'Remind me in X', 'Call me at Y', etc. You MUST calculate delay_seconds relative to NOW.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      type: { type: Type.STRING, description: "Action type: 'call', 'message', or 'alarm'." },
+                      content: { type: Type.STRING, description: "The message, call reason, or alarm note." },
+                      delay_seconds: { type: Type.NUMBER, description: "TOTAL seconds to wait from now. 1 min = 60, 1 hour = 3600." }
+                    },
+                    required: ["type", "content", "delay_seconds"],
+                  },
+                },
+                {
+                  name: "get_scheduled_tasks",
+                  description: "Retrieve all currently active (pending) scheduled tasks, alarms, reminders, messages, or calls. Use this when the user asks what tasks are pending, what alarms are set, or wants to check scheduled messages/calls.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: "cancel_scheduled_task",
+                  description: "Cancel and remove a specific scheduled task, alarm, reminder, message, or call using its unique ID. Get the ID by first calling get_scheduled_tasks.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, description: "The unique ID of the scheduled task to cancel." }
+                    },
+                    required: ["id"],
+                  },
                 }
               ]
             }
@@ -243,6 +277,14 @@ export class LiveSessionManager {
                    const args = call.args as { title: string, url: string };
                    this.onThought(`Saved file: ${args.title}`);
                    this.onFiles([{ title: args.title, url: args.url }]);
+                } else if (call.name === "schedule_action") {
+                   const args = call.args as any;
+                   this.onThought(`🕒 Scheduling ${args.type} in ${args.delay_seconds}s`);
+                } else if (call.name === "get_scheduled_tasks") {
+                   this.onThought("Retrieving scheduled tasks...");
+                } else if (call.name === "cancel_scheduled_task") {
+                   const args = call.args as any;
+                   this.onThought(`Cancelling scheduled task: ${args.id}`);
                 }
               }
             }
@@ -310,6 +352,85 @@ export class LiveSessionManager {
                         id: call.id,
                         response: { result: "File successfully saved to Zoya's Files box." }
                       }]
+                    });
+                  });
+                } else if (call.name === "schedule_action") {
+                  const args = call.args as any;
+                  fetch("/api/scheduler/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: args.type, content: args.content, delay_seconds: args.delay_seconds, chatId: 0 })
+                  }).then(res => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: res.ok ? "Timer registered successfully in the backend system." : "Error: Backend scheduler failed" }
+                        }]
+                      });
+                    });
+                  }).catch(err => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: "Error: Could not connect to the scheduling system." }
+                        }]
+                      });
+                    });
+                  });
+                } else if (call.name === "get_scheduled_tasks") {
+                  fetch("/api/tasks").then(res => {
+                    if (res.ok) {
+                      return res.json();
+                    }
+                    throw new Error("Failed to fetch");
+                  }).then(data => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: JSON.stringify(data.tasks || []) }
+                        }]
+                      });
+                    });
+                  }).catch(err => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: "Error: Could not retrieve scheduled tasks from backend." }
+                        }]
+                      });
+                    });
+                  });
+                } else if (call.name === "cancel_scheduled_task") {
+                  const args = call.args as { id: string };
+                  fetch(`/api/tasks/${args.id}`, {
+                    method: "DELETE"
+                  }).then(res => res.json()).then(data => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: data.success ? `SUCCESS: ${data.message || 'Task cancelled.'}` : `FAILURE: ${data.error || 'Failed to cancel task.'}` }
+                        }]
+                      });
+                    });
+                  }).catch(err => {
+                    this.sessionPromise?.then(session => {
+                      session.sendToolResponse({
+                        functionResponses: [{
+                          name: call.name,
+                          id: call.id,
+                          response: { result: "Error: Could not connect to backend to cancel the task." }
+                        }]
+                      });
                     });
                   });
                 }
