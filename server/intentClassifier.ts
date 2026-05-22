@@ -32,6 +32,17 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     return "schedule";
   }
 
+  // Local Guard: Instant, 100% accurate, zero-latency chat match for creator / Susant / capability queries
+  const creatorKeywords = [
+    "susant", "developer", "creator", "maker", "who created you", "who made you", 
+    "who built you", "who is the boss", "the boss", "your capability", "what can you do",
+    "what you can do", "what you can't do", "what you cannot do", "your limitation"
+  ];
+  if (creatorKeywords.some(k => lower.includes(k))) {
+    logger.info("Classifier", `[LocalGuard] Match creator/Susant/capability query for chat intent: "${text}"`);
+    return "chat";
+  }
+
   const prompt = `You are the J.A.R.V.I.S. Intent Gatekeeper. Your mission is to PREVENT unnecessary research tasks.
 
     - "chat": Default conversational mode.
