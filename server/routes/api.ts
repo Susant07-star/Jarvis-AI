@@ -920,4 +920,76 @@ router.post("/config/macrodroid", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/tasks
+ * Returns all currently active (pending) scheduled tasks for the sidebar Task Monitor.
+ */
+router.get("/tasks", async (req, res) => {
+  try {
+    const { jarvisScheduler } = await import("../scheduler");
+    const chatId = jarvisScheduler.getAdminChatId();
+    // Return ALL tasks regardless of chatId (0 = local/voice tasks are included)
+    const allTasks = Array.from((jarvisScheduler as any).tasks?.values?.() || []);
+    const tasks = allTasks.map((t: any) => ({
+      id: t.id,
+      type: t.type,
+      content: t.content,
+      executionTime: t.executionTime,
+      chatId: t.chatId,
+      secondsRemaining: Math.max(0, Math.round((t.executionTime - Date.now()) / 1000)),
+    }));
+    res.json({ tasks });
+  } catch (err: any) {
+    logger.error("API", "GET /tasks error", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/tasks/:id
+ * Cancels and removes a specific scheduled task by ID.
+ */
+router.delete("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { jarvisScheduler } = await import("../scheduler");
+    const cancelled = jarvisScheduler.cancelTask(id);
+    if (!cancelled) {
+      return res.status(404).json({ success: false, error: "Task not found or already executed." });
+    }
+    logger.info("API", `[TaskMonitor] Task ${id} cancelled via UI.`);
+    res.json({ success: true, message: `Task ${id} cancelled.` });
+  } catch (err: any) {
+    logger.error("API", "DELETE /tasks/:id error", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /api/tasks/:id
+ * Modifies an existing task: cancels the old one and schedules a new one.
+ * Body: { type, content, delay_seconds }
+ */
+router.patch("/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, content, delay_seconds } = req.body;
+    if (!type || !content || delay_seconds === undefined) {
+      return res.status(400).json({ error: "Missing type, content, or delay_seconds" });
+    }
+    const { jarvisScheduler } = await import("../scheduler");
+    // Get chatId of original task before cancelling
+    const allTasks: any[] = Array.from((jarvisScheduler as any).tasks?.values?.() || []);
+    const original = allTasks.find((t: any) => t.id === id);
+    const chatId = original?.chatId ?? jarvisScheduler.getAdminChatId();
+    jarvisScheduler.cancelTask(id);
+    const newTaskId = jarvisScheduler.schedule(chatId, type, content, delay_seconds);
+    logger.info("API", `[TaskMonitor] Task ${id} modified → new task ${newTaskId}`);
+    res.json({ success: true, newTaskId });
+  } catch (err: any) {
+    logger.error("API", "PATCH /tasks/:id error", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

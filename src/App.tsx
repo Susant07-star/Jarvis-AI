@@ -5,11 +5,12 @@ import { BrowserAgent } from './components/jarvis/BrowserAgent';
 import { useZoyaVoice } from './hooks/useZoyaVoice';
 import ZoyaAvatar from './components/jarvis/ZoyaAvatar';
 import { sendChatMessage } from './services/api';
-import { Activity, Cpu, Database, Wifi, Shield, ChevronRight, X } from 'lucide-react';
+import { Activity, Cpu, Database, Wifi, Shield, ChevronRight } from 'lucide-react';
 import { tts } from './utils/tts';
 import { TimezoneClock } from './components/jarvis/TimezoneClock';
 import { NeuralCanvas } from './components/jarvis/NeuralCanvas';
 import { playSound } from './utils/soundEffects';
+import { TaskPanel } from './components/jarvis/TaskPanel';
 
 type AppState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -352,45 +353,15 @@ export default function App() {
           />
         </div>
 
-        {/* Right: Task Panel (Sidebar on desktop, slide-out drawer on mobile) */}
+        {/* Right: Live Task Monitor Panel */}
         {showTaskPanel && (
           <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowTaskPanel(false)} />
         )}
-        <div className={`
-          fixed md:relative top-0 md:top-auto right-0 md:right-auto h-full md:h-auto z-50 md:z-auto
-          w-72 max-w-[85vw] flex-shrink-0 flex flex-col glass-panel rounded-l-xl md:rounded-xl p-3 overflow-hidden
-          transition-all duration-300 ease-in-out
-          ${showTaskPanel ? 'translate-x-0 opacity-100 flex' : 'translate-x-full md:translate-x-0 opacity-0 md:opacity-100 hidden md:flex'}
-        `}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-mono text-cyan-400 tracking-widest uppercase font-bold">Task Monitor</span>
-            <button onClick={() => setShowTaskPanel(false)} className="text-cyan-700 hover:text-cyan-400 transition-colors cursor-pointer">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-2 text-[10px] font-mono">
-            <div className="task-item-completed p-2 rounded">
-              <div className="text-emerald-400">✓ Browser Control</div>
-              <div className="text-cyan-700">Playwright initialized</div>
-            </div>
-            <div className="task-item-completed p-2 rounded">
-              <div className="text-emerald-400">✓ Memory System</div>
-              <div className="text-cyan-700">Encrypted + Task Tracker</div>
-            </div>
-            <div className="task-item-completed p-2 rounded">
-              <div className="text-emerald-400">✓ Universal DOM</div>
-              <div className="text-cyan-700">Context-aware planning</div>
-            </div>
-            <div className="task-item-active p-2 rounded">
-              <div className="text-cyan-400 animate-pulse">● Voice Pipeline</div>
-              <div className="text-cyan-700">{appState === 'listening' ? 'Listening...' : appState === 'processing' ? 'Processing...' : 'Ready'}</div>
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-cyan-900/30 text-[9px] font-mono text-cyan-700">
-            <span>Dashboard: </span>
-            <span className="text-cyan-500 break-all select-all">npx tsx server/browser/dashboard.ts tasks</span>
-          </div>
-        </div>
+        <TaskPanel
+          appState={appState}
+          showTaskPanel={showTaskPanel}
+          onClose={() => setShowTaskPanel(false)}
+        />
       </main>
 
       {/* Bottom Status Bar */}
