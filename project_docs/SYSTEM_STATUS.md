@@ -15,6 +15,7 @@
 - **Telegram Bot**: Clean UI protocol active (no technical metadata in chat) with a strict ≤40-word Telegram Conciseness Protocol.
 - **Transcription**: Native Nepali detection active on Telegram voice notes.
 - **Search Cascade**: Success-logging and fallback logic verified.
+- **I.R.I.S. Host OS Layer**: Secure Cloudflare tunnel established. Desktop daemon successfully executes native OS commands (screenshot, keyboard, mouse, app control) via the `/api/iris/execute` bridge.
 
 ## 🟡 Under Development
 - **Dropdown Thinking**: UI component for reasoning visibility.
@@ -24,5 +25,5 @@
 - *ScriptProcessorNode deprecation warning in Browser (Low priority fix).*
 
 ---
-**Last Updated**: 2026-05-19
-**Version**: 2.4 (Time-Aware Alarm & Dynamic Scheduler Hardening)
+**Last Updated**: 2026-05-24
+**Version**: 2.5 (I.R.I.S. Local Hands & OS Execution)

@@ -60,6 +60,23 @@ For mobile remote access, J.A.R.V.I.S. utilizes a **Telegram Web App Interface**
 
 ---
 
+## 6. Host OS Automation (I.R.I.S. Layer)
+
+### The J.A.R.V.I.S. - I.R.I.S. Bridge
+To bypass browser-sandbox limitations, J.A.R.V.I.S. communicates with a native desktop daemon called **I.R.I.S.**.
+- **J.A.R.V.I.S. (The Brain)**: Resides in the cloud or on a separate local server. It plans physical actions and formats them as strictly typed JSON payloads.
+- **I.R.I.S. (The Hands)**: An Electron-based desktop app running natively on the Windows host machine. It binds directly to the OS to control the mouse, keyboard, apps, and screen.
+- **The Tunnel**: I.R.I.S. establishes a Cloudflare reverse tunnel (e.g., `https://*.trycloudflare.com`) on boot. J.A.R.V.I.S. sends commands to this URL (`POST /execute`) authenticated via an `IRIS_API_KEY` bearer token.
+
+### Execution Loop
+1. Gemini LLM triggers the `execute_local_os_command` function.
+2. The Node.js Web Server regex-extracts the JSON payload (to bypass conversational hallucination wrappings).
+3. The payload is forwarded across the Cloudflare tunnel to I.R.I.S.
+4. I.R.I.S. uses `nut-js` (clipboard typing, keys), `child_process` (PowerShell/CMD), and `desktopCapturer` (Screenshots) to perform the physical action.
+5. I.R.I.S. responds with a `{ success, message }` JSON, which is passed back to Gemini's context window.
+
+---
+
 ## 6. Time & Transparency Layers
 
 ### Neural Scheduler (`scheduler.ts`)

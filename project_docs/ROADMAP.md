@@ -117,22 +117,23 @@
 
 ---
 
-## Phase 5: Full Computer & OS Environment Control (Fourth Priority 🖥️)
+## Phase 5: Full Computer & OS Environment Control ✅ (Completed but final testing left)
 
 **Goal**: Expand J.A.R.V.I.S. beyond the browser to orchestrate the entire host operating system.
 
-### 5.1 Host OS Automation
-- **System Keyboard & Mouse Control**
-  - Integrate tools like PyAutoGUI or robotJS to click, type, and navigate desktop applications outside Chromium.
-  - Allow J.A.R.V.I.S. to launch local apps, manage files, and interact with the host system directly.
-- **File System Operations**
-  - Enable native file creation, deletion, moving, and indexing across specified directories.
+### 5.1 Host OS Automation (I.R.I.S.) ✅
+- [x] **I.R.I.S. Electron Daemon**
+  - Integrated the I.R.I.S. daemon over a Cloudflare tunnel to execute physical actions on the host Windows machine.
+- [x] **System Keyboard & Mouse Control**
+  - Native control to click, type via clipboard injection, and press hotkeys using `@nut-tree-fork/nut-js`.
+- [x] **Desktop App Control & Shell Execution**
+  - Ability to open/close apps, capture base64 screenshots via `desktopCapturer`, and run PowerShell commands.
 
-### 5.2 Local Environment Telemetry
-- **Hardware Telemetry**
-  - Expose system metrics (CPU, RAM usage, storage availability, active tasks) to J.A.R.V.I.S.'s tool context for diagnostic queries.
-- **Environment Syncing**
-  - Sync settings, bookmarks, and commands across physical desktop environments dynamically.
+### 5.2 Next Steps for Local Environment
+- [ ] **Visual Awareness Loop**
+  - Wire the I.R.I.S. base64 screenshot output into Gemini Vision so J.A.R.V.I.S can "see" the host screen autonomously.
+- [ ] **Cloudflare Tunnel Auto-Sync**
+  - Use Supabase to automatically broadcast the changing Cloudflare tunnel URL from I.R.I.S. to J.A.R.V.I.S. on boot.
 
 ---
 
@@ -175,4 +176,4 @@ These apply across **all phases** and should be maintained continuously.
 | Dynamic Key Rotation | `llmRouter.ts` | ✅ Active |
 | Visual Agent Screenshots | `planner.ts` → `logs/debug_screenshots/` | ✅ Active |
 
-*Last Updated: 2026-05-19 | Phase 2 Complete. Telegram Bot, Web App Audio Calling, and Dynamic Task Scheduling/Modification fully operational.*
+*Last Updated: 2026-05-24 | Phase 5 Complete. I.R.I.S. Host OS Automation is operational for now.*

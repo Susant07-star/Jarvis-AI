@@ -26,7 +26,20 @@ interface ConnectionState {
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req: any) => {
+    // ── Global Security Enforcement ──
+    const requiredPin = process.env.JARVIS_PIN;
+    if (requiredPin) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const providedPin = url.searchParams.get('pin');
+      if (providedPin !== requiredPin) {
+        logger.warn('WS', 'Unauthorized WebSocket connection attempt (Invalid PIN)');
+        ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized: Invalid Master PIN.' }));
+        ws.close();
+        return;
+      }
+    }
+
     logger.info('WS', 'New connection established');
     
     const state: ConnectionState = {
@@ -308,6 +321,33 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
       if (!state.abortController?.signal.aborted) {
         logger.info('WS', `Stream complete: ${fullResponse.length} chars`);
+        
+        // ── I.R.I.S. Neural Uplink for Voice UI ──────────────────────────────
+        if (fullResponse.includes('"tool"') && fullResponse.includes('execute_local_os_command')) {
+          try {
+            const jsonMatch = fullResponse.match(/\{[\s\S]*"tool"\s*:\s*"execute_local_os_command"[\s\S]*\}/);
+            const rawJson = jsonMatch ? jsonMatch[0] : fullResponse;
+            const toolCall = JSON.parse(rawJson);
+            if (toolCall.tool === 'execute_local_os_command') {
+              logger.info("WS", `Executing I.R.I.S. command: ${toolCall.action}`);
+              const { executeOnIris } = await import('./irisExecutor');
+              const parsedPayload = typeof toolCall.payload === 'string'
+                ? JSON.parse(toolCall.payload)
+                : (toolCall.payload || {});
+              
+              const irisResult = await executeOnIris(toolCall.action, parsedPayload);
+              const spokenReply = irisResult.success
+                ? (toolCall.confirmation_message || irisResult.message)
+                : `I encountered an issue with your local machine: ${irisResult.message}`;
+              
+              // Send the exact output from I.R.I.S. back to the Chat UI so the user can see what happened
+              ws.send(JSON.stringify({ type: 'llm_chunk', text: `\n\n**[I.R.I.S. Action: ${irisResult.success ? 'Success' : 'Failed'}]**\n\`\`\`\n${irisResult.message}\n\`\`\`` }));
+            }
+          } catch (err: any) {
+            logger.error("WS", `[IRIS Uplink Error] Failed to parse or execute IRIS tool call via WS. Error: ${err.message}`, err);
+          }
+        }
+
         saveToMemory('jarvis', fullResponse);
         logInteraction('voice', userText, fullResponse);
         if (metrics) metrics.setExecutionResult('Direct chat complete');

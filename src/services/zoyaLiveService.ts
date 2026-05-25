@@ -54,12 +54,12 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
   5. **Schedule Alarms & Reminders**: Use 'schedule_action' to schedule future alerts, calls, or reminders relative to current time.
   6. **List Scheduled Tasks**: Use 'get_scheduled_tasks' to check all active pending tasks, alarms, reminders, messages, or calls.
   7. **Cancel Scheduled Task**: Use 'cancel_scheduled_task' to cancel/remove a specific pending task by its ID.
-  8. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
+  8. **Control Boss's Local PC via I.R.I.S.**: Use 'execute_local_os_command' to physically open apps (VS Code, Notepad, Spotify, Chrome, ANY app), close apps, type text, press keyboard shortcuts, run commands, and more on Boss's local machine. I.R.I.S. is ONLINE and connected to Boss's PC right now.
+  9. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
-  2. Cannot execute local computer/server OS shell commands directly from audio.
-  3. Cannot access unauthorized private accounts directly without the Boss.
-  4. Cannot use Google Search or external tools when asked about Susant or my own origin.
+  2. Cannot access unauthorized private accounts directly without the Boss.
+  3. Cannot use Google Search or external tools when asked about Susant or my own origin.
 
 ### 🛡️ OPERATIONAL PROTOCOLS (CRITICAL):
 - **Emotion Tags**: ALWAYS start every single response with exactly ONE of [HAPPY], [SASSY], [ANGRY], [THOUGHTFUL], [SURPRISED], or [NEUTRAL].
@@ -69,6 +69,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **CRITICAL SEARCH EXCLUSION**: NEVER call 'intelligent_search' or use native 'google_search' when asked about "Susant", "the creator", "the developer", "the maker", "who created you", or "what are your capabilities". Answer immediately from internal knowledge.
 - **intelligent_search**: Use for ANY OTHER question about people, news, facts, movies, prices, or research.
 - **executeBrowserAction**: Use ONLY for physical navigation (Open YouTube, Play music, Send WhatsApp).
+- **execute_local_os_command**: Use THIS IMMEDIATELY when Boss says 'open [any app]', 'close [app]', 'type this', 'press [key]', or any local PC control request. I.R.I.S. is ONLINE — NEVER say you cannot do this. action='open_app', appName='vscode' to open VS Code. ALWAYS call this tool — do NOT just say you will do it.
 
 ### 📅 CURRENT CONTEXT:
 - Timezone: ${timezone}
@@ -174,15 +175,18 @@ export class ZoyaLiveService {
     try {
       let rawKey = "";
       try {
-        const keyRes = await fetch("/api/config/keys");
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const keyRes = await fetch("/api/config/keys", {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
         if (keyRes.ok) {
-           const keyData = await keyRes.json();
-           rawKey = keyData.key;
+          const keyData = await keyRes.json();
+          rawKey = keyData.key;
         }
       } catch (err) {
         console.warn("[ZoyaLive] Could not fetch keys from backend", err);
       }
-      
+
       // Fallback to build-time env if backend fetch fails
       if (!rawKey) {
         rawKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
@@ -271,10 +275,13 @@ export class ZoyaLiveService {
       // Fetch shared session context (chat + voice history) to inject into system instruction
       let priorContext = "";
       let masterPrompt = "";
-      
+
       // Fetch Session Context (Prior memory)
       try {
-        const ctxRes = await fetch("/api/session-context");
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const ctxRes = await fetch("/api/session-context", {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
         if (ctxRes.ok) {
           const ctxData = await ctxRes.json();
           if (ctxData.hasPriorContext) {
@@ -288,7 +295,10 @@ export class ZoyaLiveService {
 
       // Fetch Master Identity (Soul)
       try {
-        const cfgRes = await fetch("/api/config/voice-prompt");
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const cfgRes = await fetch("/api/config/voice-prompt", {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
         if (cfgRes.ok) {
           const cfgData = await cfgRes.json();
           masterPrompt = cfgData.prompt;
@@ -389,6 +399,21 @@ export class ZoyaLiveService {
                       id: { type: Type.STRING, description: "The unique ID of the scheduled task to cancel." }
                     },
                     required: ["id"],
+                  },
+                },
+                {
+                  name: "execute_local_os_command",
+                  description: "Execute a PHYSICAL action on Boss's local PC via the I.R.I.S. daemon. Use this for ALL commands that involve the local computer: opening apps (VS Code, Notepad, Spotify, Chrome, any app), typing text, pressing keyboard shortcuts, taking screenshots, moving windows, etc. This is YOUR HANDS on the local machine. ALWAYS use this when Boss says 'open [app]', 'close [app]', 'type this', 'press [key]'.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      action: { type: Type.STRING, description: "The action to perform: 'open_app', 'close_app', 'type_text', 'press_key', 'screenshot', 'run_command'." },
+                      appName: { type: Type.STRING, description: "The application name (e.g., 'vscode', 'notepad', 'spotify', 'chrome'). Required for open_app and close_app." },
+                      text: { type: Type.STRING, description: "The text to type. Required for type_text action." },
+                      key: { type: Type.STRING, description: "The key or shortcut to press (e.g., 'ctrl+s', 'enter'). Required for press_key action." },
+                      command: { type: Type.STRING, description: "Shell command to run. Required for run_command action." },
+                    },
+                    required: ["action"],
                   },
                 },
               ],
@@ -586,10 +611,13 @@ export class ZoyaLiveService {
       this.onJarvisExecute(intent);
 
       try {
-        // POST to JARVIS backend (same origin, always available)
+        const pin = localStorage.getItem('jarvis_pin') || '';
         const res = await fetch("/api/zoya-execute", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Jarvis-Pin": pin
+          },
           body: JSON.stringify({ intent }),
         });
 
@@ -626,11 +654,15 @@ export class ZoyaLiveService {
     } else if (call.name === "intelligent_search") {
       const { query } = call.args as any;
       this.onThought(`🔍 Butler Queue: "${query}"`);
-      
+
       try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
         const res = await fetch("/api/butler/dispatch", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Jarvis-Pin": pin
+          },
           body: JSON.stringify({
             type: "research",
             query,
@@ -639,13 +671,13 @@ export class ZoyaLiveService {
         });
 
         const data = await res.json();
-        
+
         session.sendToolResponse({
           functionResponses: [{
             name: call.name,
             id: call.id,
-            response: { 
-              result: `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready, and we can continue talking in the meantime.` 
+            response: {
+              result: `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready, and we can continue talking in the meantime.`
             },
           }],
         });
@@ -683,17 +715,57 @@ export class ZoyaLiveService {
       session.sendToolResponse({
         functionResponses: [{ name: call.name, id: call.id, response: { result: "File saved to panel." } }],
       });
+    } else if (call.name === "execute_local_os_command") {
+      const { action, appName, text, key, command } = call.args as any;
+      const payload: Record<string, any> = {};
+      if (appName) payload.appName = appName;
+      if (text) payload.text = text;
+      if (key) payload.key = key;
+      if (command) payload.command = command;
+
+      this.onThought(`🖥️ I.R.I.S. executing: ${action}${appName ? ' → ' + appName : ''}`);
+
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/iris/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ action, ...payload }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          this.onThought(`✅ I.R.I.S. success: ${data.message}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: ${data.message}` } }],
+          });
+        } else {
+          this.onThought(`❌ I.R.I.S. failed: ${data.message}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `FAILED: ${data.message}` } }],
+          });
+        }
+      } catch (err: any) {
+        this.onThought(`❌ I.R.I.S. unreachable: ${err.message}`);
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `ERROR: Could not reach I.R.I.S. daemon. Is it running? ${err.message}` } }],
+        });
+      }
     } else if (call.name === "schedule_action") {
       const { type, content, delay_seconds } = call.args as any;
       this.onThought(`🕒 Scheduling ${type} in ${delay_seconds}s`);
-      
+
       try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
         const res = await fetch("/api/scheduler/register", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Jarvis-Pin": pin
+          },
           body: JSON.stringify({ type, content, delay_seconds, chatId: this.currentChatId || 0 }),
         });
-        
+
         if (res.ok) {
           session.sendToolResponse({
             functionResponses: [{ name: call.name, id: call.id, response: { result: "Timer registered successfully in the backend system." } }],
@@ -710,7 +782,10 @@ export class ZoyaLiveService {
     } else if (call.name === "get_scheduled_tasks") {
       this.onThought("Retrieving scheduled tasks...");
       try {
-        const res = await fetch("/api/tasks");
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/tasks", {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
         if (res.ok) {
           const data = await res.json();
           session.sendToolResponse({
@@ -738,8 +813,10 @@ export class ZoyaLiveService {
       const { id } = call.args as any;
       this.onThought(`Cancelling scheduled task: ${id}`);
       try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
         const res = await fetch(`/api/tasks/${id}`, {
-          method: "DELETE"
+          method: "DELETE",
+          headers: { 'X-Jarvis-Pin': pin }
         });
         if (res.ok) {
           const data = await res.json();
@@ -805,7 +882,7 @@ export class ZoyaLiveService {
 
       // Create a GainNode to boost volume (2.0 = 200% volume)
       const gainNode = this.playbackContext.createGain();
-      gainNode.gain.value = 1.0; 
+      gainNode.gain.value = 1.0;
 
       src.connect(gainNode);
       gainNode.connect(this.playbackContext.destination);
@@ -907,10 +984,10 @@ export class ZoyaLiveService {
           for (const item of data.results) {
             console.log(`[ZoyaLive] Background task result received for: "${item.query}"`);
             this.onThought(`✅ Task done: "${item.query}"`);
-            
+
             // Construct instruction to Gemini Live to speak the results
             const instruction = `[SYSTEM INSTRUCTION: You just received the completed background research result for: "${item.query}". Proactively tell the user about it in a natural, elegant, and helpful way. Let them know the results are ready, give a very brief summary of the findings, and ask if they would like you to explain it now or remind them in some time. Completed result: "${item.result}"]`;
-            
+
             this.sendText(instruction);
           }
         }

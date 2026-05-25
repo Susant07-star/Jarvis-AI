@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **System-Wide Total Awareness**: Fixed "amnesia gaps" by injecting intermediate tool execution results, background tasks (Scheduler, Butler), and I.R.I.S. failure states directly into the `ThreadManager` as `[SYSTEM - TOOL RESULT]` or `[SYSTEM NOTIFICATION]`. This ensures the LLM has perfect memory of its own actions and won't hallucinate successful execution when a tool fails.
+- Implemented State Guard in `server/orchestrator.ts` to handle confirmation inputs before intent classification, preventing confirmation bypass.
+- Refactored `server/browser/executor.ts` to ensure full sequential execution of all steps in a plan, fixing execution drop after the first step.
+
+### Updated
+- Updated documentation to reflect new confirmation handling and executor behavior.
+
+### [2026-05-24] I.R.I.S. Local Hands & OS Execution
+- **Feature — Local Physical Control (I.R.I.S.)**: Integrated the J.A.R.V.I.S. web server with the I.R.I.S. Electron desktop daemon over a secure Cloudflare tunnel.
+- **Feature — OS Command Suite**: Implemented `execute_local_os_command` tool allowing JARVIS to open/close desktop applications, type text via clipboard injection, press hotkeys, take screenshots (via `desktopCapturer`), move/click the mouse natively, and run shell commands (PowerShell/CMD).
+- **Feature — Zoya Live Native OS Control**: Extended `zoyaLiveService.ts` system prompt and tool definitions to allow Gemini Live Voice to natively trigger I.R.I.S. OS commands with near-zero latency.
+- **Fix — LLM JSON Extraction**: Hardened `/api/iris/execute` to strictly extract JSON payload blocks via regex, preventing parsing crashes when the LLM wraps tools in conversational text.
+- **Fix — Logging Precision**: Rewrote `logger.ts` to guarantee `INFO` level logs appear in `debug.log` without a verbose flag, and properly serialize Error stack traces.
+- **Fix — Action Aliases**: Mapped common tool action names (`type_text`, `press_key`, `screenshot`) natively inside the I.R.I.S. `api-bridge.ts` to fix previous missing command errors.
 ### [2026-05-19] Time-Aware Scheduler and Dynamic Task Management
 - **Feature — Dynamic Alarm/Reminder Cancellation & Modification**: Enabled full voice/text task editing. Users can now say "cancel my alarm" or "change my drink water alarm to a message in 5 minutes". The scheduler injects active task metadata into the LLM parser, matches target task IDs, and dynamically deletes/reschedules tasks.
 - **Feature — Time-Aware Alarm Briefings**: Replaced hardcoded wake-up briefings with a dynamic prompt context that reads user timezone and current time, adjusting output instructions based on whether the task is a wake-up call or a generic reminder.

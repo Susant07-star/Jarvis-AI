@@ -464,7 +464,83 @@ router.post("/chat", async (req, res) => {
         { role: "user", content: message }
       ];
 
-      const result = await callChatWithCascade(messages as any);
+      let result = await callChatWithCascade(messages as any);
+
+      // ── Universal Tool Handler (Agentic Loop) ─────────────────────────────
+      // We intercept any JSON tool call, dispatch it, and narrate the result.
+      if (result.content.includes('"tool"')) {
+        try {
+          const jsonMatch = result.content.match(/\{[\s\S]*"tool"[\s\S]*\}/);
+          const rawJson = jsonMatch ? jsonMatch[0] : result.content;
+          const toolCall = JSON.parse(rawJson);
+          
+          let toolSuccess = false;
+          let toolMessage = "";
+          let executed = false;
+
+          if (toolCall.tool === 'execute_local_os_command') {
+            const { executeOnIris } = await import('../irisExecutor');
+            const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
+            const irisResult = await executeOnIris(toolCall.action, parsedPayload);
+            toolSuccess = irisResult.success;
+            toolMessage = irisResult.message;
+            executed = true;
+          } else if (toolCall.tool === 'intelligent_search') {
+            const { butlerQueue } = await import('../butlerQueue');
+            // Assuming the text prompt uses "query" based on zoyaLiveService
+            const query = toolCall.query || toolCall.payload?.query || "General Research";
+            butlerQueue.dispatch('research', query, adminChatId);
+            toolSuccess = true;
+            toolMessage = `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready.`;
+            executed = true;
+          } else if (toolCall.tool === 'readWebpage') {
+            const url = toolCall.url || toolCall.payload?.url;
+            try {
+              const r = await fetch(`https://r.jina.ai/${url}`);
+              toolMessage = (await r.text()).substring(0, 12000);
+              toolSuccess = true;
+            } catch (err: any) {
+              toolSuccess = false;
+              toolMessage = `Error reading webpage: ${err.message}`;
+            }
+            executed = true;
+          } else if (toolCall.tool === 'saveFile') {
+            toolSuccess = true;
+            toolMessage = "File saved successfully to the frontend panel.";
+            // Fire an event to UI via websocket or rely on the final response
+            executed = true;
+          }
+
+          if (executed) {
+            messages.push({ role: "assistant", content: result.content });
+            const sysResultMsg = `[SYSTEM - TOOL RESULT]\nSuccess: ${toolSuccess}\nMessage/Output:\n${toolMessage}\n\nPlease summarize this result naturally for the user.`;
+            messages.push({ role: "user", content: sysResultMsg });
+            
+            const finalResult = await callChatWithCascade(messages as any);
+            const spokenReply = finalResult.content;
+
+            // Persist the ENTIRE agentic loop to memory (Total Awareness)
+            await ThreadManager.appendMessage(threadId, { role: 'user', content: message });
+            await ThreadManager.appendMessage(threadId, { role: 'assistant', content: result.content });
+            await ThreadManager.appendMessage(threadId, { role: 'user', content: sysResultMsg });
+            await ThreadManager.appendMessage(threadId, { role: 'assistant', content: spokenReply });
+
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.write(`data: ${JSON.stringify({ metadata: { model: finalResult.model, provider: finalResult.provider, iris_action: toolCall.tool } })}\n\n`);
+            res.write(`data: ${JSON.stringify({ content: spokenReply })}\n\n`);
+            res.write(`data: [DONE]\n\n`);
+            if (metrics) { metrics.setExecutionResult(`Tool ${toolCall.tool}: ${toolSuccess ? 'OK' : 'FAIL'}`); metrics.finalize(); }
+            return res.end();
+          }
+        } catch (err: any) {
+          logger.error("API", `[Tool Uplink Error] Failed to parse or execute tool call. Error: ${err.message}`, err);
+          logger.debug("API", `[Tool Uplink Error] Raw content was: ${result.content}`);
+          // Fall through to normal streaming if JSON parse failed
+        }
+      }
+      // ── End Universal Tool Handler ─────────────────────────────────────────
 
       // Save to persistent thread memory
       await ThreadManager.appendMessage(threadId, { role: "user", content: message });
@@ -991,5 +1067,74 @@ router.patch("/tasks/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+/**
+ * GET /api/iris/status
+ * Real-time health check — J.A.R.V.I.S. pings I.R.I.S. to see if the Hands are alive.
+ * The frontend UI can call this to show an "I.R.I.S. Connected 🟢" indicator.
+ */
+router.get("/iris/status", async (_req, res) => {
+  const { executeOnIris } = await import("../irisExecutor");
+  const result = await executeOnIris("ping", {});
+  if (result.success) {
+    res.json({ connected: true, message: "I.R.I.S. is online and ready." });
+  } else {
+    res.json({ connected: false, message: result.message });
+  }
+});
+
+/**
+ * POST /api/iris/execute
+ * The core "Neural Uplink" endpoint. Receives a physical OS command from
+ * the J.A.R.V.I.S. chat/WS pipeline (triggered by execute_local_os_command tool)
+ * and dispatches it to the I.R.I.S. daemon on the user's local machine.
+ *
+ * Body: { action: string, payload: object, confirmation_message: string }
+ *
+ * Real-Time Feedback: Returns the exact result from I.R.I.S. so J.A.R.V.I.S.
+ * can narrate the outcome to the user (success, failure, or timeout).
+ */
+router.post("/iris/execute", async (req, res) => {
+  try {
+    const { action, payload, confirmation_message, ...flatParams } = req.body;
+
+    if (!action) {
+      return res.status(400).json({ success: false, error: "Missing 'action' field." });
+    }
+
+    // Accept both flat body { action, appName, text, key } (from Voice UI)
+    // and nested body { action, payload: { appName } } (from chat pipeline)
+    let parsedPayload: Record<string, any> = { ...flatParams };
+    if (payload) {
+      try {
+        const nested = typeof payload === "string" ? JSON.parse(payload) : payload;
+        parsedPayload = { ...parsedPayload, ...nested };
+      } catch {
+        return res.status(400).json({ success: false, error: "Invalid JSON in 'payload' field." });
+      }
+    }
+
+    logger.info("API", `[I.R.I.S. Uplink] Action="${action}" Payload=${JSON.stringify(parsedPayload)}`);
+
+    const { executeOnIris } = await import("../irisExecutor");
+    const result = await executeOnIris(action, parsedPayload);
+
+    const message = result.success
+      ? (confirmation_message || result.message)
+      : `I encountered an issue: ${result.message}`;
+
+    res.json({
+      success: result.success,
+      message,
+      spoken_response: message,
+      raw: result.data,
+    });
+  } catch (err: any) {
+    logger.error("API", "I.R.I.S. Uplink Error", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 export default router;

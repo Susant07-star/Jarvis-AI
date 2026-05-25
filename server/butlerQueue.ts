@@ -14,6 +14,7 @@
 
 import { logger } from "./logger";
 import { callResearchWithCascade } from "./llmRouter";
+import { ThreadManager } from "./threadManager";
 
 interface ButlerTask {
   id: string;
@@ -108,10 +109,24 @@ class ButlerQueue {
 
         // 2. Send Telegram message with the result
         await this.deliverViaTelegram(task);
+
+        // 3. Inject into J.A.R.V.I.S. ThreadManager for Total Awareness
+        const threadId = task.chatId ? `tg_${task.chatId}` : "default_chat";
+        ThreadManager.appendMessage(threadId, {
+          role: "user",
+          content: `[SYSTEM NOTIFICATION: Background research for "${task.query}" has completed. Findings:\n${task.result}\n\nYou do not need to reply to this unless the user asks about it.]`
+        }).catch(e => logger.warn("Butler", "Failed to inject awareness to ThreadManager", e));
       }
     } catch (err: any) {
       task.status = "failed";
       logger.error("Butler", `[FAILED] Task ${task.id}: ${err.message}`);
+      
+      // Inject failure into J.A.R.V.I.S. ThreadManager for Total Awareness
+      const threadId = task.chatId ? `tg_${task.chatId}` : "default_chat";
+      ThreadManager.appendMessage(threadId, {
+        role: "user",
+        content: `[SYSTEM NOTIFICATION: Background research for "${task.query}" FAILED with error: ${err.message}]`
+      }).catch(e => logger.warn("Butler", "Failed to inject awareness to ThreadManager", e));
     } finally {
       // Clean up old tasks after 5 minutes
       setTimeout(() => this.tasks.delete(task.id), 5 * 60 * 1000);

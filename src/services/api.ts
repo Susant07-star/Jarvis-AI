@@ -9,14 +9,16 @@ export async function sendChatMessage(
   threadId: string = 'default_chat'
 ): Promise<{ reply: string, command?: any, browser_commands?: any[], model?: string, provider?: string }> {
   try {
+    const pin = localStorage.getItem('jarvis_pin') || '';
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Jarvis-Pin': pin
+      },
       body: JSON.stringify({ 
         message,
         thread_id: threadId
-        // NOTE: History is no longer sent from the browser.
-        // The server manages conversation state via ThreadManager.
       }),
       signal
     });

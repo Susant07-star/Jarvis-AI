@@ -78,6 +78,9 @@ export default function App() {
     setAppState(zoya.appState as any);
   }, [zoya.appState]);
 
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+
   // ── Startup browser state probe ──
   useEffect(() => {
     if (browserProbed) return;
@@ -95,7 +98,16 @@ export default function App() {
       };
 
       try {
-        const res = await fetch('/api/browser-status');
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch('/api/browser-status', {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
+        
+        if (res.status === 401) {
+          setShowPinPrompt(true);
+          return;
+        }
+
         const data = await res.json();
 
         if (data.alive && data.tabs && data.tabs.length > 0) {
@@ -224,6 +236,42 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col p-3 md:p-6 overflow-hidden relative">
+      {/* SECURITY LOCKDOWN OVERLAY */}
+      {showPinPrompt && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center">
+          <div className="glass-panel p-8 rounded-2xl flex flex-col items-center gap-6 max-w-sm w-full border border-red-500/30">
+            <Shield className="w-16 h-16 text-red-500 animate-pulse" />
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-red-400 font-mono mb-2">SYSTEM LOCKED</h2>
+              <p className="text-cyan-600/70 text-xs font-mono">Authentication required to access the neural link.</p>
+            </div>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                localStorage.setItem('jarvis_pin', pinInput);
+                window.location.reload();
+              }}
+              className="w-full flex flex-col gap-4"
+            >
+              <input
+                type="password"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="ENTER MASTER PIN"
+                className="w-full bg-cyan-950/50 border border-cyan-800 text-cyan-400 font-mono p-3 rounded text-center tracking-[0.5em] focus:outline-none focus:border-red-500 transition-colors"
+                autoFocus
+              />
+              <button 
+                type="submit"
+                className="w-full py-3 bg-red-900/40 hover:bg-red-800/60 border border-red-500/50 text-red-200 font-mono text-sm tracking-widest rounded transition-all"
+              >
+                AUTHORIZE
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <NeuralCanvas />
       <BrowserAgent />
       

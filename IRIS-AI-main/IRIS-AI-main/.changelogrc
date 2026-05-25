@@ -1,0 +1,61 @@
+{
+  "app_name": "IRIS AI",
+  "sections": [
+    {
+      "title": "🚨 BREAKING CHANGES",
+      "grep": "BREAKING"
+    },
+    {
+      "title": "✨ Features",
+      "grep": "^feat"
+    },
+    {
+      "title": "🐛 Bug Fixes",
+      "grep": "^fix"
+    },
+    {
+      "title": "⚡ Performance Improvements",
+      "grep": "^perf"
+    },
+    {
+      "title": "♻️ Refactoring",
+      "grep": "^refactor"
+    },
+    {
+      "title": "🛠️ Core & Build",
+      "grep": "^build|^ci|^chore"
+    },
+    {
+      "title": "📚 Documentation",
+      "grep": "^docs"
+    },
+    {
+      "title": "🚨 Security",
+      "grep": "^security"
+    },
+    {
+      "title": "🧪 Tests",
+      "grep": "^test"
+    },
+    {
+      "title": "🎨 Style",
+      "grep": "^style"
+    },
+    {
+      "title": "🚀 Release",
+      "grep": "^release"
+    },
+    {
+      "title": "🔧 Miscellaneous",
+      "grep": "^misc"
+    },
+    {
+      "title": "➕ Additions",
+      "grep": "^add"
+    },
+    {
+      "title": "🔄 Changes",
+      "grep": "^change"
+    }
+  ]
+}

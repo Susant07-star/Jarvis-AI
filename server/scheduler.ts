@@ -4,6 +4,7 @@ import https from "https";
 import { supabase } from "./supabaseClient";
 import { callChatWithCascade } from "./llmRouter";
 import { getTimezone } from "./timezoneStore";
+import { ThreadManager } from "./threadManager";
 
 interface ScheduledTask {
   id: string;
@@ -354,6 +355,13 @@ Your objective is to:
       if (supabase) {
         supabase.from("tasks").update({ status: "completed" }).eq("task_id", id).then();
       }
+
+      // Inject into J.A.R.V.I.S. ThreadManager for Total Awareness
+      const threadId = task.chatId ? `tg_${task.chatId}` : "default_chat";
+      ThreadManager.appendMessage(threadId, { 
+        role: "user", 
+        content: `[SYSTEM NOTIFICATION: You just fired a scheduled ${task.type} with the content: "${task.content}". You do not need to reply to this unless the user asks.]` 
+      }).catch(e => logger.warn("Scheduler", "Failed to inject awareness to ThreadManager", e));
 
     } catch (err: any) {
       logger.error("Scheduler", `Task execution failed: ${err.message}`);

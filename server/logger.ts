@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-const VERBOSE = process.env.JARVIS_VERBOSE === 'true';
 const LOG_DIR = path.resolve(process.cwd(), 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'debug.log');
 
@@ -11,38 +10,51 @@ function timestamp(): string {
     return new Date().toISOString();
 }
 
+function serialize(args: any[]): string {
+    return args.map(a => {
+        if (a === undefined) return '';
+        if (a instanceof Error) return `\n  Stack: ${a.stack}`;
+        if (typeof a === 'object') {
+            try { return '\n  ' + JSON.stringify(a, null, 2); } catch { return String(a); }
+        }
+        return String(a);
+    }).join(' ');
+}
+
 function writeToFile(level: string, tag: string, msg: string) {
     try {
         fs.appendFileSync(LOG_FILE, `[${timestamp()}] [${level}] [${tag}] ${msg}\n`);
-    } catch { /* swallow fs errors silently */ }
+    } catch { /* never swallow silently in prod — but can't log the log failure */ }
 }
 
 export const logger = {
-    /** Always prints to terminal + file */
+    /** Errors: always terminal + file + full stack trace */
     error(tag: string, msg: string, ...args: any[]) {
-        console.error(`[${tag}] ❌ ${msg}`, ...args);
-        writeToFile('ERROR', tag, msg);
+        const extra = serialize(args);
+        console.error(`[${tag}] ❌ ${msg}${extra}`);
+        writeToFile('ERROR', tag, `${msg}${extra}`);
     },
 
-    /** Always prints to terminal + file */
-    warn(tag: string, msg: string) {
-        console.warn(`[${tag}] ⚠️  ${msg}`);
-        writeToFile('WARN', tag, msg);
+    /** Warnings: always terminal + file */
+    warn(tag: string, msg: string, ...args: any[]) {
+        const extra = serialize(args);
+        console.warn(`[${tag}] ⚠️  ${msg}${extra}`);
+        writeToFile('WARN', tag, `${msg}${extra}`);
     },
 
-    /** Writes to debug.log, terminal only if JARVIS_VERBOSE=true */
-    debug(tag: string, msg: string) {
-        writeToFile('DEBUG', tag, msg);
-        if (VERBOSE) {
-            console.debug(`[${tag}] 🐛 ${msg}`);
+    /** Info: ALWAYS terminal + file (no VERBOSE gate) */
+    info(tag: string, msg: string, ...args: any[]) {
+        const extra = serialize(args);
+        console.log(`[${tag}] ${msg}${extra}`);
+        writeToFile('INFO', tag, `${msg}${extra}`);
+    },
+
+    /** Debug: always file, terminal only if JARVIS_VERBOSE=true */
+    debug(tag: string, msg: string, ...args: any[]) {
+        const extra = serialize(args);
+        writeToFile('DEBUG', tag, `${msg}${extra}`);
+        if (process.env.JARVIS_VERBOSE === 'true') {
+            console.debug(`[${tag}] 🐛 ${msg}${extra}`);
         }
     },
-
-    /** Terminal only if JARVIS_VERBOSE=true, always goes to file */
-    info(tag: string, msg: string) {
-        writeToFile('INFO', tag, msg);
-        if (VERBOSE) {
-            console.log(`[${tag}] ${msg}`);
-        }
-    }
 };

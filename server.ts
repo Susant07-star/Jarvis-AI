@@ -17,6 +17,18 @@ async function startServer() {
 
   app.use(express.json());
 
+  // ── Global Security Enforcement ──
+  app.use("/api", (req, res, next) => {
+    const requiredPin = process.env.JARVIS_PIN;
+    if (requiredPin) {
+      const providedPin = req.headers['x-jarvis-pin'] || req.query.pin;
+      if (providedPin !== requiredPin) {
+        return res.status(401).json({ error: "Unauthorized: Invalid Master PIN." });
+      }
+    }
+    next();
+  });
+
   // Mount modular API routes
   app.use("/api", apiRoutes);
 

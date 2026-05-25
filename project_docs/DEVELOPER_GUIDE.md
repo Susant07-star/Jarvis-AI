@@ -274,6 +274,30 @@ When ready to move to cloud storage:
 
 ---
 
+## I.R.I.S. Host OS Daemon (Setup & Execution)
+
+I.R.I.S. is the physical execution layer (Electron/Node daemon) that allows J.A.R.V.I.S. to control the host Windows machine.
+
+### Running I.R.I.S.
+1. Navigate to `IRIS-AI-main/IRIS-AI-main/`
+2. Run `npm run dev`
+3. The daemon will boot on `localhost:4000` and automatically establish a **Cloudflare Tunnel**.
+
+### Connecting J.A.R.V.I.S. to I.R.I.S.
+1. When I.R.I.S. boots, it prints a WORMHOLE URL to the console (e.g., `https://random-words.trycloudflare.com`).
+2. Copy this URL.
+3. Open `.env.local` in the root J.A.R.V.I.S. directory.
+4. Set `IRIS_WORMHOLE_URL=https://random-words.trycloudflare.com`
+5. Restart the J.A.R.V.I.S. web server.
+
+### Adding New I.R.I.S. Commands
+1. Edit `IRIS-AI-main/src/main/services/api-bridge.ts`.
+2. Add a new `case` in the switch statement for `req.body.action`.
+3. Implement the hardware binding (using `child_process`, `@nut-tree-fork/nut-js`, or `desktopCapturer`).
+4. Update the J.A.R.V.I.S. prompt in `server/agent_prompts/modules/iris_integration.json` to teach Gemini about the new action.
+
+---
+
 ## ⚠️ Watch-Out List for Future Developers
 
 ### 1. Browser Session Persistence

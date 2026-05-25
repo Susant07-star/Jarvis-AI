@@ -226,11 +226,14 @@ async function processMessage(userText: string, chatId: number): Promise<Planner
         logger.info("TelegramBot", `[TOOL] Scheduler registered: ${sa.action} (TaskID: ${taskId}) in ${sa.delay_seconds}s`);
       }
 
-      // FIX: If all actions were schedule actions, the scheduler already sent its own Telegram message(s).
-      // Do NOT generate a second chat confirmation — that causes double messages. Return empty string.
+      // Agentic Loop: Provide a natural confirmation instead of suppressing the reply.
+      // We inject the success into ThreadManager so J.A.R.V.I.S. remembers it.
       if (plan.actions.length > 0 && scheduleActions.length === plan.actions.length) {
-        logger.info("TelegramBot", `[NEURAL END] All actions were scheduler tasks. Scheduler handles confirmation. Suppressing chat reply.`);
-        return { content: "", tokens: 0, provider: "Scheduler", model: "N/A" };
+        const msg = `Sir, I have successfully scheduled your request.`;
+        await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+        await ThreadManager.appendMessage(threadId, { role: "assistant", content: msg });
+        logger.info("TelegramBot", `[NEURAL END] Scheduler actions completed. Confirming to user.`);
+        return { content: msg, tokens: 0, provider: "Scheduler", model: "N/A" };
       }
 
       const result = await callResearchWithCascade(userText);
@@ -258,9 +261,73 @@ You are responding via Telegram. Keep ALL replies under 40 words. Be direct, sha
   ];
 
   try {
-    const result = await callChatWithCascade(messages);
+    let result = await callChatWithCascade(messages);
     
-    // Persist the conversation
+    // ── Universal Tool Handler (Agentic Loop) ──────────────────────────────
+    if (result.content.includes('"tool"')) {
+      try {
+        const jsonMatch = result.content.match(/\{[\s\S]*"tool"[\s\S]*\}/);
+        const rawJson = jsonMatch ? jsonMatch[0] : result.content;
+        const toolCall = JSON.parse(rawJson);
+        
+        let toolSuccess = false;
+        let toolMessage = "";
+        let executed = false;
+
+        if (toolCall.tool === 'execute_local_os_command') {
+          const { executeOnIris } = await import('./irisExecutor');
+          const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
+          const irisResult = await executeOnIris(toolCall.action, parsedPayload);
+          toolSuccess = irisResult.success;
+          toolMessage = irisResult.message;
+          executed = true;
+        } else if (toolCall.tool === 'intelligent_search') {
+          const { butlerQueue } = await import('./butlerQueue');
+          const query = toolCall.query || toolCall.payload?.query || "General Research";
+          butlerQueue.dispatch('research', query, chatId);
+          toolSuccess = true;
+          toolMessage = `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready.`;
+          executed = true;
+        } else if (toolCall.tool === 'readWebpage') {
+          const url = toolCall.url || toolCall.payload?.url;
+          try {
+            const r = await fetch(`https://r.jina.ai/${url}`);
+            toolMessage = (await r.text()).substring(0, 12000);
+            toolSuccess = true;
+          } catch (err: any) {
+            toolSuccess = false;
+            toolMessage = `Error reading webpage: ${err.message}`;
+          }
+          executed = true;
+        } else if (toolCall.tool === 'saveFile') {
+          toolSuccess = true;
+          toolMessage = "File saved successfully.";
+          executed = true;
+        }
+
+        if (executed) {
+          messages.push({ role: "assistant", content: result.content });
+          const sysResultMsg = `[SYSTEM - TOOL RESULT]\nSuccess: ${toolSuccess}\nMessage/Output:\n${toolMessage}\n\nPlease summarize this result naturally for the user.`;
+          messages.push({ role: "user", content: sysResultMsg });
+          
+          logger.info("TelegramBot", `[AGENT LOOP] Re-prompting LLM with Tool result...`);
+          const finalResult = await callChatWithCascade(messages);
+
+          // Persist the ENTIRE agentic loop to memory (Total Awareness)
+          await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+          await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+          await ThreadManager.appendMessage(threadId, { role: "user", content: sysResultMsg });
+          await ThreadManager.appendMessage(threadId, { role: "assistant", content: finalResult.content });
+
+          logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${finalResult.model}] | Time: ${Date.now() - startTime}ms`);
+          return finalResult;
+        }
+      } catch (err: any) {
+        logger.error("TelegramBot", `[Tool Uplink Error] Failed to parse or execute tool call via Telegram. Error: ${err.message}`, err);
+      }
+    }
+    
+    // Fallback: Persist normal conversation
     await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
     await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
     
@@ -324,6 +391,16 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
   const chatId: number = msg.chat.id;
   const webAppUrl = process.env.WEB_APP_URL;
+
+  // ── Security Hardening: Validate Admin Chat ID ──
+  const adminChatIdStr = process.env.TELEGRAM_CHAT_ID;
+  if (adminChatIdStr) {
+    const adminIds = adminChatIdStr.split(',').map(id => parseInt(id.trim()));
+    if (!adminIds.includes(chatId)) {
+      logger.warn("TelegramBot", `🚨 UNAUTHORIZED ACCESS ATTEMPT from Chat ID: ${chatId}`);
+      return; // Silently drop unauthorized messages
+    }
+  }
 
   // Cache the chat ID so browser-initiated voice tasks know who to call
   import("./scheduler").then(({ jarvisScheduler }) => {

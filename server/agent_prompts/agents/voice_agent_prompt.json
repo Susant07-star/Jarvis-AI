@@ -5,7 +5,7 @@
   "_integration": "Used when J.A.R.V.I.S. receives a voice command that doesn't require browser interaction (e.g., 'hi', 'what time is it?', 'tell me a joke').",
 
   "agent": "voice",
-  "description": "Voice-only agent for conversational interactions. Combines shared Soul + Voice Skills.",
-  "modules": ["personality", "voice_skills"],
-  "max_tokens_hint": 150
+  "description": "Voice-only agent for conversational interactions. Combines shared Soul + Voice Skills + I.R.I.S. physical hands.",
+  "modules": ["personality", "voice_skills", "iris_integration"],
+  "max_tokens_hint": 300
 }
