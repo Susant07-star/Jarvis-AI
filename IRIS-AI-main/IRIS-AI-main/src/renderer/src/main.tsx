@@ -14,9 +14,20 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+
+let supabase: any = null;
+try {
+  supabase = createClient(supabaseUrl, supabaseKey);
+} catch (e) {
+  console.error("Failed to initialize Supabase client. Check VITE_SUPABASE_URL.", e);
+}
 
 const electronAPI = (window as any).electron?.ipcRenderer
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('Suppressing unhandled promise rejection to prevent app crash:', event.reason)
+  event.preventDefault()
+})
 
 class SystemErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -48,6 +59,7 @@ let isSessionUnlocked = false
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const [status, setStatus] = useState<'checking' | 'authorized'>('checking')
+  const [authError, setAuthError] = useState<Error | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -57,6 +69,10 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const verifyAccess = async () => {
       try {
+        if (!supabase) {
+          throw new Error("CRITICAL SECURITY ERROR: Supabase authentication client could not be initialized. Please check VITE_SUPABASE_URL and VITE_SUPABASE_KEY in your .env file. J.A.R.V.I.S. will not boot without secure auth.")
+        }
+        
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (sessionError || !session) {
@@ -67,6 +83,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
         const email = session.user?.email;
         if (import.meta.env.VITE_OWNER_EMAIL && email !== import.meta.env.VITE_OWNER_EMAIL) {
           await supabase.auth.signOut();
+          useAuthStore.getState().logout();
           navigate('/login', { replace: true })
           return;
         }
@@ -77,7 +94,11 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
         }
 
         setStatus('authorized')
-      } catch (error) {
+      } catch (error: any) {
+        if (error.message && error.message.includes("CRITICAL SECURITY ERROR")) {
+          setAuthError(error) // Trigger error boundary
+          return
+        }
         logout()
         navigate('/login', { replace: true })
       }
@@ -85,6 +106,10 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
     verifyAccess()
   }, [navigate, location.pathname, logout])
+
+  if (authError) {
+    throw authError; // This will be caught by SystemErrorBoundary
+  }
 
   if (status === 'checking') {
     return (

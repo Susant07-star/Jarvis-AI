@@ -9,6 +9,11 @@ export default function AuthInitializer() {
   useEffect(() => {
     const init = async () => {
       try {
+        if (!import.meta.env.VITE_IRIS_API_KEY) {
+          setAccessToken(null)
+          return
+        }
+
         const storedRefreshToken = localStorage.getItem('iris_cloud_token')
 
         if (!storedRefreshToken) {

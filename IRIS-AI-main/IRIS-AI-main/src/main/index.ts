@@ -161,40 +161,42 @@ function toggleOverlayMode() {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
-  autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.checkForUpdatesAndNotify()
+  if (!is.dev) {
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
 
-  autoUpdater.on('update-available', (info) => {
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Found',
-      message: `Neural Core Update Found: v${info.version}. Downloading in background...`
-    })
-  })
-
-  autoUpdater.on('error', (err) => {
-    dialog.showErrorBox(
-      'Auto-Updater Error',
-      err == null ? 'unknown error' : (err.stack || err).toString()
-    )
-  })
-
-  autoUpdater.on('update-downloaded', () => {
-    dialog
-      .showMessageBox({
+    autoUpdater.on('update-available', (info) => {
+      dialog.showMessageBox({
         type: 'info',
-        title: 'Update Ready',
-        message: 'New version downloaded! The system will now force reboot to apply the patch.',
-        buttons: ['Execute Restart']
+        title: 'Update Found',
+        message: `Neural Core Update Found: v${info.version}. Downloading in background...`
       })
-      .then(() => {
-        setImmediate(() => {
-          app.removeAllListeners('window-all-closed')
-          autoUpdater.quitAndInstall(false, true)
+    })
+
+    autoUpdater.on('error', (err) => {
+      console.warn('Auto-updater error (non-fatal):', err?.message || err)
+    })
+
+    autoUpdater.on('update-downloaded', () => {
+      dialog
+        .showMessageBox({
+          type: 'info',
+          title: 'Update Ready',
+          message: 'New version downloaded! The system will now force reboot to apply the patch.',
+          buttons: ['Execute Restart']
         })
-      })
-  })
+        .then(() => {
+          setImmediate(() => {
+            app.removeAllListeners('window-all-closed')
+            autoUpdater.quitAndInstall(false, true)
+          })
+        })
+    })
+
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.warn('checkForUpdatesAndNotify failed (non-fatal):', err?.message)
+    })
+  }
 
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
     const allowedPermissions = [
@@ -279,6 +281,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('check-keys-exist', () => {
     return fs.existsSync(secureConfigPath)
+  })
+
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion()
+  })
+
+  ipcMain.handle('check-for-updates', async () => {
+    if (is.dev) return { message: 'Updates disabled in dev mode.' }
+    try {
+      await autoUpdater.checkForUpdatesAndNotify()
+      return { message: 'Update check initiated.' }
+    } catch (err: any) {
+      return { message: err?.message || 'Update check failed.' }
+    }
   })
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

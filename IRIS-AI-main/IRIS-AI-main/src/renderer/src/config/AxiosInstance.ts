@@ -10,7 +10,7 @@ type QueueItem = {
 }
 
 const AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_KEY
+  baseURL: import.meta.env.VITE_BACKEND_KEY || 'http://localhost:3000'
 })
 
 AxiosInstance.interceptors.request.use((config) => {
@@ -72,7 +72,8 @@ AxiosInstance.interceptors.response.use(
           throw new Error('No refresh token found in local storage.')
         }
 
-        const res = await axios.post(`${import.meta.env.VITE_BACKEND_KEY}/users/refresh-token`, {
+        const backendUrl = import.meta.env.VITE_BACKEND_KEY || 'http://localhost:3000'
+        const res = await axios.post(`${backendUrl}/users/refresh-token`, {
           refreshToken: currentRefreshToken
         })
 
