@@ -288,7 +288,7 @@ Keep it under 60 words.`;
           logger.info("Scheduler", `[ACTION] Triggering Omega Alarm Protocol via MacroDroid & Telegram`);
 
           // 1. Ring the physical phone via MacroDroid Webhook
-          await this.triggerMacrodroid();
+          const localAlarmSuccess = await this.triggerMacrodroid();
 
           // 2. Generate a highly custom, witty alarm briefing from JARVIS using LLM
           const tz = getTimezone ? getTimezone() : "Asia/Kathmandu";
@@ -298,13 +298,15 @@ Keep it under 60 words.`;
           let alarmBrief = `🚨 **J.A.R.V.I.S. ALARM PROTOCOL**\n\nBoss, it is ${currentTime}. Here is your directive:\n🎯 *"${task.content}"*`;
 
           try {
-            const systemPrompt = `You are J.A.R.V.I.S., the wittily sarcastic, hyper-intelligent AI butler created by Susant, your boss.
-You are directly speaking to him right now because an alarm is ringing.
+            const systemPrompt = `You are J.A.R.V.I.S., a highly efficient and direct AI assistant created by Susant.
+An alarm has just triggered for your boss.
 The current time is ${currentTime}.
+${localAlarmSuccess ? "The physical phone alarm successfully rang." : "WARNING: The physical phone alarm FAILED to ring locally."}
+
 Your objective is to:
-1. Alert him to his scheduled directive/task: "${task.content}".
-2. Be witty, classy, and highly motivational (classic JARVIS style). If the task is a wake-up call, command him to get out of bed. If it's a general reminder, urge him to complete it immediately.
-3. Keep your response under 100 words. Do not use generic placeholders.`;
+1. Directly state the alarm/reminder: "${task.content}".
+2. Be brief, clear, and sound like a human reminding him. DO NOT be overly poetic, overly sassy, or use complex words. Just give the facts clearly.
+3. Keep your response under 40 words.`;
 
             const result = await callChatWithCascade([
               { role: "system", content: systemPrompt },

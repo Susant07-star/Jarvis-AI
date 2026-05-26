@@ -1,3 +1,8 @@
+// Load .env before anything else so process.env is populated
+import dotenv from 'dotenv'
+import path, { join } from 'path'
+dotenv.config({ path: join(process.cwd(), '.env') })
+
 import {
   app,
   shell,
@@ -11,7 +16,6 @@ import {
   systemPreferences,
   dialog
 } from 'electron'
-import path, { join } from 'path'
 import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'

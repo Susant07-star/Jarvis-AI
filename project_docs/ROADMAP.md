@@ -132,7 +132,7 @@
 ### 5.2 Next Steps for Local Environment
 - [ ] **Visual Awareness Loop**
   - Wire the I.R.I.S. base64 screenshot output into Gemini Vision so J.A.R.V.I.S can "see" the host screen autonomously.
-- [ ] **Cloudflare Tunnel Auto-Sync**
+- [x] **Cloudflare Tunnel Auto-Sync**
   - Use Supabase to automatically broadcast the changing Cloudflare tunnel URL from I.R.I.S. to J.A.R.V.I.S. on boot.
 
 ---

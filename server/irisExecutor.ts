@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { supabase } from "./supabaseClient";
 
 /**
  * IRIS Executor — The bridge between J.A.R.V.I.S. (Brain) and I.R.I.S. (Hands).
@@ -9,8 +10,8 @@ import { logger } from "./logger";
  * How it works:
  * 1. I.R.I.S. boots on the user's PC and opens a local HTTP server on port 4000.
  * 2. I.R.I.S. uses 'untun' (Cloudflare Tunnel) to expose that port to the internet with a public URL.
- * 3. That public URL is saved into the IRIS_WORMHOLE_URL environment variable.
- * 4. J.A.R.V.I.S. reads IRIS_WORMHOLE_URL and sends commands here.
+ * 3. That public URL is automatically synced to the Supabase iris_config table.
+ * 4. J.A.R.V.I.S. reads the dynamic URL from Supabase and sends commands here.
  *
  * Security: Every request includes the IRIS_API_KEY bearer token to prevent
  *           unauthorized access to the user's physical machine.
@@ -18,8 +19,37 @@ import { logger } from "./logger";
 
 const IRIS_API_KEY = process.env.IRIS_API_KEY || "ironman123";
 
-function getIrisUrl(): string | null {
-  return process.env.IRIS_WORMHOLE_URL || null;
+let cachedIrisUrl: string | null = process.env.IRIS_WORMHOLE_URL || null;
+let lastFetchTime = 0;
+
+async function getIrisUrl(forceRefresh = false): Promise<string | null> {
+  // If we don't have supabase configured, just use env
+  if (!supabase) return process.env.IRIS_WORMHOLE_URL || null;
+
+  // Cache URL for 5 minutes unless forced
+  const now = Date.now();
+  if (!forceRefresh && cachedIrisUrl && (now - lastFetchTime < 300000)) {
+    return cachedIrisUrl;
+  }
+
+  try {
+    const { data, error } = await supabase.from('iris_config').select('tunnel_url').eq('id', 1).single();
+    if (error) {
+      logger.error("IrisExecutor", `Failed to fetch URL from Supabase: ${error.message}`);
+      return cachedIrisUrl;
+    }
+    
+    if (data && data.tunnel_url && data.tunnel_url !== 'offline') {
+      cachedIrisUrl = data.tunnel_url;
+      lastFetchTime = now;
+      logger.info("IrisExecutor", `Synced new I.R.I.S. Tunnel URL from Supabase: ${cachedIrisUrl}`);
+      return cachedIrisUrl;
+    }
+  } catch (err: any) {
+    logger.error("IrisExecutor", `Supabase fetch exception: ${err.message}`);
+  }
+  
+  return cachedIrisUrl;
 }
 
 export interface IrisCommandResult {
@@ -36,7 +66,7 @@ export async function executeOnIris(
   action: string,
   payload: Record<string, any>
 ): Promise<IrisCommandResult> {
-  const irisUrl = getIrisUrl();
+  const irisUrl = await getIrisUrl();
 
   if (!irisUrl) {
     logger.warn(
@@ -96,6 +126,8 @@ export async function executeOnIris(
       };
     }
     logger.error("IrisExecutor", `Failed to reach I.R.I.S.: ${err.message}`);
+    // Clear cache so next request fetches fresh URL in case tunnel died
+    lastFetchTime = 0; 
     return {
       success: false,
       message: `Could not reach I.R.I.S. on your PC. Is the app running? Error: ${err.message}`,
