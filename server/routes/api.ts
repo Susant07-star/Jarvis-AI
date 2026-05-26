@@ -464,14 +464,7 @@ router.post("/chat", async (req, res) => {
         { role: "user", content: message }
       ];
 
-      // Fetch latest Photographic Memory frames from I.R.I.S if available
-      const { getVisionBuffer } = await import('../irisExecutor');
-      const visionFrames = await getVisionBuffer();
-      if (visionFrames && visionFrames.length > 0) {
-        logger.info("API", `Injecting ${visionFrames.length} I.R.I.S vision frames into Gemini context.`);
-      }
-
-      let result = await callChatWithCascade(messages as any, visionFrames || undefined);
+      let result = await callChatWithCascade(messages as any);
 
       // ── Universal Tool Handler (Agentic Loop) ─────────────────────────────
       // We intercept any JSON tool call, dispatch it, and narrate the result.
@@ -484,6 +477,7 @@ router.post("/chat", async (req, res) => {
           let toolSuccess = false;
           let toolMessage = "";
           let executed = false;
+          let visionFramesForNextCall: string[] | undefined = undefined;
 
           if (toolCall.tool === 'execute_local_os_command') {
             const { executeOnIris } = await import('../irisExecutor');
@@ -516,6 +510,19 @@ router.post("/chat", async (req, res) => {
             toolMessage = "File saved successfully to the frontend panel.";
             // Fire an event to UI via websocket or rely on the final response
             executed = true;
+          } else if (toolCall.tool === 'look_at_screen') {
+            const { getVisionBuffer } = await import('../irisExecutor');
+            const visionFrames = await getVisionBuffer();
+            if (visionFrames && visionFrames.length > 0) {
+              visionFramesForNextCall = visionFrames;
+              toolSuccess = true;
+              toolMessage = `I.R.I.S Photographic Memory buffer successfully attached to your visual cortex. Describe what you see, or verify if the action was successful.`;
+              executed = true;
+            } else {
+              toolSuccess = false;
+              toolMessage = "Failed to fetch frames or I.R.I.S is offline. Cannot see the screen.";
+              executed = true;
+            }
           }
 
           if (executed) {
@@ -523,7 +530,7 @@ router.post("/chat", async (req, res) => {
             const sysResultMsg = `[SYSTEM - TOOL RESULT]\nSuccess: ${toolSuccess}\nMessage/Output:\n${toolMessage}\n\nPlease summarize this result naturally for the user.`;
             messages.push({ role: "user", content: sysResultMsg });
             
-            const finalResult = await callChatWithCascade(messages as any);
+            const finalResult = await callChatWithCascade(messages as any, visionFramesForNextCall);
             const spokenReply = finalResult.content;
 
             // Persist the ENTIRE agentic loop to memory (Total Awareness)
