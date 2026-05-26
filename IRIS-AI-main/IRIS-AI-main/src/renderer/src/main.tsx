@@ -68,20 +68,35 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
   useEffect(() => {
     const verifyAccess = async () => {
+      const logToTerminal = (msg: string) => {
+        console.log(msg);
+        if (window.electron?.ipcRenderer) {
+          window.electron.ipcRenderer.send('console-log', msg);
+        }
+      };
+
+      logToTerminal("[AUTH] Starting verifyAccess check...");
       try {
         if (!supabase) {
-          throw new Error("CRITICAL SECURITY ERROR: Supabase authentication client could not be initialized. Please check VITE_SUPABASE_URL and VITE_SUPABASE_KEY in your .env file. J.A.R.V.I.S. will not boot without secure auth.")
+          logToTerminal("[AUTH ERROR] Supabase client is null!");
+          throw new Error("CRITICAL SECURITY ERROR: Supabase authentication client could not be initialized.")
         }
         
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        logToTerminal(`[AUTH] Supabase getSession result: sessionExists=${!!session}, error=${sessionError?.message || 'none'}`);
 
         if (sessionError || !session) {
+          logToTerminal("[AUTH] No active session found. Redirecting to /login");
           navigate('/login', { replace: true })
           return
         }
           
         const email = session.user?.email;
+        logToTerminal(`[AUTH] Active session email: ${email}`);
+        logToTerminal(`[AUTH] VITE_OWNER_EMAIL configured as: ${import.meta.env.VITE_OWNER_EMAIL}`);
+
         if (import.meta.env.VITE_OWNER_EMAIL && email !== import.meta.env.VITE_OWNER_EMAIL) {
+          logToTerminal("[AUTH ERROR] Email mismatch! Signing out and wiping local AuthStore.");
           await supabase.auth.signOut();
           useAuthStore.getState().logout();
           navigate('/login', { replace: true })
@@ -89,10 +104,12 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
         }
 
         if (!isSessionUnlocked && location.pathname !== '/lock') {
+          logToTerminal("[AUTH] Session not unlocked, redirecting to /lock");
           navigate('/lock', { replace: true })
           return
         }
 
+        logToTerminal("[AUTH] Authorized successfully!");
         setStatus('authorized')
       } catch (error: any) {
         if (error.message && error.message.includes("CRITICAL SECURITY ERROR")) {
@@ -133,7 +150,11 @@ const AppRouter = () => {
 
   useEffect(() => {
     if (electronAPI) {
+      const logToTerminal = (msg: string) => electronAPI.send('console-log', msg);
+      
+      logToTerminal("[ROUTER] electronAPI found, registering oauth-callback listener");
       electronAPI.on('oauth-callback', async (_event: any, url: string) => {
+        logToTerminal(`[ROUTER] oauth-callback triggered with URL: ${url}`);
         try {
           const urlObj = new URL(url.replace('iris://', 'http://localhost/'))
           const hashParams = new URLSearchParams(urlObj.hash.substring(1))
@@ -142,12 +163,16 @@ const AppRouter = () => {
           const accessToken = hashParams.get('access_token') || urlObj.searchParams.get('accessToken')
 
           if (refreshToken && accessToken) {
+            logToTerminal("[ROUTER] Extracted tokens from OAuth callback. Setting Supabase session...");
             await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
             useAuthStore.getState().setAccessToken(accessToken)
+            logToTerminal("[ROUTER] Navigating to /");
             navigate('/')
+          } else {
+            logToTerminal("[ROUTER WARNING] No tokens found in oauth callback URL");
           }
-        } catch (e) {
-          console.error(e)
+        } catch (e: any) {
+          logToTerminal(`[ROUTER ERROR] Error processing oauth callback: ${e.message}`);
         }
       })
     }

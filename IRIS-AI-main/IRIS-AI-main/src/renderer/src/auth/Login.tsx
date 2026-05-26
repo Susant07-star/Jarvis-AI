@@ -21,20 +21,23 @@ export default function LoginPage() {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
     if (supabaseUrl && supabaseKey) {
+      window.electron?.ipcRenderer.send('console-log', '[AUTH] Initiating Supabase OAuth flow...')
       const supabase = createClient(supabaseUrl, supabaseKey)
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // This will trigger the oauth-callback listener in main.tsx
           redirectTo: 'iris://callback'
         }
       })
       if (data?.url) {
+        window.electron?.ipcRenderer.send('console-log', '[AUTH] Opening external browser for Google login')
         window.open(data.url, '_blank')
       } else if (error) {
+        window.electron?.ipcRenderer.send('console-log', `[AUTH ERROR] Supabase OAuth Error: ${error.message}`)
         console.error("Supabase OAuth Error:", error)
       }
     } else {
+      window.electron?.ipcRenderer.send('console-log', '[CRITICAL ERROR] Missing Supabase credentials in your .env file! The button will do nothing until VITE_SUPABASE_URL and VITE_SUPABASE_KEY are set.')
       console.error("Missing Supabase credentials in .env")
     }
   }

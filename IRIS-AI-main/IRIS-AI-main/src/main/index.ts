@@ -110,6 +110,10 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  ipcMain.on('console-log', (_event, message) => {
+    console.log('\x1b[36m[IRIS FRONTEND]\x1b[0m', message)
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
