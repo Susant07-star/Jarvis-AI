@@ -134,3 +134,37 @@ export async function executeOnIris(
     };
   }
 }
+
+/**
+ * Retrieves the Photographic Memory Buffer from I.R.I.S.
+ * Returns an array of up to 10 base64-encoded JPEG frames (1 per second).
+ * Returns null if I.R.I.S. is offline or the buffer is empty.
+ */
+export async function getVisionBuffer(): Promise<string[] | null> {
+  const irisUrl = await getIrisUrl();
+  if (!irisUrl) return null;
+
+  try {
+    const response = await fetch(`${irisUrl}/execute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${IRIS_API_KEY}`,
+      },
+      body: JSON.stringify({ action: 'get_vision_buffer' }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) return null;
+
+    const result = await response.json();
+    const frames: string[] = result?.data?.frames || [];
+    if (frames.length > 0) {
+      logger.info('IrisExecutor', `Vision buffer fetched: ${frames.length} frames.`);
+    }
+    return frames.length > 0 ? frames : null;
+  } catch (err: any) {
+    logger.warn('IrisExecutor', `Vision buffer fetch failed: ${err.message}`);
+    return null;
+  }
+}

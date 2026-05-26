@@ -1,4 +1,4 @@
-import { IpcMain, app, clipboard, screen } from 'electron'
+import { IpcMain, app, clipboard, screen, desktopCapturer } from 'electron'
 import http from 'http'
 import { exec } from 'child_process'
 import { keyboard, Key, mouse, Button, Point } from '@nut-tree-fork/nut-js'
@@ -7,6 +7,9 @@ import { keyboard, Key, mouse, Button, Point } from '@nut-tree-fork/nut-js'
 // Reads the same IRIS_API_KEY env var that J.A.R.V.I.S. uses.
 // Only requests containing this Bearer token are processed.
 const SECRET_TOKEN = process.env.IRIS_API_KEY || 'ironman123'
+
+// ── Photographic Memory Buffer ────────────────────────────────────────────────
+const VISION_BUFFER: string[] = []
 
 // ── App Alias Map ────────────────────────────────────────────────────────────
 const APP_ALIASES: Record<string, string> = {
@@ -54,9 +57,12 @@ async function routeAction(action: string, payload: any): Promise<{ success: boo
   try {
     switch (action) {
 
-      // ── PING ──
       case 'ping':
         return { success: true, message: 'I.R.I.S. online. All systems nominal.' }
+
+      // ── GET VISION BUFFER ──
+      case 'get_vision_buffer':
+        return { success: true, message: 'Frames retrieved.', data: { frames: VISION_BUFFER } }
 
       // ── OPEN APP ──
       case 'open_app': {
@@ -311,4 +317,24 @@ export default function registerApiBridge({ ipcMain }: { ipcMain: IpcMain }) {
   server.on('error', (err) => {
     console.error(`[I.R.I.S. Daemon] ❌ Failed to start: ${err.message}`)
   })
+
+  // ── Start Vision Capture Loop ──
+  setInterval(async () => {
+    try {
+      const sources = await desktopCapturer.getSources({ 
+        types: ['screen'], 
+        thumbnailSize: { width: 1280, height: 720 } 
+      })
+      if (sources.length > 0) {
+        // Compress as JPEG to save memory and reduce bandwidth
+        const base64Img = sources[0].thumbnail.toJPEG(75).toString('base64')
+        VISION_BUFFER.push(base64Img)
+        if (VISION_BUFFER.length > 10) {
+          VISION_BUFFER.shift()
+        }
+      }
+    } catch (e) {
+      console.error("[I.R.I.S. Daemon] Screenshot capture failed:", e)
+    }
+  }, 1000)
 }

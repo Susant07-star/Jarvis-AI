@@ -99,16 +99,17 @@
 
 ---
 
-## Phase 4: Security Hardening & Owner Authentication (Third Priority 🔒)
+## Phase 4: Security Hardening & Owner Authentication ✅ (Completed)
 
 **Goal**: Harden J.A.R.V.I.S. access control to prevent unauthorized use, locking replies and system control solely to the primary administrator.
 
 ### 4.1 Owner Access Locking
-- **Telegram Admin Whitelist**
+- [x] **Telegram Admin Whitelist**
   - Restrict the Telegram bot listener to strictly reply only to verified user IDs (stored in env/database).
-  - Silently ignore or send a warning to any unauthorized user attempting to message J.A.R.V.I.S.
-- **Session Auth Keys**
-  - Implement token-based query validation on the WebUI routes to prevent arbitrary access to the HUD dashboard.
+- [x] **3-Layer Security Lock**
+  - **Layer 1:** Google OAuth integration natively via Supabase JS.
+  - **Layer 2:** Cloud Identity Whitelist checking against `OWNER_EMAIL`.
+  - **Layer 3:** 4-Digit Local Enclave Master PIN (required for both Web UI and I.R.I.S Vault).
 
 ### 4.2 Credentials & Encryption Isolation
 - **Encrypted Local Enclaves**
@@ -130,8 +131,13 @@
   - Ability to open/close apps, capture base64 screenshots via `desktopCapturer`, and run PowerShell commands.
 
 ### 5.2 Next Steps for Local Environment
-- [ ] **Visual Awareness Loop**
-  - Wire the I.R.I.S. base64 screenshot output into Gemini Vision so J.A.R.V.I.S can "see" the host screen autonomously.
+- [x] **I.R.I.S Daemon (Electron)**
+  - [x] Implement `desktopCapturer` in `wormhole.ts` (or main process) to take screenshots every 1000ms.
+  - [x] Implement a circular array holding the last 10 base64 frames.
+  - [x] Add an endpoint (e.g., action `get_vision_buffer`) to the wormhole Express server so J.A.R.V.I.S can retrieve the frames.
+- [x] **J.A.R.V.I.S Server (Backend)**
+  - [x] Add `getVisionBuffer()` to `irisExecutor.ts` to request frames from I.R.I.S.
+  - [x] Update `threadManager.ts` to fetch these frames when handling user messages and pass them into Gemini as inline image data.
 - [x] **Cloudflare Tunnel Auto-Sync**
   - Use Supabase to automatically broadcast the changing Cloudflare tunnel URL from I.R.I.S. to J.A.R.V.I.S. on boot.
 

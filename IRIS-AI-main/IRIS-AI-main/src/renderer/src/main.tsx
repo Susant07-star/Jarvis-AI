@@ -10,6 +10,11 @@ import { useAuthStore } from './store/auth-store'
 import AxiosInstance from './config/AxiosInstance'
 import AuthInitializer from './auth/AuthToken'
 import IndexRoot from './IndexRoot'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const electronAPI = (window as any).electron?.ipcRenderer
 
@@ -52,17 +57,18 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const verifyAccess = async () => {
       try {
-        if (!accessToken && !localStorage.getItem('iris_cloud_token')) {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError || !session) {
           navigate('/login', { replace: true })
           return
         }
-
-        const userRes = await AxiosInstance.get('/users/me')
-        if (userRes.status !== 200) throw new Error('Cloud Auth Failed')
           
-        const email = userRes.data?.user?.email || userRes.data?.email;
+        const email = session.user?.email;
         if (import.meta.env.VITE_OWNER_EMAIL && email !== import.meta.env.VITE_OWNER_EMAIL) {
-          throw new Error('UNAUTHORIZED IDENTITY DETECTED. ACCESS DENIED.');
+          await supabase.auth.signOut();
+          navigate('/login', { replace: true })
+          return;
         }
 
         if (!isSessionUnlocked && location.pathname !== '/lock') {
@@ -78,7 +84,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     }
 
     verifyAccess()
-  }, [navigate, location.pathname, accessToken, logout])
+  }, [navigate, location.pathname, logout])
 
   if (status === 'checking') {
     return (
@@ -102,20 +108,21 @@ const AppRouter = () => {
 
   useEffect(() => {
     if (electronAPI) {
-      electronAPI.on('oauth-callback', (_event: any, url: string) => {
+      electronAPI.on('oauth-callback', async (_event: any, url: string) => {
         try {
           const urlObj = new URL(url.replace('iris://', 'http://localhost/'))
+          const hashParams = new URLSearchParams(urlObj.hash.substring(1))
 
-          const refreshToken = urlObj.searchParams.get('refreshToken')
-          const accessToken = urlObj.searchParams.get('accessToken')
+          const refreshToken = hashParams.get('refresh_token') || urlObj.searchParams.get('refreshToken')
+          const accessToken = hashParams.get('access_token') || urlObj.searchParams.get('accessToken')
 
           if (refreshToken && accessToken) {
-            localStorage.setItem('iris_cloud_token', refreshToken)
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
             useAuthStore.getState().setAccessToken(accessToken)
-
             navigate('/')
           }
         } catch (e) {
+          console.error(e)
         }
       })
     }

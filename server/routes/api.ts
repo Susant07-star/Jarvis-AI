@@ -464,7 +464,14 @@ router.post("/chat", async (req, res) => {
         { role: "user", content: message }
       ];
 
-      let result = await callChatWithCascade(messages as any);
+      // Fetch latest Photographic Memory frames from I.R.I.S if available
+      const { getVisionBuffer } = await import('../irisExecutor');
+      const visionFrames = await getVisionBuffer();
+      if (visionFrames && visionFrames.length > 0) {
+        logger.info("API", `Injecting ${visionFrames.length} I.R.I.S vision frames into Gemini context.`);
+      }
+
+      let result = await callChatWithCascade(messages as any, visionFrames || undefined);
 
       // ── Universal Tool Handler (Agentic Loop) ─────────────────────────────
       // We intercept any JSON tool call, dispatch it, and narrate the result.

@@ -11,13 +11,32 @@ import {
   Lock
 } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
+import { createClient } from '@supabase/supabase-js'
 
 export default function LoginPage() {
   const [bootLogs, setBootLogs] = useState<string[]>([])
   const [isReady, setIsReady] = useState(false)
 
-  const handleGoogleLogin = () => {
-    window.open(`${import.meta.env.VITE_BACKEND_KEY}/users/google`, '_blank')
+  const handleGoogleLogin = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // This will trigger the oauth-callback listener in main.tsx
+          redirectTo: 'iris://callback'
+        }
+      })
+      if (data?.url) {
+        window.open(data.url, '_blank')
+      } else if (error) {
+        console.error("Supabase OAuth Error:", error)
+      }
+    } else {
+      console.error("Missing Supabase credentials in .env")
+    }
   }
 
   useEffect(() => {

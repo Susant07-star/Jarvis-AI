@@ -18,7 +18,7 @@ interface Provider {
   model: string;
   isAvailable: () => boolean;
   keyCount: () => number;
-  call: (messages: ThreadMessage[], forceJson?: boolean, imageBase64?: string) => Promise<PlannerResponse>;
+  call: (messages: ThreadMessage[], forceJson?: boolean, imageBase64?: string | string[]) => Promise<PlannerResponse>;
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
     model,
     isAvailable: () => !!process.env[envVarName],
     keyCount: () => getKeyCount(process.env[envVarName]),
-    call: async (messages: ThreadMessage[], forceJson: boolean = true, imageBase64?: string): Promise<PlannerResponse> => {
+    call: async (messages: ThreadMessage[], forceJson: boolean = true, imageBase64?: string | string[]): Promise<PlannerResponse> => {
       const apiKey = getRandomKey(process.env[envVarName]);
       const genAI = new GoogleGenAI({ apiKey });
 
@@ -118,15 +118,18 @@ function createGeminiProvider(name: string, model: string, envVarName: string): 
         parts: [{ text: m.content }]
       }));
 
-      // Add image to the LAST user message if provided
+      // Add image(s) to the LAST user message if provided
       if (imageBase64 && contents.length > 0) {
         const lastMsg = contents[contents.length - 1];
-        lastMsg.parts.push({
-          inlineData: {
-            data: imageBase64,
-            mimeType: "image/png"
-          }
-        } as any);
+        const images = Array.isArray(imageBase64) ? imageBase64 : [imageBase64];
+        images.forEach(img => {
+          lastMsg.parts.push({
+            inlineData: {
+              data: img,
+              mimeType: "image/jpeg"
+            }
+          } as any);
+        });
       }
 
       let content = "";
@@ -221,7 +224,7 @@ export async function callPlannerWithCascade(messages: ThreadMessage[], imageBas
   throw new Error("All LLM brains exhausted during planning.");
 }
 
-export async function callChatWithCascade(messages: ThreadMessage[]): Promise<PlannerResponse> {
+export async function callChatWithCascade(messages: ThreadMessage[], images?: string[]): Promise<PlannerResponse> {
   const available = CHAT_PROVIDER_PRIORITY.filter((p) => p.isAvailable());
   if (available.length === 0) throw new Error("No LLM provider configured.");
 
@@ -232,7 +235,7 @@ export async function callChatWithCascade(messages: ThreadMessage[]): Promise<Pl
 
     while (attempt < keyRetries) {
       try {
-        return await provider.call(messages, false);
+        return await provider.call(messages, false, images);
       } catch (err: any) {
         logger.warn("LLMRouter", `[Chat] ${provider.name} (${provider.model}) attempt ${attempt + 1} failed: ${err.message}`);
         if (attempt < keyRetries - 1) {
