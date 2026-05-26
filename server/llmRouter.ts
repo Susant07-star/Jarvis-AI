@@ -182,6 +182,7 @@ const cerebrasLlama70B = createOpenAICompatibleProvider("Cerebras", "llama3.1-70
 // GEMINI POOL (JSON/Planner) — generateContent REST API model names
 const gemini31FlashLite = createGeminiProvider("Google", "gemini-3.1-flash-lite-preview", "GEMINI_API_KEY");
 const gemini25Flash = createGeminiProvider("Google", "gemini-2.5-flash", "GEMINI_API_KEY");
+const gemini15Flash = createGeminiProvider("Google", "gemini-1.5-flash", "GEMINI_API_KEY");
 
 // ── Model Priority Cascade ────────────────────────────────────────────────────
 
@@ -225,7 +226,14 @@ export async function callPlannerWithCascade(messages: ThreadMessage[], imageBas
 }
 
 export async function callChatWithCascade(messages: ThreadMessage[], images?: string[]): Promise<PlannerResponse> {
-  const available = CHAT_PROVIDER_PRIORITY.filter((p) => p.isAvailable());
+  let cascade = CHAT_PROVIDER_PRIORITY;
+
+  // If vision is attached, strictly enforce Gemini 1.5 and 2.5 per user config
+  if (images && images.length > 0) {
+    cascade = [gemini15Flash, gemini25Flash];
+  }
+
+  const available = cascade.filter((p) => p.isAvailable());
   if (available.length === 0) throw new Error("No LLM provider configured.");
 
   for (let i = 0; i < available.length; i++) {
