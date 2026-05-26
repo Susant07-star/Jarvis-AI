@@ -60,7 +60,10 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
         const userRes = await AxiosInstance.get('/users/me')
         if (userRes.status !== 200) throw new Error('Cloud Auth Failed')
           
-
+        const email = userRes.data?.user?.email || userRes.data?.email;
+        if (import.meta.env.VITE_OWNER_EMAIL && email !== import.meta.env.VITE_OWNER_EMAIL) {
+          throw new Error('UNAUTHORIZED IDENTITY DETECTED. ACCESS DENIED.');
+        }
 
         if (!isSessionUnlocked && location.pathname !== '/lock') {
           navigate('/lock', { replace: true })

@@ -18,7 +18,18 @@ async function startServer() {
   app.use(express.json());
 
   // ── Global Security Enforcement ──
+  app.get("/api/config/auth", (req, res) => {
+    res.json({
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseKey: process.env.SUPABASE_KEY,
+      ownerEmail: process.env.OWNER_EMAIL
+    });
+  });
+
   app.use("/api", (req, res, next) => {
+    // Skip PIN check for the auth config endpoint so frontend can load login screen
+    if (req.path === '/config/auth') return next();
+
     const requiredPin = process.env.JARVIS_PIN;
     if (requiredPin) {
       const providedPin = req.headers['x-jarvis-pin'] || req.query.pin;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { VoiceVisualizer } from './components/jarvis/VoiceVisualizer';
 import { ChatWindow, Message } from './components/jarvis/ChatWindow';
 import { BrowserAgent } from './components/jarvis/BrowserAgent';
@@ -80,6 +81,10 @@ export default function App() {
 
   const [showPinPrompt, setShowPinPrompt] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [supabaseClient, setSupabaseClient] = useState<any>(null);
 
   // ── Startup browser state probe ──
   useEffect(() => {
@@ -96,6 +101,31 @@ export default function App() {
         timestamp: new Date(),
         source: 'system'
       };
+
+      try {
+        const authRes = await fetch('/api/config/auth');
+        const authConfig = await authRes.json();
+        
+        if (authConfig.supabaseUrl && authConfig.supabaseKey) {
+          const supabase = createClient(authConfig.supabaseUrl, authConfig.supabaseKey);
+          setSupabaseClient(supabase);
+          
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            setShowAuthPrompt(true);
+            return;
+          }
+          
+          if (authConfig.ownerEmail && session.user.email !== authConfig.ownerEmail) {
+            await supabase.auth.signOut();
+            setAuthError("UNAUTHORIZED IDENTITY DETECTED. ACCESS DENIED.");
+            setShowAuthPrompt(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Auth config fetch failed", err);
+      }
 
       try {
         const pin = localStorage.getItem('jarvis_pin') || '';
@@ -236,6 +266,34 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col p-3 md:p-6 overflow-hidden relative">
+      {/* IDENTITY LOCKDOWN OVERLAY */}
+      {showAuthPrompt && (
+        <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center">
+          <div className="glass-panel p-8 rounded-2xl flex flex-col items-center gap-6 max-w-sm w-full border border-indigo-500/30">
+            <Shield className="w-16 h-16 text-indigo-400 animate-pulse" />
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-indigo-400 font-mono mb-2">IDENTITY VERIFICATION</h2>
+              <p className="text-cyan-600/70 text-xs font-mono">
+                {authError || "Please authenticate to access J.A.R.V.I.S. neural link."}
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                if (supabaseClient) {
+                  await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.origin }
+                  });
+                }
+              }}
+              className="w-full bg-indigo-900/40 hover:bg-indigo-800/60 border border-indigo-500/50 text-indigo-300 py-3 rounded-lg font-mono tracking-widest transition-all"
+            >
+              LOGIN WITH GOOGLE
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* SECURITY LOCKDOWN OVERLAY */}
       {showPinPrompt && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center">

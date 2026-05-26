@@ -1,7 +1,11 @@
+import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 import { logger } from "./logger";
 import { supabase } from "./supabaseClient";
+
+// Initialize Gemini for Embeddings
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const THREADS_DIR = path.join(process.cwd(), "data", "threads");
 
@@ -13,28 +17,49 @@ if (!fs.existsSync(THREADS_DIR)) {
 export interface ThreadMessage {
   role: "user" | "assistant" | "system";
   content: string;
+  timestamp?: string;
 }
 
 export class ThreadManager {
   /**
-   * Retrieves the last N messages for a given thread.
+   * Helper to convert text into a 768-dimension vector
+   */
+  static async getEmbedding(text: string): Promise<number[] | null> {
+    if (!process.env.GEMINI_API_KEY) return null;
+    try {
+      const response = await ai.models.embedContent({
+        model: 'text-embedding-004',
+        contents: text,
+      });
+      return response.embeddings?.[0]?.values || null;
+    } catch (e) {
+      logger.error("ThreadManager", "Embedding failed", e);
+      return null;
+    }
+  }
+
+  /**
+   * Retrieves the last N messages for a given thread (Short-Term Memory)
    */
   static async getHistory(threadId: string, limit: number = 20): Promise<ThreadMessage[]> {
     if (supabase) {
       try {
         const { data, error } = await supabase
           .from("memory_store")
-          .select("value")
-          .eq("key", threadId)
-          .single();
+          .select("content, metadata")
+          .eq("metadata->>thread_id", threadId)
+          .order("metadata->>timestamp", { ascending: false })
+          .limit(limit);
 
-        if (error && error.code !== "PGRST116") { // PGRST116 is 'not found'
-          logger.error("ThreadManager", `Supabase getHistory error for ${threadId}`, error);
-        }
+        if (error) throw error;
         
-        if (data && data.value) {
-          const history: ThreadMessage[] = data.value;
-          return history.slice(-limit);
+        if (data && data.length > 0) {
+          // Data is descending (newest first). Reverse it for chat history context.
+          return data.reverse().map(row => ({
+            role: row.metadata?.role || "user",
+            content: row.content,
+            timestamp: row.metadata?.timestamp
+          }));
         }
         return [];
       } catch (err) {
@@ -44,53 +69,80 @@ export class ThreadManager {
 
     // Fallback to local
     const filePath = path.join(THREADS_DIR, `${threadId}.json`);
-    if (!fs.existsSync(filePath)) {
-      return [];
-    }
-
+    if (!fs.existsSync(filePath)) return [];
     try {
       const data = fs.readFileSync(filePath, "utf-8");
       const history: ThreadMessage[] = JSON.parse(data);
       return history.slice(-limit);
     } catch (err) {
-      logger.error("ThreadManager", `Failed to read local history for ${threadId}`, err);
       return [];
     }
   }
 
   /**
-   * Appends a new message to the thread history.
+   * Appends a new message to the thread history and embeds it in the Vector DB (Long-Term Memory)
    */
   static async appendMessage(threadId: string, message: ThreadMessage) {
-    const history = await this.getHistory(threadId, 100); // Keep up to 100 in deep memory
-    history.push(message);
+    if (!message.content || !message.content.trim()) return;
 
     if (supabase) {
       try {
-        const { error } = await supabase
+        const timestamp = message.timestamp || new Date().toISOString();
+        const embedding = await this.getEmbedding(message.content);
+        
+        await supabase
           .from("memory_store")
-          .upsert({ 
-            key: threadId, 
-            value: history,
-            updated_at: new Date().toISOString()
+          .insert({
+            content: message.content,
+            metadata: {
+              thread_id: threadId,
+              role: message.role,
+              timestamp: timestamp
+            },
+            embedding: embedding || null
           });
-
-        if (error) {
-          logger.error("ThreadManager", `Supabase save history error for ${threadId}`, error);
-        } else {
-          return; // Successfully saved to Supabase
-        }
       } catch (err) {
-        logger.error("ThreadManager", `Failed to save history to Supabase for ${threadId}`, err);
+        logger.error("ThreadManager", `Failed to save vector history for ${threadId}`, err);
       }
     }
 
-    // Fallback to local
+    // Fallback local backup (keeping rolling window of 100)
     const filePath = path.join(THREADS_DIR, `${threadId}.json`);
+    let localHistory: ThreadMessage[] = [];
+    if (fs.existsSync(filePath)) {
+      try { localHistory = JSON.parse(fs.readFileSync(filePath, "utf-8")); } catch(e){}
+    }
+    localHistory.push(message);
+    if (localHistory.length > 100) localHistory = localHistory.slice(-100);
+    fs.writeFileSync(filePath, JSON.stringify(localHistory, null, 2));
+  }
+
+  /**
+   * Semantic Vector Search: Finds most relevant past memories matching a query
+   */
+  static async searchMemory(query: string, limit: number = 3): Promise<string[]> {
+    if (!supabase || !process.env.GEMINI_API_KEY) return [];
+    
     try {
-      fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+      const queryEmbedding = await this.getEmbedding(query);
+      if (!queryEmbedding) return [];
+
+      // Requires Supabase RPC `match_memories`
+      const { data, error } = await supabase.rpc('match_memories', {
+        query_embedding: queryEmbedding,
+        match_threshold: 0.5, // Return memories with > 50% similarity
+        match_count: limit
+      });
+
+      if (error) {
+        logger.warn("ThreadManager", "Vector search RPC failed. Has the SQL script been run?", error);
+        return [];
+      }
+
+      return data.map((row: any) => `[Past Memory - ${new Date(row.metadata?.timestamp || Date.now()).toLocaleString()}]: ${row.content}`);
     } catch (err) {
-      logger.error("ThreadManager", `Failed to save local history for ${threadId}`, err);
+      logger.error("ThreadManager", "Search memory failed", err);
+      return [];
     }
   }
 
@@ -100,10 +152,8 @@ export class ThreadManager {
   static async clearThread(threadId: string) {
     if (supabase) {
       try {
-        await supabase.from("memory_store").delete().eq("key", threadId);
-      } catch (err) {
-        logger.error("ThreadManager", `Failed to delete from Supabase: ${threadId}`, err);
-      }
+        await supabase.from("memory_store").delete().eq("metadata->>thread_id", threadId);
+      } catch (err) {}
     }
 
     const filePath = path.join(THREADS_DIR, `${threadId}.json`);
