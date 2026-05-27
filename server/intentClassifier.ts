@@ -32,16 +32,16 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     return "schedule";
   }
 
-  // Local Guard: Instant, 100% accurate, zero-latency chat match for creator / Susant / capability queries
-  const creatorKeywords = [
-    "susant", "developer", "creator", "maker", "who created you", "who made you", 
-    "who built you", "who is the boss", "the boss", "your capability", "what can you do",
-    "what you can do", "what you can't do", "what you cannot do", "your limitation",
-    // OS Commands (force to chat mode so J.A.R.V.I.S can intercept execute_local_os_command)
-    "open vs code", "open vscode", "open notepad", "open spotify", "close spotify", 
-    "type this", "press ctrl", "scroll down", "scroll up", "run this command", 
-    "send a whatsapp", "open app", "close app"
-  ];
+   // Local Guard: Instant, 100% accurate, zero-latency chat match for creator / Susant / capability queries
+   const creatorKeywords = [
+     "susant", "developer", "creator", "maker", "who created you", "who made you", 
+     "who built you", "who is the boss", "the boss", "your capability", "what can you do",
+     "what you can do", "what you can't do", "what you cannot do", "your limitation",
+     // OS Commands (force to chat mode so J.A.R.V.I.S can intercept execute_local_os_command)
+     "open vs code", "open vscode", "open notepad", "open spotify", "close spotify", 
+     "type this", "press ctrl", "scroll down", "scroll up", "run this command", 
+     "send a whatsapp", "open whatsapp", "whatsapp", "open app", "close app"
+   ];
   if (creatorKeywords.some(k => lower.includes(k))) {
     logger.info("Classifier", `[LocalGuard] Match creator/OS command query for chat intent: "${text}"`);
     return "chat";

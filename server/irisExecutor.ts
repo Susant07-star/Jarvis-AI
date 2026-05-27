@@ -22,6 +22,43 @@ const IRIS_API_KEY = process.env.IRIS_API_KEY || "ironman123";
 let cachedIrisUrl: string | null = process.env.IRIS_WORMHOLE_URL || null;
 let lastFetchTime = 0;
 
+/**
+ * Enhanced executor with visual verification
+ */
+export async function executeOnIrisWithVerification(
+  action: string,
+  payload: Record<string, any>
+): Promise<IrisCommandResult> {
+  // Execute the original action
+  const result = await executeOnIris(action, payload);
+  
+  // If action was successful and is an OS interaction action, verify with screenshot
+  if (result.success && 
+      ['open_app', 'close_app', 'click_screen', 'phantom_type', 'type_text', 
+       'press_key', 'press_keys', 'run_command', 'scroll'].includes(action)) {
+    
+    // Minimal delay to let the action settle (reduced from 500ms to 100ms for speed)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Take verification screenshot
+    const verifyResult = await executeOnIris('screenshot', {});
+    
+    if (verifyResult.success && verifyResult.data) {
+      // Attach verification data to result
+      return {
+        ...result,
+        verification: {
+          screenshotTaken: true,
+          timestamp: new Date().toISOString(),
+          data: verifyResult.data
+        }
+      };
+    }
+  }
+  
+  return result;
+}
+
 async function getIrisUrl(forceRefresh = false): Promise<string | null> {
   // If we don't have supabase configured, just use env
   if (!supabase) return process.env.IRIS_WORMHOLE_URL || null;
@@ -56,6 +93,11 @@ export interface IrisCommandResult {
   success: boolean;
   message: string;
   data?: any;
+  verification?: {
+    screenshotTaken: boolean;
+    timestamp: string;
+    data?: any;
+  };
 }
 
 /**

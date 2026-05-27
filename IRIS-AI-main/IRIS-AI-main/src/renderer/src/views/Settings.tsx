@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as faceapi from 'face-api.js'
 import { GiArtificialIntelligence } from 'react-icons/gi'
+import { RiCloseLine } from 'react-icons/ri'
+import { FaMemory } from 'react-icons/fa6'
+import { HiComputerDesktop } from 'react-icons/hi2'
 import {
   RiKey2Line,
   RiSave3Line,
@@ -21,14 +24,16 @@ import {
   RiTerminalWindowLine,
   RiRefreshLine,
   RiDownloadCloud2Line,
-  RiRocketLine
+  RiRocketLine,
+  RiPulseLine,
+  RiCloseLine
 } from 'react-icons/ri'
 
 interface SettingsProps {
   isSystemActive: boolean
 }
 
-type TabType = 'updates' | 'general' | 'keys' | 'security'
+type TabType = 'updates' | 'general' | 'keys' | 'security' | 'monitoring'
 
 const SettingsView = ({ isSystemActive }: SettingsProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('updates')
@@ -43,6 +48,12 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
   const [groqKey, setGroqKey] = useState(localStorage.getItem('iris_groq_api_key') || '')
   const [hfKey, setHfKey] = useState(localStorage.getItem('iris_hf_api_key') || '')
   const [tailvyKey, setTailvyKey] = useState(localStorage.getItem('iris_tailvy_api_key') || '')
+
+  // System Monitoring Thresholds
+  const [cpuThreshold, setCpuThreshold] = useState(85)
+  const [ramThreshold, setRamThreshold] = useState(90)
+  const [batteryThreshold, setBatteryThreshold] = useState(20)
+  const [isMonitoringActive, setIsMonitoringActive] = useState(false)
 
   const [isSecurityUnlocked, setIsSecurityUnlocked] = useState(false)
   const [authPin, setAuthPin] = useState('')
@@ -271,6 +282,12 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
               className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold tracking-widest rounded-lg transition-all duration-300 ${activeTab === 'security' ? 'bg-white text-black shadow-md' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
             >
               <RiShieldKeyholeLine size={16} /> SECURITY
+            </button>
+            <button
+              onClick={() => setActiveTab('monitoring')}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold tracking-widest rounded-lg transition-all duration-300 ${activeTab === 'monitoring' ? 'bg-white text-black shadow-md' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+            >
+              <RiPulseLine size={16} /> MONITORING
             </button>
           </div>
         </div>
@@ -608,9 +625,121 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
                           UNLOCK
                         </button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+</motion.div>
+            )}
+
+            {/* --- TAB 5: MONITORING --- */}
+            {activeTab === 'monitoring' && (
+              <motion.div
+                key="monitoring"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="grid grid-cols-1 gap-6 absolute w-full"
+              >
+                <div className={`${cardClass} gap-6`}>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <span className={titleClass}>
+                      <RiPulseLine className="text-cyan-400" size={18} /> System Monitoring
+                    </span>
+                    <span className={`text-[10px] font-mono tracking-widest px-3 py-1 rounded-md border ${isMonitoringActive ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : 'text-zinc-400 border-zinc-700 bg-zinc-900'}`}>
+                      {isMonitoringActive ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <label className="text-[10px] text-zinc-400 font-mono tracking-widest uppercase mb-2 flex items-center gap-2">
+                        <RiCpuLine size={14} /> CPU Alert Threshold ({cpuThreshold}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={cpuThreshold}
+                        onChange={(e) => setCpuThreshold(parseInt(e.target.value))}
+                        className="w-full h-2 bg-zinc-900 rounded-full appearance-none cursor-pointer slider-thumb"
+                      />
+                      <style>{`
+                        .slider-thumb::-webkit-slider-thumb {
+                          appearance: none;
+                          width: 20px;
+                          height: 20px;
+                          border-radius: 50%;
+                          background: #06b6d4;
+                          cursor: pointer;
+                          box-shadow: 0 0 10px #06b6d4;
+                        }
+                      `}</style>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-zinc-400 font-mono tracking-widest uppercase mb-2 flex items-center gap-2">
+                        <FaMemory size={14} /> RAM Alert Threshold ({ramThreshold}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={ramThreshold}
+                        onChange={(e) => setRamThreshold(parseInt(e.target.value))}
+                        className="w-full h-2 bg-zinc-900 rounded-full appearance-none cursor-pointer slider-thumb"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-zinc-400 font-mono tracking-widest uppercase mb-2 flex items-center gap-2">
+                        <HiComputerDesktop size={14} /> Battery Alert Threshold ({batteryThreshold}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="5"
+                        max="50"
+                        value={batteryThreshold}
+                        onChange={(e) => setBatteryThreshold(parseInt(e.target.value))}
+                        className="w-full h-2 bg-zinc-900 rounded-full appearance-none cursor-pointer slider-thumb"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={() => {
+                          // Send thresholds to JARVIS
+                          fetch('/api/system/thresholds', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ cpu: cpuThreshold, ram: ramThreshold, battery: batteryThreshold })
+                          }).then(() => alert('Thresholds saved'));
+                        }}
+                        className="flex-1 py-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-400 hover:text-black font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 transition-all border border-cyan-500/50 cursor-pointer"
+                      >
+                        <RiSave3Line size={16} /> SAVE THRESHOLDS
+                      </button>
+                      <button
+                        onClick={() => {
+                          const action = isMonitoringActive ? 'stop' : 'start';
+                          fetch(`/api/system/${action}`, { method: 'POST' })
+                            .then(() => setIsMonitoringActive(!isMonitoringActive));
+                        }}
+                        className={`flex-1 py-3 rounded-lg font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 transition-all cursor-pointer ${isMonitoringActive ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'}`}
+                      >
+                        {isMonitoringActive ? <RiCloseLine size={16} /> : <RiRecordCircleLine size={16} />}
+                        {isMonitoringActive ? 'STOP MONITORING' : 'START MONITORING'}
+                      </button>
+                    </div>
+
+                    <div className="bg-[#050505] border border-white/5 p-4 rounded-xl mt-2">
+                      <p className="text-[10px] text-zinc-400 font-mono leading-relaxed">
+                        [MONITORING] When enabled, JARVIS will continuously monitor your system resources.
+                        Alerts will be sent via Telegram when thresholds are exceeded or suspicious processes are detected.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            </AnimatePresence>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0a0a0c] p-6 rounded-3xl border border-white/5">
                   <div className="bg-[#111113] border border-white/10 p-7 rounded-2xl flex flex-col gap-5">

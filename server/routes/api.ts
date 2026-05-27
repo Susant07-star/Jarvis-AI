@@ -1099,56 +1099,131 @@ router.get("/iris/status", async (_req, res) => {
 });
 
 /**
- * POST /api/iris/execute
- * The core "Neural Uplink" endpoint. Receives a physical OS command from
- * the J.A.R.V.I.S. chat/WS pipeline (triggered by execute_local_os_command tool)
- * and dispatches it to the I.R.I.S. daemon on the user's local machine.
- *
- * Body: { action: string, payload: object, confirmation_message: string }
- *
- * Real-Time Feedback: Returns the exact result from I.R.I.S. so J.A.R.V.I.S.
- * can narrate the outcome to the user (success, failure, or timeout).
+ * GET /api/system/metrics
+ * Fetches current system metrics (CPU, RAM, battery, processes)
+ * Used by I.R.I.S. dashboard to display live telemetry
  */
-router.post("/iris/execute", async (req, res) => {
+router.get("/system/metrics", async (_req, res) => {
   try {
-    const { action, payload, confirmation_message, ...flatParams } = req.body;
-
-    if (!action) {
-      return res.status(400).json({ success: false, error: "Missing 'action' field." });
-    }
-
-    // Accept both flat body { action, appName, text, key } (from Voice UI)
-    // and nested body { action, payload: { appName } } (from chat pipeline)
-    let parsedPayload: Record<string, any> = { ...flatParams };
-    if (payload) {
-      try {
-        const nested = typeof payload === "string" ? JSON.parse(payload) : payload;
-        parsedPayload = { ...parsedPayload, ...nested };
-      } catch {
-        return res.status(400).json({ success: false, error: "Invalid JSON in 'payload' field." });
-      }
-    }
-
-    logger.info("API", `[I.R.I.S. Uplink] Action="${action}" Payload=${JSON.stringify(parsedPayload)}`);
-
-    const { executeOnIris } = await import("../irisExecutor");
-    const result = await executeOnIris(action, parsedPayload);
-
-    const message = result.success
-      ? (confirmation_message || result.message)
-      : `I encountered an issue: ${result.message}`;
-
-    res.json({
-      success: result.success,
-      message,
-      spoken_response: message,
-      raw: result.data,
-    });
-  } catch (err: any) {
-    logger.error("API", "I.R.I.S. Uplink Error", err);
-    res.status(500).json({ success: false, error: err.message });
+    const { getSystemMetrics } = await import("../systemMonitor");
+    const metrics = await getSystemMetrics();
+    res.json({ success: true, data: metrics });
+  } catch (error: any) {
+    logger.error("API", "System metrics fetch error", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
+/**
+ * GET /api/system/status
+ * Returns monitoring status and current thresholds
+ */
+router.get("/system/status", async (_req, res) => {
+  try {
+    const { getMonitoringStatus, getThresholds } = await import("../systemMonitor");
+    const status = getMonitoringStatus();
+    const thresholds = getThresholds();
+    res.json({ success: true, active: status.active, thresholds });
+  } catch (error: any) {
+    logger.error("API", "System status fetch error", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/thresholds
+ * Updates alert thresholds (CPU, RAM, battery percentages)
+ * Body: { cpu?: number, ram?: number, battery?: number }
+ */
+router.post("/system/thresholds", async (req, res) => {
+  try {
+    const { cpu, ram, battery } = req.body;
+    const { setThresholds, getThresholds } = await import("../systemMonitor");
+    
+    const thresholds: any = {};
+    if (cpu !== undefined) thresholds.cpu = parseInt(cpu);
+    if (ram !== undefined) thresholds.ram = parseInt(ram);
+    if (battery !== undefined) thresholds.battery = parseInt(battery);
+    
+    setThresholds(thresholds);
+    logger.info("API", `Thresholds updated via dashboard: ${JSON.stringify(thresholds)}`);
+    
+    res.json({ success: true, thresholds: getThresholds() });
+  } catch (error: any) {
+    logger.error("API", "Threshold update error", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/start
+ * Starts the system monitoring loop
+ * Body: { interval?: number (milliseconds) }
+ */
+router.post("/system/start", async (req, res) => {
+  try {
+    const { interval } = req.body;
+    const { startMonitoring } = await import("../systemMonitor");
+    startMonitoring(interval || 10000);
+    logger.info("API", `System monitoring started via dashboard`);
+    res.json({ success: true, message: "System monitoring started." });
+  } catch (error: any) {
+    logger.error("API", "Failed to start monitoring", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/stop
+ * Stops the system monitoring loop
+ */
+router.post("/system/stop", async (_req, res) => {
+  try {
+    const { stopMonitoring } = await import("../systemMonitor");
+    stopMonitoring();
+    logger.info("API", `System monitoring stopped via dashboard`);
+    res.json({ success: true, message: "System monitoring stopped." });
+  } catch (error: any) {
+    logger.error("API", "Failed to stop monitoring", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/system/known-apps
+ * Returns the list of known applications for baseline comparison
+ */
+router.get("/system/known-apps", async (_req, res) => {
+  try {
+    const { getSystemConfig } = await import("../systemConfig");
+    const config = await getSystemConfig();
+    res.json({ success: true, applications: config.knownApplications || [] });
+  } catch (error: any) {
+    logger.error("API", "Failed to fetch known apps", error);
+    res.json({ success: true, applications: [] });
+  }
+});
+
+/**
+ * POST /api/system/known-apps
+ * Updates the list of known applications
+ * Body: { applications: string[] }
+ */
+router.post("/system/known-apps", async (req, res) => {
+  try {
+    const { applications } = req.body;
+    if (!Array.isArray(applications)) {
+      return res.status(400).json({ success: false, error: "Applications must be an array" });
+    }
+    
+    const { updateKnownApplications } = await import("../systemConfig");
+    await updateKnownApplications(applications);
+    logger.info("API", `Known applications updated: ${applications.length} apps`);
+    res.json({ success: true, message: "Known applications updated." });
+  } catch (error: any) {
+    logger.error("API", "Failed to update known apps", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 export default router;
