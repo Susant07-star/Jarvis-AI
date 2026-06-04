@@ -47,6 +47,7 @@ Unlike standard AI interfaces, J.A.R.V.I.S. features a **Real-time Telemetry HUD
 | Feature | Description | Status |
 | :--- | :--- | :--- |
 | **🗣️ Live Voice API** | Sub-second Hinglish conversation via WebSockets. | **STABLE** |
+| **🔐 Voice Biometrics** | Military-grade ECAPA-TDNN speaker verification (Web & Telegram) with dynamic enrollment. | **NEW** |
 | **📱 Telegram Call** | Urgent 🚨 Ringing UI + Sci-fi alerts + Haptic feedback. | **V2** |
 | **🕒 Neural Scheduler** | Plan future calls or messages (e.g., "Remind me in 10 mins"). | **NEW** |
 | **🌐 Dual-Search Engine** | Powered by Tavily AI + SerpAPI + DuckDuckGo. | **ACTIVE** |

@@ -135,13 +135,89 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     const groq = getGroqClient();
     
     // 1. STT: Transcribe
-    const userText = await transcribeAudio(audioBuffer, groq);
+    let userText = await transcribeAudio(audioBuffer, groq);
     metrics = new MetricsTracker(userText || '');
     
     // Send final STT transcription back to UI so it displays immediately
     if (userText) {
       ws.send(JSON.stringify({ type: 'final', text: userText }));
     }
+
+    // ── Pending Enrollment Interception ──
+    const threadId = (ws as any).threadId || "ws_client";
+    const { pendingVoiceEnrollments } = await import("./voiceEnrollmentCache");
+    if (pendingVoiceEnrollments.has(threadId)) {
+        const pending = pendingVoiceEnrollments.get(threadId)!;
+        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
+            pendingVoiceEnrollments.delete(threadId);
+        } else {
+            const nameMatch = (userText || "").match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
+            const extractedName = nameMatch ? nameMatch[1].trim() : (userText || "").trim();
+            const { supabase } = await import("./supabaseClient");
+            if (supabase) {
+                await supabase.from("voice_profiles").insert({
+                    name: extractedName,
+                    embedding_b64: pending.embedding
+                });
+                logger.info("WS", `Successfully enrolled unknown voice as: ${extractedName}`);
+                const reply = `Got it. Biometric profile saved for ${extractedName}. I will remember this voice.`;
+                ws.send(JSON.stringify({ type: 'llm_chunk', text: reply }));
+                const replyAudio = await generateTTS(reply);
+                if (replyAudio && ws.readyState === ws.OPEN) ws.send(replyAudio);
+            }
+            pendingVoiceEnrollments.delete(threadId);
+            if (pending.originalText) {
+                userText = `(My name is ${extractedName}) ${pending.originalText}`;
+                // Fall through to LLM processing
+            } else {
+                ws.send(JSON.stringify({ type: 'done' }));
+                state.isProcessing = false;
+                return;
+            }
+        }
+    }
+
+    // ── Voice Biometrics & Authentication ──
+    const fullBuffer = Buffer.concat(audioBuffer);
+    const { verifyVoice } = await import("./voice_bridge");
+    let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
+    try {
+        voiceResult = await verifyVoice(fullBuffer);
+    } catch (err: any) {
+        logger.error("WS", `Voice verification error: ${err.message}. Defaulting to Boss.`);
+    }
+
+    if (!voiceResult.liveness) {
+        const alertMsg = "Security Alert: Audio liveness check failed. Playback detected.";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: alertMsg }));
+        ws.send(JSON.stringify({ type: 'done' }));
+        state.isProcessing = false;
+        return;
+    }
+
+    if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
+        pendingVoiceEnrollments.set(threadId, {
+            embedding: voiceResult.embedding,
+            timestamp: Date.now(),
+            originalText: userText || ""
+        });
+        const prompt = "I detected an unrecognized voice. Who are you? Please reply with your name so I can remember you.";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: prompt }));
+        const promptAudio = await generateTTS(prompt);
+        if (promptAudio && ws.readyState === ws.OPEN) ws.send(promptAudio);
+        ws.send(JSON.stringify({ type: 'done' }));
+        state.isProcessing = false;
+        return;
+    }
+
+    const isBossVoice = voiceResult.speaker === "boss";
+    if (isBossVoice) {
+        logger.info("WS", `✅ Boss verified with confidence: ${(voiceResult.confidence * 100).toFixed(1)}%`);
+    } else {
+        logger.info("WS", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
+    }
+    // ── End Voice Biometrics ───────────────────────────────────────────────
+
     
     // 0. Check Confirmation Loop using centralized State Guard
     const confirmationResult = checkConfirmationInput(userText || '');
@@ -261,6 +337,16 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     let streamFinalResponse = true;
     let fullResponse = '';
     let sentenceBuffer = '';
+
+    if (!isBossVoice && decision.mode !== "direct") {
+       const restrictedMsg = "I'm sorry, but system commands, scheduling, and browser actions are restricted to the Boss only. I can still chat with you though!";
+       ws.send(JSON.stringify({ type: 'llm_chunk', text: restrictedMsg }));
+       const restrictedAudio = await generateTTS(restrictedMsg);
+       if (restrictedAudio && ws.readyState === ws.OPEN) ws.send(restrictedAudio);
+       ws.send(JSON.stringify({ type: 'done' }));
+       state.isProcessing = false;
+       return;
+    }
 
     if (decision.mode === "direct") {
       // Direct Conversational Mode

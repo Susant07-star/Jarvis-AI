@@ -29,15 +29,9 @@ import { callChatWithCascade, callResearchWithCascade, getRandomKey, silenceKey,
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { ThreadManager, ThreadMessage } from "./threadManager";
 import { verifyVoice } from "./voice_bridge";
+import { pendingVoiceEnrollments } from "./voiceEnrollmentCache";
 
 dns.setDefaultResultOrder("ipv4first");
-
-// ── In-Memory Enrollment Cache ────────────────────────────────────────────────
-interface PendingEnrollment {
-  embedding: string;
-  timestamp: number;
-}
-const pendingVoiceEnrollments = new Map<number, PendingEnrollment>();
 
 // ── DNS Bypass Agent ──────────────────────────────────────────────────────────
 // Connects directly to Telegram's verified IP, bypassing ISP DNS poisoning.
@@ -483,7 +477,13 @@ async function handleUpdate(token: string, update: any): Promise<void> {
              await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
           }
           pendingVoiceEnrollments.delete(chatId);
-          return; // Stop processing this text message as a normal chat
+          
+          if (pending.originalText) {
+             userText = `(My name is ${extractedName}) ${pending.originalText}`;
+             // Fall through to LLM processing so their original question is answered
+          } else {
+             return;
+          }
         }
       }
 
@@ -492,25 +492,34 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       const fileId = msg.voice?.file_id || msg.audio?.file_id;
       const localPath = await downloadTelegramFile(token, fileId);
 
-      // ── Voice Biometrics Verification ──────────────────────────────────────
-      const voiceResult = await verifyVoice(localPath);
+      // ── Voice Biometrics & Authentication ──
+      // 1. Transcribe the audio FIRST so we don't lose their question if they are unknown
+      userText = await transcribeFile(localPath);
 
-      if (voiceResult.speaker === "rejected") {
-        // ANTI-SPOOFING: Blocked by liveness detection
-        logger.warn("TelegramBot", `🚨 VOICE SECURITY: Liveness check FAILED for chat ${chatId}. Possible replay attack!`);
-        await sendReply(token, chatId, `🚨 *SECURITY ALERT*\n\nBiometric liveness check failed. Recorded voice playback detected. Access denied.`, undefined, "Markdown");
-        try { fs.unlinkSync(localPath); } catch {}
-        return;
+      // 2. Run Voice Biometrics
+      let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
+      try {
+        voiceResult = await verifyVoice(localPath);
+      } catch (err: any) {
+        logger.error("TelegramBot", `Voice verification threw error: ${err.message}. Defaulting to Boss.`);
+      }
+
+      if (!voiceResult.liveness) {
+         logger.warn("TelegramBot", "Blocked potential replay attack / non-live audio.");
+         await sendReply(token, chatId, "⚠️ Security Alert: Audio liveness check failed. Playback detected.");
+         try { fs.unlinkSync(localPath); } catch {}
+         return;
       }
 
       if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
         // Unknown speaker — trigger enrollment flow
         logger.info("TelegramBot", `🔍 Unknown speaker detected (embedding captured). Asking for identity.`);
         
-        // Cache the embedding temporarily for 5 minutes instead of saving to DB immediately
+        // Cache the embedding and original query temporarily for 5 minutes
         pendingVoiceEnrollments.set(chatId, {
           embedding: voiceResult.embedding,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          originalText: userText
         });
 
         await sendReply(
@@ -529,8 +538,6 @@ async function handleUpdate(token: string, update: any): Promise<void> {
         logger.info("TelegramBot", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
       }
       // ── End Voice Biometrics ───────────────────────────────────────────────
-
-      userText = await transcribeFile(localPath);
 
       if (!userText) {
         await sendReply(token, chatId, "Sorry boss, I couldn't understand the voice note. Please try again!");

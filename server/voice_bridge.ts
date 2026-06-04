@@ -42,15 +42,22 @@ export interface VoiceVerificationResult {
  * Sends an audio file to the Hugging Face Voice Engine for speaker verification.
  * Returns a structured result with the speaker identity.
  */
-export async function verifyVoice(audioFilePath: string): Promise<VoiceVerificationResult> {
+export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVerificationResult> {
   if (!HF_URL || !HF_KEY) {
     logger.warn("VoiceEngine", "Voice verification skipped: env vars not set. Treating as Boss.");
     return { speaker: "boss", confidence: 1.0, liveness: true };
   }
 
   try {
-    const audioBuffer = fs.readFileSync(audioFilePath);
-    const fileName = path.basename(audioFilePath);
+    let audioBuffer: Buffer;
+    let fileName = "audio.ogg";
+    
+    if (Buffer.isBuffer(audioSource)) {
+      audioBuffer = audioSource;
+    } else {
+      audioBuffer = fs.readFileSync(audioSource);
+      fileName = path.basename(audioSource);
+    }
 
     // Build multipart/form-data manually (no external dependencies needed)
     const boundary = `----JarvisFormBoundary${Date.now()}`;
