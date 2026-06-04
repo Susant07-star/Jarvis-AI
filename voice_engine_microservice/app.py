@@ -42,7 +42,9 @@ load_model()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def get_boss_embedding() -> np.ndarray | None:
+from typing import Optional
+
+def get_boss_embedding() -> Optional[np.ndarray]:
     """Decode the boss embedding from the base64 env variable."""
     if not BOSS_EMBEDDING_B64:
         return None

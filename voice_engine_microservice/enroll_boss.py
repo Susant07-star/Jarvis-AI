@@ -21,7 +21,7 @@ CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
-RECORD_SECONDS = 5
+RECORD_SECONDS = 15
 WAVE_OUTPUT_FILENAME = "boss_voice_sample.wav"
 
 def record_audio():
