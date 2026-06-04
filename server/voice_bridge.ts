@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 /**
  * Pings the Hugging Face Voice Biometrics engine every 10 minutes
  * to ensure the free Space never goes to sleep.
@@ -18,8 +16,8 @@ export function startVoiceEngineHeartbeat() {
 
   setInterval(async () => {
     try {
-      // Send a lightweight GET request to the root health check endpoint
-      const response = await axios.get(hfUrl);
+      // Send a lightweight GET request to the root health check endpoint using native fetch
+      const response = await fetch(hfUrl);
       console.log(`[VoiceEngine] Heartbeat successful (Status: ${response.status})`);
     } catch (error: any) {
       console.error(`[VoiceEngine] Heartbeat failed! Space might be sleeping. Error: ${error.message}`);
