@@ -32,6 +32,13 @@ import { verifyVoice } from "./voice_bridge";
 
 dns.setDefaultResultOrder("ipv4first");
 
+// ── In-Memory Enrollment Cache ────────────────────────────────────────────────
+interface PendingEnrollment {
+  embedding: string;
+  timestamp: number;
+}
+const pendingVoiceEnrollments = new Map<number, PendingEnrollment>();
+
 // ── DNS Bypass Agent ──────────────────────────────────────────────────────────
 // Connects directly to Telegram's verified IP, bypassing ISP DNS poisoning.
 
@@ -454,6 +461,32 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
     if (msg.text) {
       userText = msg.text;
+
+      // ── Pending Enrollment Interception ──
+      if (pendingVoiceEnrollments.has(chatId)) {
+        const pending = pendingVoiceEnrollments.get(chatId)!;
+        // Expire after 5 minutes
+        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
+          pendingVoiceEnrollments.delete(chatId);
+        } else {
+          // Extract name using a basic regex or fallback to the full text
+          const nameMatch = userText.match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
+          const extractedName = nameMatch ? nameMatch[1].trim() : userText.trim();
+          
+          const { supabase } = await import("./supabaseClient");
+          if (supabase) {
+             await supabase.from("voice_profiles").insert({
+               name: extractedName,
+               embedding_b64: pending.embedding
+             });
+             logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
+             await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
+          }
+          pendingVoiceEnrollments.delete(chatId);
+          return; // Stop processing this text message as a normal chat
+        }
+      }
+
     } else if (msg.voice || msg.audio) {
       await sendTyping(token, chatId);
       const fileId = msg.voice?.file_id || msg.audio?.file_id;
@@ -470,23 +503,19 @@ async function handleUpdate(token: string, update: any): Promise<void> {
         return;
       }
 
-      if (voiceResult.speaker === "unknown") {
+      if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
         // Unknown speaker — trigger enrollment flow
         logger.info("TelegramBot", `🔍 Unknown speaker detected (embedding captured). Asking for identity.`);
         
-        // Store pending enrollment in Supabase for follow-up
-        if (supabase && voiceResult.embedding) {
-          await supabase.from("voice_profiles").insert({
-            name: `Unknown_${Date.now()}`,
-            embedding_b64: voiceResult.embedding,
-          }).then(() => {
-            logger.info("TelegramBot", "Unknown voice embedding saved to Supabase for enrollment.");
-          });
-        }
+        // Cache the embedding temporarily for 5 minutes instead of saving to DB immediately
+        pendingVoiceEnrollments.set(chatId, {
+          embedding: voiceResult.embedding,
+          timestamp: Date.now()
+        });
 
         await sendReply(
           token, chatId,
-          `🎙 I detected an unrecognized voice.\n\n*Who are you?* Please reply with your name so J.A.R.V.I.S. can remember you.`,
+          `🎙 I detected an unrecognized voice.\n\n*Who are you?* Please reply with your name so I can remember you.`,
           undefined, "Markdown"
         );
         try { fs.unlinkSync(localPath); } catch {}
