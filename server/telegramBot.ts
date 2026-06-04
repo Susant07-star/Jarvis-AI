@@ -20,6 +20,7 @@ import TelegramBot from "node-telegram-bot-api";
 import https from "https";
 import dns from "dns";
 import fs from "fs";
+import { supabase } from "./supabaseClient";
 import path from "path";
 import Groq from "groq-sdk";
 import { logger } from "./logger";
@@ -201,14 +202,23 @@ function escapeHtml(text: string): string {
 
 // ── JARVIS Brain ──────────────────────────────────────────────────────────────
 
-async function processMessage(userText: string, chatId: number): Promise<PlannerResponse> {
+async function processMessage(userText: string, chatId: number, isBossVerified: boolean = true): Promise<PlannerResponse> {
   const startTime = Date.now();
-  logger.info("TelegramBot", `[NEURAL START] Processing: "${userText}" for ${chatId}`);
+  logger.info("TelegramBot", `[NEURAL START] Processing: "${userText}" for ${chatId} | Boss: ${isBossVerified}`);
 
   const decision = await determineOrchestrationMode(userText);
   logger.info("TelegramBot", `[INTENT] Mode: ${decision.mode.toUpperCase()} | Intent: ${decision.intent} | Time: ${Date.now() - startTime}ms`);
   
   const threadId = `tg_${chatId}`;
+
+  // ── PERMISSION GATE: Non-boss speakers can only chat ──────────────────
+  if (!isBossVerified && (decision.mode === "agent" || decision.intent === "schedule")) {
+    logger.warn("TelegramBot", `🔒 PERMISSION DENIED: Non-boss user tried ${decision.mode}/${decision.intent}`);
+    return {
+      content: "I'm sorry, but system commands, scheduling, and browser actions are restricted to the Boss only. I can still chat with you though!",
+      tokens: 0, provider: "Security", model: "N/A"
+    };
+  }
   
   if (decision.mode === "agent") {
     try {
@@ -265,7 +275,8 @@ You are responding via Telegram. Keep ALL replies under 40 words. Be direct, sha
     let result = await callChatWithCascade(messages);
     
     // ── Universal Tool Handler (Agentic Loop) ──────────────────────────────
-    if (result.content.includes('"tool"')) {
+    // Only Boss can execute system tools (I.R.I.S., search, file ops)
+    if (result.content.includes('"tool"') && isBossVerified) {
       try {
         const jsonMatch = result.content.match(/\{[\s\S]*"tool"[\s\S]*\}/);
         const rawJson = jsonMatch ? jsonMatch[0] : result.content;
@@ -439,6 +450,7 @@ async function handleUpdate(token: string, update: any): Promise<void> {
     }
 
     let userText = "";
+    let isBossVoice = true; // Default: text messages from admin = boss. Voice messages overwrite this.
 
     if (msg.text) {
       userText = msg.text;
@@ -462,10 +474,6 @@ async function handleUpdate(token: string, update: any): Promise<void> {
         // Unknown speaker — trigger enrollment flow
         logger.info("TelegramBot", `🔍 Unknown speaker detected (embedding captured). Asking for identity.`);
         
-        // Cache the embedding temporarily with the message ID as key
-        const { getSupabaseClient } = await import("./supabaseClient");
-        const supabase = getSupabaseClient();
-        
         // Store pending enrollment in Supabase for follow-up
         if (supabase && voiceResult.embedding) {
           await supabase.from("voice_profiles").insert({
@@ -485,8 +493,11 @@ async function handleUpdate(token: string, update: any): Promise<void> {
         return;
       }
 
-      if (voiceResult.speaker === "boss") {
+      isBossVoice = voiceResult.speaker === "boss";
+      if (isBossVoice) {
         logger.info("TelegramBot", `✅ Boss verified with confidence: ${(voiceResult.confidence * 100).toFixed(1)}%`);
+      } else {
+        logger.info("TelegramBot", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
       }
       // ── End Voice Biometrics ───────────────────────────────────────────────
 
@@ -507,8 +518,11 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       return; // Ignore stickers, images, etc.
     }
 
+    // Determine boss status: text messages from admin chatId = boss, voice = verified above
+    const isBoss = (msg.voice || msg.audio) ? (typeof isBossVoice !== 'undefined' ? isBossVoice : true) : true;
+    
     await sendTyping(token, chatId);
-    const result = await processMessage(userText, chatId);
+    const result = await processMessage(userText, chatId, isBoss);
     
     // DEEP DEBUGGING: Log the actual content being sent back to the user
     logger.info("TelegramBot", `Full AI Response for ${chatId}: "${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}"`);
