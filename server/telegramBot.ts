@@ -27,6 +27,7 @@ import { determineOrchestrationMode } from "./orchestrator";
 import { callChatWithCascade, callResearchWithCascade, getRandomKey, silenceKey, PlannerResponse } from "./llmRouter";
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { ThreadManager, ThreadMessage } from "./threadManager";
+import { verifyVoice } from "./voice_bridge";
 
 dns.setDefaultResultOrder("ipv4first");
 
@@ -445,6 +446,50 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       await sendTyping(token, chatId);
       const fileId = msg.voice?.file_id || msg.audio?.file_id;
       const localPath = await downloadTelegramFile(token, fileId);
+
+      // ── Voice Biometrics Verification ──────────────────────────────────────
+      const voiceResult = await verifyVoice(localPath);
+
+      if (voiceResult.speaker === "rejected") {
+        // ANTI-SPOOFING: Blocked by liveness detection
+        logger.warn("TelegramBot", `🚨 VOICE SECURITY: Liveness check FAILED for chat ${chatId}. Possible replay attack!`);
+        await sendReply(token, chatId, `🚨 *SECURITY ALERT*\n\nBiometric liveness check failed. Recorded voice playback detected. Access denied.`, undefined, "Markdown");
+        try { fs.unlinkSync(localPath); } catch {}
+        return;
+      }
+
+      if (voiceResult.speaker === "unknown") {
+        // Unknown speaker — trigger enrollment flow
+        logger.info("TelegramBot", `🔍 Unknown speaker detected (embedding captured). Asking for identity.`);
+        
+        // Cache the embedding temporarily with the message ID as key
+        const { getSupabaseClient } = await import("./supabaseClient");
+        const supabase = getSupabaseClient();
+        
+        // Store pending enrollment in Supabase for follow-up
+        if (supabase && voiceResult.embedding) {
+          await supabase.from("voice_profiles").insert({
+            name: `Unknown_${Date.now()}`,
+            embedding_b64: voiceResult.embedding,
+          }).then(() => {
+            logger.info("TelegramBot", "Unknown voice embedding saved to Supabase for enrollment.");
+          });
+        }
+
+        await sendReply(
+          token, chatId,
+          `🎙 I detected an unrecognized voice.\n\n*Who are you?* Please reply with your name so J.A.R.V.I.S. can remember you.`,
+          undefined, "Markdown"
+        );
+        try { fs.unlinkSync(localPath); } catch {}
+        return;
+      }
+
+      if (voiceResult.speaker === "boss") {
+        logger.info("TelegramBot", `✅ Boss verified with confidence: ${(voiceResult.confidence * 100).toFixed(1)}%`);
+      }
+      // ── End Voice Biometrics ───────────────────────────────────────────────
+
       userText = await transcribeFile(localPath);
 
       if (!userText) {
@@ -457,6 +502,7 @@ async function handleUpdate(token: string, update: any): Promise<void> {
         text: `🎙 *Heard:* "${userText}"`,
         parse_mode: "Markdown",
       });
+
     } else {
       return; // Ignore stickers, images, etc.
     }
