@@ -10,6 +10,7 @@ import apiRoutes from "./server/routes/api";
 import { setupWebSocketServer } from "./server/websocket";
 import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
+import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
 
 async function startServer() {
   const app = express();
@@ -78,6 +79,9 @@ async function startServer() {
 
   // Initialize Scheduler from Supabase
   await jarvisScheduler.init();
+
+  // Start Hugging Face Voice Engine Heartbeat
+  startVoiceEngineHeartbeat();
 
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);

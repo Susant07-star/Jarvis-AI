@@ -95,6 +95,23 @@ A unified diagnostic system for real-time neural observation.
 
 ---
 
+## 7. Voice Biometrics & Security (Hugging Face Microservice)
+
+To bypass Render's Free Tier RAM limits (512MB), avoid paid cloud APIs, and ensure J.A.R.V.I.S. works even when the user's local PC is turned off, the Voice Biometrics engine is deployed as an independent serverless microservice.
+
+### Speaker Identification & Routing
+- **Engine**: Open-source Python Audio Engine (e.g., SpeechBrain) deployed on a **Hugging Face Space** (Free Tier: 16GB RAM, 2 vCPUs).
+- **Audio Interception**: Before sending audio to Whisper STT, the Render server makes a rapid API call to the Hugging Face Space with the audio chunk.
+- **Authentication**: The extracted voice print is matched against a hardcoded, encrypted "Boss Profile". If it fails, the system cross-references the dynamic `voice_profiles` table in **Supabase**.
+- **Dynamic Enrollment**: If the voice is completely unknown, J.A.R.V.I.S. halts the standard LLM response and triggers a specialized "Who are you?" intent to register the new speaker dynamically into Supabase.
+
+### Anti-Spoofing & Target Extraction
+Because the Hugging Face Space has ample RAM, we can run state-of-the-art models:
+- **Liveness Detection**: Analyzes the audio for synthetic distortion to prevent playback attacks (recordings of the boss's voice).
+- **Target Speaker Extraction**: If the Boss and a stranger speak simultaneously, the Hugging Face microservice filters out the stranger's voice frequencies before sending the clean audio back to the Render server.
+
+---
+
 ## 7. Dual-Search Strategy
 The system utilizes two distinct research engines:
 1. **Gemini Grounding**: Used for conversational knowledge and deep research (Answering).

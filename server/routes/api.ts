@@ -261,29 +261,55 @@ router.post("/zoya-execute", async (req, res) => {
       return res.json({ success: false, error: errorFallback || "Could not formulate a valid plan." });
     }
 
-    // Execute Node/System actions
+// Execute Node/System actions
     const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
     let searchResult = "";
     for (const na of nodeActions) {
        if (na.action === 'serp_api_search') {
-          logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
-          const groq = getGroqClient();
-          const summary = await performSearch(na.query, groq);
-          searchResult += `Search results for "${na.query}":\n${summary}\n`;
+            logger.info("Node", `Executing SerpAPI search for: ${na.query}`);
+            const groq = getGroqClient();
+            const summary = await performSearch(na.query, groq);
+            searchResult += `Search results for "${na.query}":\n${summary}\n`;
        } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
-          const { jarvisScheduler } = await import("../scheduler");
-          const threadId = req.body.thread_id || "";
-          const chatIdMatch = threadId.match(/tg_(\d+)/);
-          const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
-          
-          const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
-          logger.info("API", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
-          searchResult += `[Scheduler] Action scheduled (TaskID: ${taskId}) for ${na.delay_seconds}s from now.\n`;
+            const { jarvisScheduler } = await import("../scheduler");
+            const threadId = req.body.thread_id || "";
+            const chatIdMatch = threadId.match(/tg_(\d+)/);
+            const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
+            
+            const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
+            logger.info("API", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
+            searchResult += `[Scheduler] Action scheduled (TaskID: ${taskId}) for ${na.delay_seconds}s from now.\n`;
        }
     }
 
-    // Execute Python actions
-    const browserActions = plannedSteps.filter((s:any) => s.action !== 'serp_api_search');
+    // I.R.I.S. Router - Convert open_url/open_tab actions to I.R.I.S. commands
+    const { transformStepsToIRIS } = await import("../irisIntentRouter");
+    const { transformed: routedSteps, originalCount, transformedCount } = transformStepsToIRIS(plannedSteps);
+    
+    if (transformedCount > 0) {
+      logger.info("API", `[I.R.I.S. Router] Converted ${transformedCount}/${originalCount} steps to I.R.I.S. commands for voice agent`);
+    }
+
+    // Execute via Python Layer (browser actions that weren't converted)
+    const browserActions = routedSteps.filter((s:any) => s.action !== 'open_app' && s.action !== 'serp_api_search');
+    const irisActions = routedSteps.filter((s:any) => s.action === 'open_app');
+    
+    // Execute I.R.I.S. actions
+    if (irisActions.length > 0) {
+      logger.info("API", `[Zoya Execute] Executing ${irisActions.length} actions via I.R.I.S.`);
+      for (const ia of irisActions) {
+        try {
+          const { executeOnIris } = await import("../irisExecutor");
+          const irisResult = await executeOnIris(ia.action, ia.payload);
+          logger.info("API", `[I.R.I.S.] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'} - ${irisResult.message}`);
+          searchResult += `[I.R.I.S.] ${irisResult.message}\n`;
+        } catch (e: any) {
+          logger.error('API', `I.R.I.S. action failed: ${e.message}`);
+          searchResult += `[I.R.I.S. Error] ${e.message}\n`;
+        }
+      }
+    }
+    
     if (browserActions.length > 0) {
       if (process.env.USE_BROWSER_AGENT !== "true") {
           return res.json({ success: false, error: "Browser execution is disabled on the cloud.", suggestion: "Cannot run browser tasks right now." });
@@ -479,31 +505,18 @@ router.post("/chat", async (req, res) => {
           let executed = false;
           let visionFramesForNextCall: string[] | undefined = undefined;
 
-          if (toolCall.tool === 'execute_local_os_command') {
-            const { executeOnIris } = await import('../irisExecutor');
-            const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
-            const irisResult = await executeOnIris(toolCall.action, parsedPayload);
-            toolSuccess = irisResult.success;
-            toolMessage = irisResult.message;
-            executed = true;
-          } else if (toolCall.tool === 'intelligent_search') {
-            const { butlerQueue } = await import('../butlerQueue');
-            // Assuming the text prompt uses "query" based on zoyaLiveService
-            const query = toolCall.query || toolCall.payload?.query || "General Research";
-            butlerQueue.dispatch('research', query, adminChatId);
-            toolSuccess = true;
-            toolMessage = `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready.`;
-            executed = true;
-          } else if (toolCall.tool === 'readWebpage') {
-            const url = toolCall.url || toolCall.payload?.url;
-            try {
-              const r = await fetch(`https://r.jina.ai/${url}`);
-              toolMessage = (await r.text()).substring(0, 12000);
-              toolSuccess = true;
-            } catch (err: any) {
-              toolSuccess = false;
-              toolMessage = `Error reading webpage: ${err.message}`;
-            }
+if (toolCall.tool === 'execute_local_os_command') {
+             const { executeOnIrisWithVerification } = await import('../irisExecutor');
+             const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
+             const irisResult = await executeOnIrisWithVerification(toolCall.action, parsedPayload);
+             toolSuccess = irisResult.success;
+             toolMessage = irisResult.message;
+             // Include verification data if available
+             if (irisResult.verification?.screenshotTaken) {
+               toolMessage += "\n[Verified via screenshot]";
+             }
+             executed = true;
+           }
             executed = true;
           } else if (toolCall.tool === 'saveFile') {
             toolSuccess = true;
@@ -669,9 +682,19 @@ router.post("/chat", async (req, res) => {
         return res.end();
       }
 
+      // C2. I.R.I.S. Router - Convert website navigation to I.R.I.S. actions
+      const { transformStepsToIRIS } = await import("../irisIntentRouter");
+      const { transformed: routedSteps, originalCount, transformedCount } = transformStepsToIRIS(plannedSteps);
+      
+      if (transformedCount > 0) {
+        logger.info("API", `[I.R.I.S. Router] Converted ${transformedCount}/${originalCount} steps to I.R.I.S. commands`);
+        res.write(`data: ${JSON.stringify({ content: `\n[Routed ${transformedCount} actions to I.R.I.S. for system control]\n\n` })}\n\n`);
+      }
+      
       // D. Node Action Execution (SerpAPI, Scheduler)
-      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
-      const browserActions = plannedSteps.filter((s:any) => !['serp_api_search', 'schedule_call', 'schedule_message'].includes(s.action));
+      const nodeActions = routedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
+      const irisActions = routedSteps.filter((s:any) => s.action === 'open_app');
+      const browserActions = routedSteps.filter((s:any) => !['serp_api_search', 'schedule_call', 'schedule_message', 'open_app'].includes(s.action));
 
       for (const na of nodeActions) {
          if (na.action === 'serp_api_search') {
@@ -693,7 +716,23 @@ router.post("/chat", async (req, res) => {
          if (metrics) metrics.addTokens('planner', 50); 
       }
 
-      // E. Execute via Python Layer
+      // E1. Execute I.R.I.S. Actions (converted from open_url/open_tab)
+      if (irisActions.length > 0) {
+        logger.info("API", `[I.R.I.S. Executor] Executing ${irisActions.length} actions via I.R.I.S.`);
+        for (const ia of irisActions) {
+          try {
+            const { executeOnIris } = await import("../irisExecutor");
+            const irisResult = await executeOnIris(ia.action, ia.payload);
+            res.write(`data: ${JSON.stringify({ content: `\n[I.R.I.S.] ${irisResult.message}` })}\n\n`);
+            logger.info("API", `[I.R.I.S.] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'}`);
+          } catch (e: any) {
+            logger.error('API', `I.R.I.S. action failed: ${e.message}`);
+            res.write(`data: ${JSON.stringify({ content: `\n[I.R.I.S. Error] ${e.message}` })}\n\n`);
+          }
+        }
+      }
+
+      // E. Execute via Python Layer (actual browser actions)
       if (browserActions.length > 0) {
         if (process.env.USE_BROWSER_AGENT !== "true") {
              logger.info("API", "Browser agent is disabled. Falling back to direct conversational response.");

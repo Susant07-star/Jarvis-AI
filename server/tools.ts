@@ -100,42 +100,15 @@ export const jarvisTools = [
     type: "function",
     function: {
       name: "execute_local_os_command",
-      description: "Execute a physical OS command on the user's local computer via I.R.I.S. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen. Includes automatic visual verification after each action.",
+      description: "Execute a physical OS command on the user's local computer via I.R.I.S. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen.",
       parameters: {
         type: "object",
         properties: {
-          action: { type: "string", enum: ["open_app", "phantom_type", "adb_command", "click_screen", "run_command", "type_text", "press_key", "screenshot", "scroll"], description: "The specific local OS action to perform." },
+          action: { type: "string", enum: ["open_app", "phantom_type", "adb_command", "click_screen"], description: "The specific local OS action to perform." },
           payload: { type: "string", description: "JSON string containing parameters for the action. E.g. {\"appName\":\"vscode\"} for open_app, or {\"text\":\"console.log('hello')\"} for phantom_type." },
-          confirmation_message: { type: "string", description: "Natural confirmation spoken to the user. E.g., 'Right away sir, deploying phantom typer.'"}
+          confirmation_message: { type: "string", description: "Natural confirmation spoken to the user. E.g., 'Right away boss, deploying phantom typer.'" }
         },
         required: ["action", "payload", "confirmation_message"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_system_status",
-      description: "Get the current system metrics (CPU, memory, battery) and monitoring status. Use this to check if the system is under stress or to provide telemetry to the user.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "detect_and_research_processes",
-      description: "Trigger immediate process scan and research for suspicious applications. Useful when the user wants to check for potential malware or unknown programs running on their system.",
-      parameters: {
-        type: "object",
-        properties: {
-          research_suspicious: { type: "boolean", description: "Whether to automatically research unknown processes via web search" },
-          confirmation_message: { type: "string", description: "Natural confirmation for the user" }
-        },
-        required: ["confirmation_message"]
       }
     }
   }

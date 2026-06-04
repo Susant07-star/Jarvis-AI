@@ -32,15 +32,32 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     return "schedule";
   }
 
-   // Local Guard: Instant, 100% accurate, zero-latency chat match for creator / Susant / capability queries
+   // Local Guard: Website/App opening detection (FORCE CHAT MODE for I.R.I.S. routing)
+   // This MUST be checked BEFORE creatorKeywords to catch all variations
+   const websitePatterns = [
+     /youtube\.com/i, /google\.com/i, /facebook\.com/i, /twitter\.com/i,
+     /instagram\.com/i, /reddit\.com/i, /linkedin\.com/i, /github\.com/i,
+     /amazon\.com/i, /netflix\.com/i, /whatsapp/i,
+     /open\s+(youtube|google|facebook|twitter|instagram|reddit|linkedin|github|amazon|netflix|chrome|edge)/i,
+     /go\s+to\s+(youtube|google|facebook|twitter|instagram|reddit|linkedin|github|amazon|netflix)/i
+   ];
+   if (websitePatterns.some(pattern => pattern.test(text))) {
+     logger.info("Classifier", `[LocalGuard] Detected website/app navigation via I.R.I.S.: "${text}"`);
+     return "chat";
+   }
+
+   // Local Guard: App/OS command detection
+   const appOpenKeywords = ["open app", "close app", "open ", "close ", "type ", "press ", "press ctrl", "scroll", "phantom type"];
+   if (appOpenKeywords.some(k => lower.includes(k))) {
+     logger.info("Classifier", `[LocalGuard] Detected OS command intent: "${text}"`);
+     return "chat";
+   }
+
+  // Local Guard: Creator/queries
    const creatorKeywords = [
      "susant", "developer", "creator", "maker", "who created you", "who made you", 
      "who built you", "who is the boss", "the boss", "your capability", "what can you do",
      "what you can do", "what you can't do", "what you cannot do", "your limitation",
-     // OS Commands (force to chat mode so J.A.R.V.I.S can intercept execute_local_os_command)
-     "open vs code", "open vscode", "open notepad", "open spotify", "close spotify", 
-     "type this", "press ctrl", "scroll down", "scroll up", "run this command", 
-     "send a whatsapp", "open whatsapp", "whatsapp", "open app", "close app"
    ];
   if (creatorKeywords.some(k => lower.includes(k))) {
     logger.info("Classifier", `[LocalGuard] Match creator/OS command query for chat intent: "${text}"`);
