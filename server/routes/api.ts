@@ -516,8 +516,6 @@ if (toolCall.tool === 'execute_local_os_command') {
                toolMessage += "\n[Verified via screenshot]";
              }
              executed = true;
-           }
-            executed = true;
           } else if (toolCall.tool === 'saveFile') {
             toolSuccess = true;
             toolMessage = "File saved successfully to the frontend panel.";
