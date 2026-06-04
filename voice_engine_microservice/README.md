@@ -1,3 +1,11 @@
+---
+title: Jarvis Voice Engine
+emoji: 🎙️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
 # J.A.R.V.I.S. Voice Biometrics Engine
 
 This microservice runs on a Free Hugging Face Space (Docker CPU). It handles all audio processing, extracting voice embeddings via SpeechBrain, and verifying if the speaker is the Boss.
