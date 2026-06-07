@@ -12,6 +12,13 @@ All notable changes to this project will be documented in this file.
 ### Updated
 - Updated documentation to reflect new confirmation handling and executor behavior.
 
+### [2026-06-07] Phase 7: Voice Biometrics & Autonomous Enrollment
+- **Feature — Real-Time Voice Biometrics**: Integrated Hugging Face microservice to verify incoming live audio and Telegram voice notes against a known profile embedding.
+- **Feature — Autonomous Guest Enrollment**: Built an autonomous 1:N biometric system. Unknown speakers are automatically detected, asked for their name, and enrolled dynamically into Supabase via natural voice notes or Live Call conversations.
+- **Feature — Liveness Detection**: Enabled basic liveness detection in the voice engine to block playback and spoofing attacks.
+- **Fix — Parallel Verification**: Resolved `ENOENT` crashing in Telegram voice processing by parallelizing the Whisper transcription and voice verification modules.
+- **Fix — Biometric Buffer Fidelity**: Increased Live Call audio buffer logic to 3.5 seconds (56k samples) with a 4-second cooldown to guarantee high-fidelity matching and eliminate false rejections.
+
 ### [2026-05-24] I.R.I.S. Local Hands & OS Execution
 - **Feature — Local Physical Control (I.R.I.S.)**: Integrated the J.A.R.V.I.S. web server with the I.R.I.S. Electron desktop daemon over a secure Cloudflare tunnel.
 - **Feature — OS Command Suite**: Implemented `execute_local_os_command` tool allowing JARVIS to open/close desktop applications, type text via clipboard injection, press hotkeys, take screenshots (via `desktopCapturer`), move/click the mouse natively, and run shell commands (PowerShell/CMD).
