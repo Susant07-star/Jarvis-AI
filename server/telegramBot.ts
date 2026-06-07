@@ -576,6 +576,18 @@ async function handleUpdate(token: string, update: any): Promise<void> {
     await sendTyping(token, chatId);
     const result = await processMessage(userText, chatId, isBoss, resolvedSpeakerName);
     
+    // Inject voice biometric logs into thought process
+    if (msg.voice || msg.audio) {
+      if (!result.internal_steps) result.internal_steps = [];
+      const scoreDisplay = typeof voiceResult !== 'undefined' ? (voiceResult.confidence > 0 ? `${(voiceResult.confidence * 100).toFixed(1)}%` : `${((voiceResult as any).debug_similarity || 0) * 100}%`) : 'N/A';
+      
+      if (isBossVoice) {
+        result.internal_steps.unshift(`✅ Voice matched: BOSS SUSANT (${scoreDisplay})`);
+      } else {
+        result.internal_steps.unshift(`🔎 Voice scan: Unknown speaker (similarity: ${scoreDisplay})`);
+      }
+    }
+
     // DEEP DEBUGGING: Log the actual content being sent back to the user
     logger.info("TelegramBot", `Full AI Response for ${chatId}: "${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}"`);
 
