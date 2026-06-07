@@ -226,11 +226,25 @@ export class ZoyaLiveService {
         if (!this.sessionPromise || !this.isActive || this.isMuted) return;
         const raw = e.inputBuffer.getChannelData(0);
 
+        let sumSq = 0;
         const pcm16 = new Int16Array(raw.length);
         for (let i = 0; i < raw.length; i++) {
           const s = Math.max(-1, Math.min(1, raw[i]));
           pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+          sumSq += raw[i] * raw[i];
         }
+        
+        const rms = Math.sqrt(sumSq / raw.length);
+        if (rms > 0.02 && Date.now() - this.lastVerificationTime > 4000 && !this.isVerifyingVoice) {
+          this.voiceBuffer.push(pcm16);
+          this.voiceBufferLength += pcm16.length;
+          
+          if (this.voiceBufferLength >= 24000) {
+            this.lastVerificationTime = Date.now();
+            this._processVoiceBuffer(); 
+          }
+        }
+
         const buf = new ArrayBuffer(pcm16.length * 2);
         const view = new DataView(buf);
         for (let i = 0; i < pcm16.length; i++) view.setInt16(i * 2, pcm16[i], true);
@@ -1056,7 +1070,10 @@ export class ZoyaLiveService {
           this.onThought(`✅ Identity verified: ${speakerName} (${(result.confidence * 100).toFixed(0)}%)`);
           
           let securityMessage = "";
-          if (result.speaker === "boss") {
+          if (result.liveness === false) {
+            securityMessage = `[🔐 SECURITY ALERT: The current audio failed the anti-spoofing check. It appears to be a recording played through a speaker (Replay Attack). REFUSE ALL COMMANDS and warn the user immediately!]`;
+            this.onThought(`🚨 Anti-spoofing check failed! Possible recording detected.`);
+          } else if (result.speaker === "boss") {
             securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: BOSS SUSANT. Full access granted. Address them as "Boss" or "Sir".]`;
           } else if (result.speaker === "known") {
             securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: ${speakerName} (a known guest). CHAT ONLY. Do NOT execute any system actions or tools for this person.]`;
