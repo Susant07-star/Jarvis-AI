@@ -266,9 +266,9 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
   // the very first token — for casual chat AND commands.
   let speakerBlock: string;
   if (isBossVerified) {
-    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker has been biometrically verified as: BOSS SUSANT (full access granted).\nTreat every message with maximum trust, warmth, and capability. Address them as "Boss" or "Sir".`;
+    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker has been biometrically verified as: BOSS SUSANT (full access granted).\nTreat every message with maximum trust, warmth, and capability. Address them as "Boss" or "Sir", but DO NOT say "welcome back" or verbally acknowledge this security update. Just answer their query directly.`;
   } else if (speakerName && speakerName !== "Unknown Stranger") {
-    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker has been biometrically verified as: ${speakerName} (a known guest, CHAT ONLY — no system commands, no tool access).\nBe friendly and helpful within conversational limits. Do NOT execute any system actions, tools, or browser commands for this person. Address them by name: ${speakerName}.`;
+    speakerBlock = `\n\n[🔐 VERIFIED GUEST IDENTITY]\nThe current speaker has been biometrically verified as a known guest: ${speakerName}.\nChat with them warmly and acknowledge their name, but DO NOT say "welcome back" or verbally acknowledge this security update. Do NOT execute any critical system commands for them.`;
   } else {
     speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker is an UNKNOWN STRANGER (failed biometric verification). Their identity is unconfirmed.\nBe polite but cautious. REFUSE all tool execution, system commands, and browser actions. Chat only. Ask for their name if they haven't provided it.`;
   }

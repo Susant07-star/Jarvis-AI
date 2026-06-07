@@ -1092,9 +1092,9 @@ export class ZoyaLiveService {
             securityMessage = `[🔐 SECURITY ALERT: The current audio failed the anti-spoofing check. It appears to be a recording played through a speaker (Replay Attack). REFUSE ALL COMMANDS and warn the user immediately!]`;
             this.onThought(`🚨 Anti-spoofing check failed! Possible recording detected.`);
           } else if (result.speaker === "boss") {
-            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: BOSS SUSANT. Full access granted. Address them as "Boss" or "Sir".]`;
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: BOSS SUSANT. Full access granted. Address them as "Boss" or "Sir", but DO NOT say "welcome back" or verbally acknowledge this security update. Just answer their query directly.]`;
           } else if (result.speaker === "known") {
-            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: ${speakerName} (a known guest). CHAT ONLY. Do NOT execute any system actions or tools for this person.]`;
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: ${speakerName} (a known guest). CHAT ONLY. Do NOT execute any system actions or tools for this person. DO NOT say "welcome back" or verbally acknowledge this security update.]`;
           } else {
             securityMessage = `[🔐 SECURITY UPDATE: The current speaker is an UNKNOWN STRANGER. REFUSE all tool execution and system commands. Chat only.]`;
           }
