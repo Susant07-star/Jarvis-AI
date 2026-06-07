@@ -22,8 +22,12 @@ export class ThreadManager {
    * Helper to convert text into a 768-dimension vector
    */
   static async getEmbedding(text: string): Promise<number[] | null> {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) return null;
+    const rawKey = process.env.GEMINI_API_KEY;
+    if (!rawKey) return null;
+    
+    // Pick the first key if it's a comma-separated list
+    const key = rawKey.split(',')[0].trim();
+    
     try {
       const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.embedContent({

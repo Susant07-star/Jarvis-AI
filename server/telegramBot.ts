@@ -477,10 +477,34 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       const localPath = await downloadTelegramFile(token, fileId);
 
       // ── Voice Biometrics & Authentication ──
-      // 1. Transcribe the audio FIRST
-      userText = await transcribeFile(localPath);
+      // Run transcription AND biometric verification in PARALLEL so neither
+      // suffers from file-not-found — the file exists for both simultaneously.
+      let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
+      let transcribedText = "";
 
-      // ── Auto-enrollment: If this voice note introduces a name and we have an embedding cached ──
+      try {
+        [transcribedText, voiceResult] = await Promise.all([
+          transcribeFile(localPath),
+          verifyVoice(localPath).catch((err: any) => {
+            logger.error("TelegramBot", `Voice verification failed: ${err.message}. Defaulting to Boss.`);
+            return { speaker: "boss", confidence: 0.5, liveness: true, embedding: "" };
+          })
+        ]);
+      } catch (err: any) {
+        logger.error("TelegramBot", `Transcription failed: ${err.message}`);
+        transcribedText = "";
+      }
+
+      userText = transcribedText;
+
+      if (!voiceResult.liveness) {
+         logger.warn("TelegramBot", "Blocked potential replay attack / non-live audio.");
+         await sendReply(token, chatId, "⚠️ Security Alert: Audio liveness check failed. Playback detected.");
+         try { fs.unlinkSync(localPath); } catch {}
+         return;
+      }
+
+      // ── Auto-enrollment: if there's a cached embedding and this note says a name ──
       const cached = unknownEmbeddingCache.get(chatId);
       if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
         const nameMatch = userText.match(/(?:my name is|i am|i'm|this is|it is|it's|call me|name is|they call me|we call me) ([\w\s]+)/i);
@@ -493,7 +517,6 @@ async function handleUpdate(token: string, update: any): Promise<void> {
             try { fs.unlinkSync(localPath); } catch {}
             return;
           }
-          // Save to Supabase
           const { error } = await supabase.from("voice_profiles").insert({
             name: extractedName,
             embedding_b64: cached.embedding
@@ -507,21 +530,6 @@ async function handleUpdate(token: string, update: any): Promise<void> {
           }
           unknownEmbeddingCache.delete(chatId);
         }
-      }
-
-      // 2. Run Voice Biometrics
-      let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
-      try {
-        voiceResult = await verifyVoice(localPath);
-      } catch (err: any) {
-        logger.error("TelegramBot", `Voice verification threw error: ${err.message}. Defaulting to Boss.`);
-      }
-
-      if (!voiceResult.liveness) {
-         logger.warn("TelegramBot", "Blocked potential replay attack / non-live audio.");
-         await sendReply(token, chatId, "⚠️ Security Alert: Audio liveness check failed. Playback detected.");
-         try { fs.unlinkSync(localPath); } catch {}
-         return;
       }
 
       if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
