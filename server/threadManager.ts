@@ -4,9 +4,6 @@ import path from "path";
 import { logger } from "./logger";
 import { supabase } from "./supabaseClient";
 
-// Initialize Gemini for Embeddings
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 const THREADS_DIR = path.join(process.cwd(), "data", "threads");
 
 // Ensure directory exists for local fallback
@@ -25,8 +22,10 @@ export class ThreadManager {
    * Helper to convert text into a 768-dimension vector
    */
   static async getEmbedding(text: string): Promise<number[] | null> {
-    if (!process.env.GEMINI_API_KEY) return null;
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
     try {
+      const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.embedContent({
         model: 'text-embedding-004',
         contents: text,
