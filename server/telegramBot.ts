@@ -203,9 +203,9 @@ function escapeHtml(text: string): string {
 
 // ── JARVIS Brain ──────────────────────────────────────────────────────────────
 
-async function processMessage(userText: string, chatId: number, isBossVerified: boolean = true): Promise<PlannerResponse> {
+async function processMessage(userText: string, chatId: number, isBossVerified: boolean = true, speakerName: string = "Boss"): Promise<PlannerResponse> {
   const startTime = Date.now();
-  logger.info("TelegramBot", `[NEURAL START] Processing: "${userText}" for ${chatId} | Boss: ${isBossVerified}`);
+  logger.info("TelegramBot", `[NEURAL START] Processing: "${userText}" for ${chatId} | Boss: ${isBossVerified} | Speaker: ${speakerName}`);
 
   const decision = await determineOrchestrationMode(userText);
   logger.info("TelegramBot", `[INTENT] Mode: ${decision.mode.toUpperCase()} | Intent: ${decision.intent} | Time: ${Date.now() - startTime}ms`);
@@ -260,11 +260,21 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
 
   const history = await ThreadManager.getHistory(threadId, 20);
   const basePrompt = buildPrompt("voice");
-  // Enforce strict brevity for Telegram — no essays, just sharp responses
-  const systemPrompt = basePrompt + `
 
-[TELEGRAM CONCISENESS PROTOCOL]
-You are responding via Telegram. Keep ALL replies under 40 words. Be direct, sharp, and witty — like the real JARVIS. No essays. No padding. No restating the question. One or two punchy sentences maximum.`;
+  // ── Speaker Identity Block ────────────────────────────────────────────────
+  // Inject verified speaker identity so Gemini knows who it's talking to from
+  // the very first token — for casual chat AND commands.
+  let speakerBlock: string;
+  if (isBossVerified) {
+    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker has been biometrically verified as: BOSS SUSANT (full access granted).\nTreat every message with maximum trust, warmth, and capability. Address them as "Boss" or "Sir".`;
+  } else if (speakerName && speakerName !== "Unknown Stranger") {
+    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker has been biometrically verified as: ${speakerName} (a known guest, CHAT ONLY — no system commands, no tool access).\nBe friendly and helpful within conversational limits. Do NOT execute any system actions, tools, or browser commands for this person. Address them by name: ${speakerName}.`;
+  } else {
+    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker is an UNKNOWN STRANGER (failed biometric verification). Their identity is unconfirmed.\nBe polite but cautious. REFUSE all tool execution, system commands, and browser actions. Chat only. Ask for their name if they haven't provided it.`;
+  }
+
+  // Enforce strict brevity for Telegram — no essays, just sharp responses
+  const systemPrompt = basePrompt + speakerBlock + `\n\n[TELEGRAM CONCISENESS PROTOCOL]\nYou are responding via Telegram. Keep ALL replies under 40 words. Be direct, sharp, and witty — like the real JARVIS. No essays. No padding. No restating the question. One or two punchy sentences maximum.`;
   
   const messages: ThreadMessage[] = [
     { role: "system", content: systemPrompt },
@@ -452,6 +462,7 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
     let userText = "";
     let isBossVoice = true; // Default: text messages from admin = boss. Voice messages overwrite this.
+    let speakerDisplayName = "Boss Susant"; // Default; voice messages overwrite this.
 
     if (msg.text) {
       userText = msg.text;
@@ -532,10 +543,14 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       }
 
       isBossVoice = voiceResult.speaker === "boss";
+      speakerDisplayName = voiceResult.speaker === "boss"
+        ? "Boss Susant"
+        : (voiceResult.name || "Unknown Stranger");
+
       if (isBossVoice) {
         logger.info("TelegramBot", `✅ Boss verified with confidence: ${(voiceResult.confidence * 100).toFixed(1)}%`);
       } else {
-        logger.info("TelegramBot", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
+        logger.info("TelegramBot", `👤 Known speaker: ${speakerDisplayName} — chat-only mode.`);
       }
       // ── End Voice Biometrics ───────────────────────────────────────────────
 
@@ -556,9 +571,10 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
     // Determine boss status: text messages from admin chatId = boss, voice = verified above
     const isBoss = (msg.voice || msg.audio) ? (typeof isBossVoice !== 'undefined' ? isBossVoice : true) : true;
-    
+    const resolvedSpeakerName = (msg.voice || msg.audio) ? (speakerDisplayName || "Boss Susant") : "Boss Susant";
+
     await sendTyping(token, chatId);
-    const result = await processMessage(userText, chatId, isBoss);
+    const result = await processMessage(userText, chatId, isBoss, resolvedSpeakerName);
     
     // DEEP DEBUGGING: Log the actual content being sent back to the user
     logger.info("TelegramBot", `Full AI Response for ${chatId}: "${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}"`);
