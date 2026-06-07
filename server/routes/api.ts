@@ -200,6 +200,30 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
+// ── Voice Biometrics (Parallel Streaming endpoint) ──
+router.post("/verify-voice-buffer", upload.single('audio_file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio file provided" });
+    }
+
+    const { verifyVoice } = await import("../voice_bridge");
+    const result = await verifyVoice(req.file.path);
+    
+    // Clean up temporary file
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+
+    res.json(result);
+  } catch (err: any) {
+    logger.error("API", `Voice buffer verification failed: ${err.message}`);
+    // Cleanup on error
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+    res.status(500).json({ error: "Verification failed", speaker: "boss", confidence: 0.5 });
+  }
+});
+
 /**
  * Handle text-based chat interactions.
  */

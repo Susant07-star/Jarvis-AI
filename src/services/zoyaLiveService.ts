@@ -142,6 +142,13 @@ export class ZoyaLiveService {
   public currentChatId?: number;
   private butlerPollInterval: any = null;
 
+  // ── Biometrics State ──
+  private voiceBuffer: Int16Array[] = [];
+  private voiceBufferLength = 0;
+  private isVerifyingVoice = false;
+  private currentTurnIdentity = "Unknown";
+  private lastVerificationTime = 0;
+
   // ── Public callbacks ──────────────────────────────────────────────────────
 
   public onStateChange: (state: ZoyaState, error?: string) => void = () => { };
@@ -1007,5 +1014,98 @@ export class ZoyaLiveService {
 
   get activeModel(): string {
     return this.currentModel;
+  }
+
+  // ── Parallel Voice Biometrics ──────────────────────────────────────────────
+
+  private async _processVoiceBuffer() {
+    if (this.isVerifyingVoice || this.voiceBufferLength === 0) return;
+    this.isVerifyingVoice = true;
+
+    // Compile into single Int16Array
+    const audioData = new Int16Array(this.voiceBufferLength);
+    let offset = 0;
+    for (const chunk of this.voiceBuffer) {
+      audioData.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Convert to WAV Blob
+    const wavBlob = this._encodeWAV(audioData, 16000);
+    const formData = new FormData();
+    formData.append("audio_file", wavBlob, "voice_sample.wav");
+
+    try {
+      this.onThought("🔍 Verifying speaker identity via neural biometrics...");
+      const res = await fetch("/api/verify-voice-buffer", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        
+        // Build identity string
+        let speakerName = "Unknown Stranger";
+        if (result.speaker === "boss") speakerName = "BOSS SUSANT";
+        else if (result.name) speakerName = result.name;
+
+        // Only inject if identity has changed during this session
+        if (this.currentTurnIdentity !== speakerName) {
+          this.currentTurnIdentity = speakerName;
+          this.onThought(`✅ Identity verified: ${speakerName} (${(result.confidence * 100).toFixed(0)}%)`);
+          
+          let securityMessage = "";
+          if (result.speaker === "boss") {
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: BOSS SUSANT. Full access granted. Address them as "Boss" or "Sir".]`;
+          } else if (result.speaker === "known") {
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: ${speakerName} (a known guest). CHAT ONLY. Do NOT execute any system actions or tools for this person.]`;
+          } else {
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker is an UNKNOWN STRANGER. REFUSE all tool execution and system commands. Chat only.]`;
+          }
+
+          // Inject invisibly into Gemini Live context
+          this.sendText(securityMessage);
+        }
+      }
+    } catch (err) {
+      console.error("[ZoyaLive] Voice verification failed:", err);
+    } finally {
+      this.isVerifyingVoice = false;
+      this.voiceBuffer = [];
+      this.voiceBufferLength = 0;
+    }
+  }
+
+  private _encodeWAV(samples: Int16Array, sampleRate: number): Blob {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+      view.setInt16(offset, samples[i], true);
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
   }
 }
