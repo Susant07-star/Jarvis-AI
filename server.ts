@@ -12,11 +12,22 @@ import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
 import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
 
+import { logger } from "./server/logger";
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
   app.use(express.json());
+
+  // ── Global API Telemetry Logging ──
+  app.use((req, res, next) => {
+    // Don't spam the logs with the telemetry endpoint itself, or assets
+    if (req.path.startsWith('/api/') && req.path !== '/api/logs/raw' && req.path !== '/api/butler/results') {
+      logger.info('API', `[${req.method}] ${req.originalUrl}`);
+    }
+    next();
+  });
 
   // ── Global Security Enforcement ──
   app.get("/api/config/auth", (req, res) => {
