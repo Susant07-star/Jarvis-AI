@@ -478,6 +478,14 @@ async function handleUpdate(token: string, update: any): Promise<void> {
           const nameMatch = userText.match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
           const extractedName = nameMatch ? nameMatch[1].trim() : userText.trim();
           
+          // Security Hardening: Do not let strangers claim to be the Boss
+          const forbiddenNames = ["boss", "susant", "admin", "jarvis", "creator"];
+          if (forbiddenNames.some(f => extractedName.toLowerCase().includes(f))) {
+             await sendReply(token, chatId, "Nice try, but there is only one Boss. Voice profile rejected.", undefined, "Markdown");
+             pendingVoiceEnrollments.delete(chatId);
+             return;
+          }
+          
           const { supabase } = await import("./supabaseClient");
           if (supabase) {
              await supabase.from("voice_profiles").insert({
