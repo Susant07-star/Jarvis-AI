@@ -151,21 +151,22 @@ async def verify_voice(
         if boss_emb is not None:
             boss_similarity = compute_similarity(incoming_emb, boss_emb)
             logger.info(f"Boss similarity score: {boss_similarity:.4f}")
-            # Threshold: 0.75 is strict. Adjust if needed.
-            if boss_similarity >= 0.75:
+            # Threshold: 0.65 (browser mic audio has more variation than enrolled audio)
+            if boss_similarity >= 0.65:
                 return JSONResponse({
                     "speaker": "boss",
                     "confidence": round(boss_similarity, 4),
                     "liveness": True
                 })
+        else:
+            logger.warning("BOSS_VOICE_EMBEDDING env var is empty or not set! Cannot verify boss.")
 
-        # 7. Compare against known profiles (from Supabase — passed via request body in future)
-        # For now, return unknown if not boss
+        # 7. Return unknown with actual similarity score for debugging
         return JSONResponse({
             "speaker": "unknown",
-            "confidence": 0.0,
+            "confidence": round(boss_similarity if boss_emb is not None else 0.0, 4),
             "liveness": True,
-            # Include embedding so Node.js server can save it to Supabase for enrollment
+            "debug_similarity": round(boss_similarity if boss_emb is not None else 0.0, 4),
             "embedding": base64.b64encode(incoming_emb.astype(np.float32).tobytes()).decode('utf-8')
         })
 

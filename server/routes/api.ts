@@ -18,6 +18,17 @@ import { setTimezone, getTimezone } from "../timezoneStore";
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
+// Dedicated multer for voice files — preserves .wav extension so SpeechBrain can decode correctly
+const voiceUpload = multer({
+  storage: multer.diskStorage({
+    destination: 'uploads/',
+    filename: (_req, _file, cb) => {
+      // Always save with .wav extension regardless of original filename
+      cb(null, `voice_${Date.now()}_${Math.random().toString(36).slice(2)}.wav`);
+    },
+  }),
+});
+
 // ── Shared config for frontend ──
 router.get("/config/voice-prompt", async (req, res) => {
   try {
@@ -201,7 +212,7 @@ if (!fs.existsSync('uploads')) {
 }
 
 // ── Voice Biometrics (Parallel Streaming endpoint) ──
-router.post("/verify-voice-buffer", upload.single('audio_file'), async (req, res) => {
+router.post("/verify-voice-buffer", voiceUpload.single('audio_file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No audio file provided" });

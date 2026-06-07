@@ -50,7 +50,7 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
 
   try {
     let audioBuffer: Buffer;
-    let fileName = "audio.ogg";
+    let fileName = "audio.wav";
     
     if (Buffer.isBuffer(audioSource)) {
       audioBuffer = audioSource;
@@ -59,6 +59,10 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
       fileName = path.basename(audioSource);
     }
 
+    // Detect content type from filename extension
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    const mimeType = ext === 'ogg' ? 'audio/ogg' : ext === 'mp3' ? 'audio/mpeg' : 'audio/wav';
+
     // Build multipart/form-data manually (no external dependencies needed)
     const boundary = `----JarvisFormBoundary${Date.now()}`;
     const CRLF = "\r\n";
@@ -66,7 +70,7 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
     const header = Buffer.from(
       `--${boundary}${CRLF}` +
       `Content-Disposition: form-data; name="audio_file"; filename="${fileName}"${CRLF}` +
-      `Content-Type: audio/ogg${CRLF}${CRLF}`
+      `Content-Type: ${mimeType}${CRLF}${CRLF}`
     );
     const footer = Buffer.from(`${CRLF}--${boundary}--${CRLF}`);
     const body = Buffer.concat([header, audioBuffer, footer]);
@@ -89,8 +93,9 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
       return { speaker: "boss", confidence: 0.5, liveness: true };
     }
 
-    const result = await response.json() as VoiceVerificationResult;
-    logger.info("VoiceEngine", `Verification result: speaker=${result.speaker}, confidence=${result.confidence}`);
+    const result = await response.json() as VoiceVerificationResult & { debug_similarity?: number };
+    const simScore = result.debug_similarity !== undefined ? ` | similarity=${result.debug_similarity.toFixed(4)}` : '';
+    logger.info("VoiceEngine", `Verification result: speaker=${result.speaker}, confidence=${result.confidence}${simScore}`);
     return result;
 
   } catch (error: any) {
