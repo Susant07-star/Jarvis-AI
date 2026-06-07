@@ -5,7 +5,7 @@ import base64
 import logging
 import tempfile
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Form
 from fastapi.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
@@ -104,6 +104,7 @@ def health_check():
 @app.post("/verify")
 async def verify_voice(
     audio_file: UploadFile = File(...),
+    known_profiles: str = Form(None),
     authorization: str = Header(None)
 ):
     """
@@ -161,12 +162,44 @@ async def verify_voice(
         else:
             logger.warning("BOSS_VOICE_EMBEDDING env var is empty or not set! Cannot verify boss.")
 
-        # 7. Return unknown with actual similarity score for debugging
+        # 7. Compare against known profiles (1:N Matching)
+        if known_profiles:
+            try:
+                profiles = json.loads(known_profiles)
+                best_match_name = None
+                best_match_score = 0.0
+                
+                for profile in profiles:
+                    if profile.get('embedding_b64'):
+                        try:
+                            prof_emb_bytes = base64.b64decode(profile['embedding_b64'])
+                            prof_emb_np = np.frombuffer(prof_emb_bytes, dtype=np.float32)
+                            sim = compute_similarity(incoming_emb, prof_emb_np)
+                            if sim > best_match_score:
+                                best_match_score = sim
+                                best_match_name = profile.get('name', 'Unknown Guest')
+                        except Exception as e:
+                            logger.error(f"Error parsing profile {profile.get('name')}: {e}")
+                
+                # Threshold for known guests: 0.45
+                if best_match_score >= 0.45:
+                    logger.info(f"Guest similarity score: {best_match_score:.4f} for {best_match_name}")
+                    return JSONResponse({
+                        "speaker": "known",
+                        "name": best_match_name,
+                        "confidence": round(float(best_match_score), 4),
+                        "liveness": True,
+                        "debug_similarity": round(float(best_match_score), 4)
+                    })
+            except Exception as e:
+                logger.error(f"Error parsing known_profiles JSON: {e}")
+
+        # 8. Return unknown with actual similarity score for debugging
         return JSONResponse({
             "speaker": "unknown",
-            "confidence": round(boss_similarity if boss_emb is not None else 0.0, 4),
+            "confidence": round(float(boss_similarity if boss_emb is not None else 0.0), 4),
             "liveness": True,
-            "debug_similarity": round(boss_similarity if boss_emb is not None else 0.0, 4),
+            "debug_similarity": round(float(boss_similarity if boss_emb is not None else 0.0), 4),
             "embedding": base64.b64encode(incoming_emb.astype(np.float32).tobytes()).decode('utf-8')
         })
 

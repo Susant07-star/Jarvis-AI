@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { logger } from "./logger";
+import { supabase } from "./supabaseClient";
 
 const HF_URL = process.env.HUGGINGFACE_VOICE_API_URL;
 const HF_KEY = process.env.HUGGINGFACE_VOICE_API_KEY;
@@ -63,9 +64,29 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
     const ext = fileName.split('.').pop()?.toLowerCase();
     const mimeType = ext === 'ogg' ? 'audio/ogg' : ext === 'mp3' ? 'audio/mpeg' : 'audio/wav';
 
+    // Fetch known profiles from Supabase
+    let knownProfiles: any[] = [];
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from("voice_profiles").select("name, embedding_b64");
+        if (!error && data) {
+          knownProfiles = data;
+        }
+      } catch (err) {
+        logger.warn("VoiceEngine", "Failed to fetch known profiles from Supabase");
+      }
+    }
+
     // Build multipart/form-data manually (no external dependencies needed)
     const boundary = `----JarvisFormBoundary${Date.now()}`;
     const CRLF = "\r\n";
+
+    const knownProfilesJson = JSON.stringify(knownProfiles);
+    const profilesHeader = Buffer.from(
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="known_profiles"${CRLF}${CRLF}` +
+      `${knownProfilesJson}${CRLF}`
+    );
 
     const header = Buffer.from(
       `--${boundary}${CRLF}` +
@@ -73,7 +94,7 @@ export async function verifyVoice(audioSource: string | Buffer): Promise<VoiceVe
       `Content-Type: ${mimeType}${CRLF}${CRLF}`
     );
     const footer = Buffer.from(`${CRLF}--${boundary}--${CRLF}`);
-    const body = Buffer.concat([header, audioBuffer, footer]);
+    const body = Buffer.concat([profilesHeader, header, audioBuffer, footer]);
 
     logger.info("VoiceEngine", `Verifying voice for file: ${fileName} (${audioBuffer.length} bytes)`);
 
