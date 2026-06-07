@@ -235,6 +235,39 @@ router.post("/verify-voice-buffer", voiceUpload.single('audio_file'), async (req
   }
 });
 
+// ── Enroll a new guest voice print ──
+router.post("/enroll-voice", async (req, res) => {
+  try {
+    const { name, embedding_b64 } = req.body;
+    if (!name || !embedding_b64) {
+      return res.status(400).json({ success: false, error: "Missing name or embedding_b64" });
+    }
+
+    // Security: block attempts to register as the boss
+    const forbidden = ["boss", "susant", "admin", "jarvis", "creator"];
+    if (forbidden.some(f => name.toLowerCase().includes(f))) {
+      return res.status(403).json({ success: false, error: "That name is reserved. Nice try." });
+    }
+
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) {
+      return res.status(503).json({ success: false, error: "Supabase not configured" });
+    }
+
+    const { error } = await supabase.from("voice_profiles").insert({ name, embedding_b64 });
+    if (error) {
+      logger.error("API", `Voice enrollment failed for "${name}": ${error.message}`);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    logger.info("API", `✅ Voice profile enrolled for: ${name}`);
+    res.json({ success: true, name });
+  } catch (err: any) {
+    logger.error("API", `Enroll-voice error: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /**
  * Handle text-based chat interactions.
  */

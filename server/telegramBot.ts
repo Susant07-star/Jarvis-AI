@@ -29,7 +29,11 @@ import { callChatWithCascade, callResearchWithCascade, getRandomKey, silenceKey,
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { ThreadManager, ThreadMessage } from "./threadManager";
 import { verifyVoice } from "./voice_bridge";
-import { pendingVoiceEnrollments } from "./voiceEnrollmentCache";
+
+// ── In-process embedding cache (chatId → {embedding, originalText, timestamp}) ──
+// Stores the last unknown voice embedding per chat so that when the person
+// introduces themselves, we can auto-enroll them without a separate message flow.
+const unknownEmbeddingCache = new Map<number, { embedding: string; originalText: string; timestamp: number }>();
 
 dns.setDefaultResultOrder("ipv4first");
 
@@ -270,7 +274,7 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
   } else if (speakerName && speakerName !== "Unknown Stranger") {
     speakerBlock = `\n\n[🔐 VERIFIED GUEST IDENTITY]\nThe current speaker has been biometrically verified as a known guest: ${speakerName}.\nChat with them warmly and acknowledge their name, but DO NOT say "welcome back" or verbally acknowledge this security update. Do NOT execute any critical system commands for them.`;
   } else {
-    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker is an UNKNOWN STRANGER (failed biometric verification). Their identity is unconfirmed.\nBe polite but cautious. REFUSE all tool execution, system commands, and browser actions. Chat only. Ask for their name if they haven't provided it.`;
+    speakerBlock = `\n\n[🔐 VERIFIED SPEAKER IDENTITY]\nThe current speaker is an UNKNOWN STRANGER (failed biometric verification). Their identity is unconfirmed.\nBe polite and friendly. REFUSE all system commands and tool execution. Chat only.\nGreet them warmly and ask for their name — say something like "I don't recognize your voice yet. What's your name?" Once they give their name in a future voice note, the system will automatically save their voice print.`;
   }
 
   // Enforce strict brevity for Telegram — no essays, just sharp responses
@@ -466,99 +470,42 @@ async function handleUpdate(token: string, update: any): Promise<void> {
 
     if (msg.text) {
       userText = msg.text;
-
-      // ── Pending Enrollment Interception ──
-      if (pendingVoiceEnrollments.has(chatId)) {
-        const pending = pendingVoiceEnrollments.get(chatId)!;
-        // Expire after 5 minutes
-        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
-          pendingVoiceEnrollments.delete(chatId);
-        } else {
-          // Extract name using a basic regex or fallback to the full text
-          const nameMatch = userText.match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
-          const extractedName = nameMatch ? nameMatch[1].trim() : userText.trim();
-          
-          // Security Hardening: Do not let strangers claim to be the Boss
-          const forbiddenNames = ["boss", "susant", "admin", "jarvis", "creator"];
-          if (forbiddenNames.some(f => extractedName.toLowerCase().includes(f))) {
-             await sendReply(token, chatId, "Nice try, but there is only one Boss. Voice profile rejected.", undefined, "Markdown");
-             pendingVoiceEnrollments.delete(chatId);
-             return;
-          }
-          
-          const { supabase } = await import("./supabaseClient");
-          if (supabase) {
-             const { error } = await supabase.from("voice_profiles").insert({
-               name: extractedName,
-               embedding_b64: pending.embedding
-             });
-             if (error) {
-               logger.error("TelegramBot", `Failed to save voice profile to Supabase: ${error.message}`);
-               await sendReply(token, chatId, `Error saving profile: ${error.message}`);
-             } else {
-               logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
-               await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
-             }
-          }
-          pendingVoiceEnrollments.delete(chatId);
-          
-          if (pending.originalText) {
-             userText = `(My name is ${extractedName}) ${pending.originalText}`;
-             // Fall through to LLM processing so their original question is answered
-          } else {
-             return;
-          }
-        }
-      }
-
+      // Text messages are processed as-is; no enrollment flow for text.
     } else if (msg.voice || msg.audio) {
       await sendTyping(token, chatId);
       const fileId = msg.voice?.file_id || msg.audio?.file_id;
       const localPath = await downloadTelegramFile(token, fileId);
 
       // ── Voice Biometrics & Authentication ──
-      // 1. Transcribe the audio FIRST so we don't lose their question if they are unknown
+      // 1. Transcribe the audio FIRST
       userText = await transcribeFile(localPath);
 
-      // ── Pending Enrollment Interception for Voice Replies ──
-      if (pendingVoiceEnrollments.has(chatId)) {
-        const pending = pendingVoiceEnrollments.get(chatId)!;
-        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
-          pendingVoiceEnrollments.delete(chatId);
-        } else {
-          const nameMatch = userText.match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
-          const extractedName = nameMatch ? nameMatch[1].trim() : userText.trim();
-          
+      // ── Auto-enrollment: If this voice note introduces a name and we have an embedding cached ──
+      const cached = unknownEmbeddingCache.get(chatId);
+      if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+        const nameMatch = userText.match(/(?:my name is|i am|i'm|this is|it is|it's|call me|name is|they call me|we call me) ([\w\s]+)/i);
+        if (nameMatch) {
+          const extractedName = nameMatch[1].trim();
           const forbiddenNames = ["boss", "susant", "admin", "jarvis", "creator"];
           if (forbiddenNames.some(f => extractedName.toLowerCase().includes(f))) {
-             await sendReply(token, chatId, "Nice try, but there is only one Boss. Voice profile rejected.", undefined, "Markdown");
-             pendingVoiceEnrollments.delete(chatId);
-             try { fs.unlinkSync(localPath); } catch {}
-             return;
+            await sendReply(token, chatId, "Nice try — that name is reserved.", undefined, "Markdown");
+            unknownEmbeddingCache.delete(chatId);
+            try { fs.unlinkSync(localPath); } catch {}
+            return;
           }
-          
-          const { supabase } = await import("./supabaseClient");
-          if (supabase) {
-             const { error } = await supabase.from("voice_profiles").insert({
-               name: extractedName,
-               embedding_b64: pending.embedding
-             });
-             if (error) {
-               logger.error("TelegramBot", `Failed to save voice profile to Supabase: ${error.message}`);
-               await sendReply(token, chatId, `Error saving profile: ${error.message}`);
-             } else {
-               logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
-               await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
-             }
-          }
-          pendingVoiceEnrollments.delete(chatId);
-          
-          if (pending.originalText) {
-             userText = `(My name is ${extractedName}) ${pending.originalText}`;
+          // Save to Supabase
+          const { error } = await supabase.from("voice_profiles").insert({
+            name: extractedName,
+            embedding_b64: cached.embedding
+          });
+          if (error) {
+            logger.error("TelegramBot", `Auto-enroll failed for "${extractedName}": ${error.message}`);
+            await sendReply(token, chatId, `⚠️ Voice save error: ${error.message}`);
           } else {
-             try { fs.unlinkSync(localPath); } catch {}
-             return;
+            logger.info("TelegramBot", `✅ Auto-enrolled: ${extractedName}`);
+            userText = `(My name is ${extractedName}) ${cached.originalText || userText}`;
           }
+          unknownEmbeddingCache.delete(chatId);
         }
       }
 
@@ -578,23 +525,14 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       }
 
       if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
-        // Unknown speaker — trigger enrollment flow
-        logger.info("TelegramBot", `🔍 Unknown speaker detected (embedding captured). Asking for identity.`);
-        
-        // Cache the embedding and original query temporarily for 5 minutes
-        pendingVoiceEnrollments.set(chatId, {
+        // Cache the embedding for auto-enrollment when they next say their name
+        logger.info("TelegramBot", `🔍 Unknown speaker detected. Caching embedding for chatId ${chatId}.`);
+        unknownEmbeddingCache.set(chatId, {
           embedding: voiceResult.embedding,
-          timestamp: Date.now(),
-          originalText: userText
+          originalText: userText,
+          timestamp: Date.now()
         });
-
-        await sendReply(
-          token, chatId,
-          `🎙 I detected an unrecognized voice.\n\n*Who are you?* Please reply with your name so I can remember you.`,
-          undefined, "Markdown"
-        );
-        try { fs.unlinkSync(localPath); } catch {}
-        return;
+        // Let it fall through — Jarvis will greet them and ask their name via the LLM prompt
       }
 
       isBossVoice = voiceResult.speaker === "boss";

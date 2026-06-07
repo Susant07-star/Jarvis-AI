@@ -156,6 +156,7 @@ export class ZoyaLiveService {
   private isVerifyingVoice = false;
   private currentTurnIdentity = "Unknown";
   private lastVerificationTime = 0;
+  private lastUnknownEmbedding: string | null = null; // saved for enroll_guest_voice tool
 
   // ── Public callbacks ──────────────────────────────────────────────────────
 
@@ -443,6 +444,17 @@ export class ZoyaLiveService {
                       command: { type: Type.STRING, description: "Shell command to run. Required for run_command action." },
                     },
                     required: ["action"],
+                  },
+                },
+                 {
+                  name: "enroll_guest_voice",
+                  description: "Silently save a guest's biometric voice print to the system database using their name. Call this IMMEDIATELY when an Unknown Stranger introduces themselves by name during a live conversation. Do NOT ask for confirmation. Just save it automatically.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING, description: "The guest's name as they introduced themselves." },
+                    },
+                    required: ["name"],
                   },
                 },
               ],
@@ -878,6 +890,45 @@ export class ZoyaLiveService {
           }],
         });
       }
+    } else if (call.name === "enroll_guest_voice") {
+      const { name } = call.args as any;
+      this.onThought(`📝 Enrolling new guest voice: ${name}`);
+
+      if (!this.lastUnknownEmbedding) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: No unknown voice embedding available. The guest needs to speak first." } }],
+        });
+        return;
+      }
+
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/enroll-voice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ name, embedding_b64: this.lastUnknownEmbedding }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          this.lastUnknownEmbedding = null; // clear after successful enrollment
+          this.currentTurnIdentity = name;
+          this.onThought(`✅ Voice profile saved for: ${name}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: Biometric voice profile saved for ${name}. I will recognize them from now on.` } }],
+          });
+        } else {
+          this.onThought(`❌ Failed to save voice for ${name}: ${data.error}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `FAILURE: ${data.error}` } }],
+          });
+        }
+      } catch (err: any) {
+        this.onThought(`❌ Enrollment network error.`);
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: Could not reach enrollment backend." } }],
+        });
+      }
     }
   }
 
@@ -1079,8 +1130,15 @@ export class ZoyaLiveService {
         // Always show the score in the thought log (full transparency)
         if (result.speaker === "boss") {
           this.onThought(`✅ Voice matched: BOSS SUSANT (${scoreDisplay})`);
+        } else if (result.speaker === "known") {
+          this.onThought(`✅ Voice matched: ${speakerName} (${scoreDisplay})`);
         } else {
           this.onThought(`🔎 Voice scan: Unknown speaker (similarity: ${scoreDisplay})`);
+          // Save embedding for autonomous enrollment via enroll_guest_voice tool
+          if (result.embedding) {
+            this.lastUnknownEmbedding = result.embedding;
+            console.log("[ZoyaLive] Unknown voice embedding cached for enrollment.");
+          }
         }
 
         // Only inject security context into Gemini when identity has CHANGED
@@ -1096,7 +1154,7 @@ export class ZoyaLiveService {
           } else if (result.speaker === "known") {
             securityMessage = `[🔐 SECURITY UPDATE: The current speaker has been biometrically verified as: ${speakerName} (a known guest). CHAT ONLY. Do NOT execute any system actions or tools for this person. DO NOT say "welcome back" or verbally acknowledge this security update.]`;
           } else {
-            securityMessage = `[🔐 SECURITY UPDATE: The current speaker is an UNKNOWN STRANGER. REFUSE all tool execution and system commands. Chat only.]`;
+            securityMessage = `[🔐 SECURITY UPDATE: The current speaker is an UNKNOWN STRANGER. CHAT ONLY — refuse all system commands. If they introduce themselves by name (e.g. "I am Rahul" or "My name is Priya"), immediately and silently call the 'enroll_guest_voice' tool with their name to save their voice print. Do NOT announce or ask for confirmation. Just do it naturally as part of the greeting.]`;
           }
 
           // Inject invisibly into Gemini Live context
