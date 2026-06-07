@@ -1072,10 +1072,20 @@ export class ZoyaLiveService {
         if (result.speaker === "boss") speakerName = "BOSS SUSANT";
         else if (result.name) speakerName = result.name;
 
-        // Only inject if identity has changed during this session
+        const scoreDisplay = result.confidence > 0
+          ? `${(result.confidence * 100).toFixed(1)}%`
+          : `${result.debug_similarity !== undefined ? (result.debug_similarity * 100).toFixed(1) : '0'}%`;
+
+        // Always show the score in the thought log (full transparency)
+        if (result.speaker === "boss") {
+          this.onThought(`✅ Voice matched: BOSS SUSANT (${scoreDisplay})`);
+        } else {
+          this.onThought(`🔎 Voice scan: Unknown speaker (similarity: ${scoreDisplay})`);
+        }
+
+        // Only inject security context into Gemini when identity has CHANGED
         if (this.currentTurnIdentity !== speakerName) {
           this.currentTurnIdentity = speakerName;
-          this.onThought(`✅ Identity verified: ${speakerName} (${(result.confidence * 100).toFixed(0)}%)`);
           
           let securityMessage = "";
           if (result.liveness === false) {
