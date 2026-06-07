@@ -244,11 +244,11 @@ export class ZoyaLiveService {
         }
         
         const rms = Math.sqrt(sumSq / raw.length);
-        if (rms > 0.01 && Date.now() - this.lastVerificationTime > 4000 && !this.isVerifyingVoice) {
+        if (rms > 0.01 && Date.now() - this.lastVerificationTime > 10000 && !this.isVerifyingVoice) {
           this.voiceBuffer.push(pcm16);
           this.voiceBufferLength += pcm16.length;
           
-          if (this.voiceBufferLength >= 24000) {
+          if (this.voiceBufferLength >= 56000) {
             this.lastVerificationTime = Date.now();
             this._processVoiceBuffer(); 
           }

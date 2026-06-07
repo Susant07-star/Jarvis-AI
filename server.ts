@@ -23,7 +23,7 @@ async function startServer() {
   // ── Global API Telemetry Logging ──
   app.use((req, res, next) => {
     // Don't spam the logs with the telemetry endpoint itself, or assets
-    if (req.path.startsWith('/api/') && req.path !== '/api/logs/raw' && req.path !== '/api/butler/results') {
+    if (req.path.startsWith('/api/') && req.path !== '/api/logs/raw' && req.path !== '/api/butler/results' && req.path !== '/api/tasks') {
       logger.info('API', `[${req.method}] ${req.originalUrl}`);
     }
     next();
