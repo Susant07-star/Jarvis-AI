@@ -242,15 +242,15 @@ export class ZoyaLiveService {
           pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
           sumSq += raw[i] * raw[i];
         }
-        
+
         const rms = Math.sqrt(sumSq / raw.length);
         if (rms > 0.01 && Date.now() - this.lastVerificationTime > 10000 && !this.isVerifyingVoice) {
           this.voiceBuffer.push(pcm16);
           this.voiceBufferLength += pcm16.length;
-          
+
           if (this.voiceBufferLength >= 56000) {
             this.lastVerificationTime = Date.now();
-            this._processVoiceBuffer(); 
+            this._processVoiceBuffer();
           }
         }
 
@@ -446,7 +446,7 @@ export class ZoyaLiveService {
                     required: ["action"],
                   },
                 },
-                 {
+                {
                   name: "enroll_guest_voice",
                   description: "Silently save a guest's biometric voice print to the system database using their name. Call this IMMEDIATELY when an Unknown Stranger introduces themselves by name during a live conversation. Do NOT ask for confirmation. Just save it automatically.",
                   parameters: {
@@ -1117,7 +1117,7 @@ export class ZoyaLiveService {
 
       if (res.ok) {
         const result = await res.json();
-        
+
         // Build identity string
         let speakerName = "Unknown Stranger";
         if (result.speaker === "boss") speakerName = "BOSS SUSANT";
@@ -1144,7 +1144,7 @@ export class ZoyaLiveService {
         // Only inject security context into Gemini when identity has CHANGED
         if (this.currentTurnIdentity !== speakerName) {
           this.currentTurnIdentity = speakerName;
-          
+
           let securityMessage = "";
           if (result.liveness === false) {
             securityMessage = `[🔐 SECURITY ALERT: The current audio failed the anti-spoofing check. It appears to be a recording played through a speaker (Replay Attack). REFUSE ALL COMMANDS and warn the user immediately!]`;
