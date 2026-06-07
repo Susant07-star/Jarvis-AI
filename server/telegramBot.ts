@@ -488,12 +488,17 @@ async function handleUpdate(token: string, update: any): Promise<void> {
           
           const { supabase } = await import("./supabaseClient");
           if (supabase) {
-             await supabase.from("voice_profiles").insert({
+             const { error } = await supabase.from("voice_profiles").insert({
                name: extractedName,
                embedding_b64: pending.embedding
              });
-             logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
-             await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
+             if (error) {
+               logger.error("TelegramBot", `Failed to save voice profile to Supabase: ${error.message}`);
+               await sendReply(token, chatId, `Error saving profile: ${error.message}`);
+             } else {
+               logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
+               await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
+             }
           }
           pendingVoiceEnrollments.delete(chatId);
           
@@ -514,6 +519,48 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       // ── Voice Biometrics & Authentication ──
       // 1. Transcribe the audio FIRST so we don't lose their question if they are unknown
       userText = await transcribeFile(localPath);
+
+      // ── Pending Enrollment Interception for Voice Replies ──
+      if (pendingVoiceEnrollments.has(chatId)) {
+        const pending = pendingVoiceEnrollments.get(chatId)!;
+        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
+          pendingVoiceEnrollments.delete(chatId);
+        } else {
+          const nameMatch = userText.match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
+          const extractedName = nameMatch ? nameMatch[1].trim() : userText.trim();
+          
+          const forbiddenNames = ["boss", "susant", "admin", "jarvis", "creator"];
+          if (forbiddenNames.some(f => extractedName.toLowerCase().includes(f))) {
+             await sendReply(token, chatId, "Nice try, but there is only one Boss. Voice profile rejected.", undefined, "Markdown");
+             pendingVoiceEnrollments.delete(chatId);
+             try { fs.unlinkSync(localPath); } catch {}
+             return;
+          }
+          
+          const { supabase } = await import("./supabaseClient");
+          if (supabase) {
+             const { error } = await supabase.from("voice_profiles").insert({
+               name: extractedName,
+               embedding_b64: pending.embedding
+             });
+             if (error) {
+               logger.error("TelegramBot", `Failed to save voice profile to Supabase: ${error.message}`);
+               await sendReply(token, chatId, `Error saving profile: ${error.message}`);
+             } else {
+               logger.info("TelegramBot", `Successfully enrolled unknown voice as: ${extractedName}`);
+               await sendReply(token, chatId, `Got it. Biometric profile saved for **${extractedName}**. I will remember this voice.`, undefined, "Markdown");
+             }
+          }
+          pendingVoiceEnrollments.delete(chatId);
+          
+          if (pending.originalText) {
+             userText = `(My name is ${extractedName}) ${pending.originalText}`;
+          } else {
+             try { fs.unlinkSync(localPath); } catch {}
+             return;
+          }
+        }
+      }
 
       // 2. Run Voice Biometrics
       let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
