@@ -244,7 +244,7 @@ export class ZoyaLiveService {
         }
 
         const rms = Math.sqrt(sumSq / raw.length);
-        if (rms > 0.01 && Date.now() - this.lastVerificationTime > 10000 && !this.isVerifyingVoice) {
+        if (rms > 0.01 && Date.now() - this.lastVerificationTime > 6000 && !this.isVerifyingVoice) {
           this.voiceBuffer.push(pcm16);
           this.voiceBufferLength += pcm16.length;
 
@@ -1094,6 +1094,21 @@ export class ZoyaLiveService {
   private async _processVoiceBuffer() {
     if (this.isVerifyingVoice || this.voiceBufferLength === 0) return;
     this.isVerifyingVoice = true;
+
+    // Check if voice biometrics is globally disabled
+    if (import.meta.env.VITE_ENABLE_VOICE_BIOMETRICS === "false") {
+      this.isVerifyingVoice = false;
+      this.voiceBuffer = [];
+      this.voiceBufferLength = 0;
+      
+      if (this.currentTurnIdentity !== "BOSS SUSANT") {
+        this.currentTurnIdentity = "BOSS SUSANT";
+        const msg = `[🔐 SECURITY UPDATE: Voice biometrics are currently DISABLED. Defaulting to full BOSS clearance.]`;
+        console.log(`[ZoyaLive] Injecting: ${msg}`);
+        this.sendText(msg);
+      }
+      return;
+    }
 
     // Compile into single Int16Array
     const audioData = new Int16Array(this.voiceBufferLength);

@@ -483,12 +483,16 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       let transcribedText = "";
 
       try {
+        const verifyPromise = process.env.ENABLE_VOICE_BIOMETRICS === "false" 
+          ? Promise.resolve({ speaker: "boss", confidence: 1.0, liveness: true, embedding: "" })
+          : verifyVoice(localPath).catch((err: any) => {
+              logger.error("TelegramBot", `Voice verification failed: ${err.message}. Defaulting to Boss.`);
+              return { speaker: "boss", confidence: 0.5, liveness: true, embedding: "" };
+            });
+
         [transcribedText, voiceResult] = await Promise.all([
           transcribeFile(localPath),
-          verifyVoice(localPath).catch((err: any) => {
-            logger.error("TelegramBot", `Voice verification failed: ${err.message}. Defaulting to Boss.`);
-            return { speaker: "boss", confidence: 0.5, liveness: true, embedding: "" };
-          })
+          verifyPromise
         ]);
       } catch (err: any) {
         logger.error("TelegramBot", `Transcription failed: ${err.message}`);
