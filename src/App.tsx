@@ -116,11 +116,15 @@ export default function App() {
             return;
           }
           
-          if (authConfig.ownerEmail && session.user.email !== authConfig.ownerEmail) {
-            await supabase.auth.signOut();
-            setAuthError("UNAUTHORIZED IDENTITY DETECTED. ACCESS DENIED.");
-            setShowAuthPrompt(true);
-            return;
+          if (authConfig.ownerEmail) {
+            const allowedEmails = authConfig.ownerEmail.split(',').map((e: string) => e.trim().toLowerCase());
+            const userEmail = session.user.email?.toLowerCase() || '';
+            if (!allowedEmails.includes(userEmail)) {
+              await supabase.auth.signOut();
+              setAuthError("UNAUTHORIZED IDENTITY DETECTED. ACCESS DENIED.");
+              setShowAuthPrompt(true);
+              return;
+            }
           }
         }
       } catch (err) {

@@ -95,12 +95,16 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
         logToTerminal(`[AUTH] Active session email: ${email}`);
         logToTerminal(`[AUTH] VITE_OWNER_EMAIL configured as: ${import.meta.env.VITE_OWNER_EMAIL}`);
 
-        if (import.meta.env.VITE_OWNER_EMAIL && email !== import.meta.env.VITE_OWNER_EMAIL) {
-          logToTerminal("[AUTH ERROR] Email mismatch! Signing out and wiping local AuthStore.");
-          await supabase.auth.signOut();
-          useAuthStore.getState().logout();
-          navigate('/login', { replace: true })
-          return;
+        if (import.meta.env.VITE_OWNER_EMAIL) {
+          const allowedEmails = import.meta.env.VITE_OWNER_EMAIL.split(',').map((e: string) => e.trim().toLowerCase());
+          const userEmail = email?.toLowerCase() || '';
+          if (!allowedEmails.includes(userEmail)) {
+            logToTerminal("[AUTH ERROR] Email mismatch! Signing out and wiping local AuthStore.");
+            await supabase.auth.signOut();
+            useAuthStore.getState().logout();
+            navigate('/login', { replace: true })
+            return;
+          }
         }
 
         if (!isSessionUnlocked && location.pathname !== '/lock') {
