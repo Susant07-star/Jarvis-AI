@@ -81,20 +81,20 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
 
   return (
     <div className={`relative ${sizeClasses} flex items-center justify-center`} style={{ perspective: "1000px" }}>
-      {/* Outer glow aura - Optimized for mobile by reducing blur */}
+      {/* Outer glow aura - Drastically reduced blur for mobile performance */}
       <motion.div
         animate={{
           scale: currentEmotion === "angry" ? [1, 1.2, 1] : [1, 1.1, 1],
           opacity: currentEmotion === "angry" ? [0.2, 0.4, 0.2] : [0.1, 0.15, 0.1],
         }}
         transition={{ duration: currentEmotion === "angry" ? 0.5 : 4, repeat: Infinity }}
-        className={`absolute inset-0 rounded-full ${isMobile ? 'blur-[40px]' : 'blur-[80px]'}`}
+        className={`absolute inset-0 rounded-full ${isMobile ? 'blur-md' : 'blur-[60px]'}`}
         style={{ backgroundColor: theme.color }}
       />
 
       {/* Breathing wrapper */}
       <motion.div
-        animate={["neutral", "happy", "thoughtful"].includes(currentEmotion) ? { y: [0, -4, 0] } : { y: 0 }}
+        animate={["neutral", "happy", "thoughtful"].includes(currentEmotion) ? { y: isMobile ? [0, -2, 0] : [0, -4, 0] } : { y: 0 }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className="relative z-10 w-full h-full"
       >
@@ -117,10 +117,10 @@ export default function ZoyaAvatar({ state, emotion = "neutral", size = "md" }: 
             <Eye side="right" state={state} emotion={currentEmotion} theme={theme} mousePos={mousePos} isMobile={isMobile} />
           </div>
 
-          {/* Cheek glow - Reduced for mobile */}
+          {/* Cheek glow - Drastically reduced for mobile */}
           <div className="absolute top-[55%] left-0 right-0 flex justify-between px-[12%] pointer-events-none">
-            <div className={`w-[25%] h-6 ${isMobile ? 'blur-xl' : 'blur-3xl'} opacity-20 rounded-full ${theme.bg}`} />
-            <div className={`w-[25%] h-6 ${isMobile ? 'blur-xl' : 'blur-3xl'} opacity-20 rounded-full ${theme.bg}`} />
+            <div className={`w-[25%] h-6 ${isMobile ? 'blur-md opacity-10' : 'blur-3xl opacity-20'} rounded-full ${theme.bg}`} />
+            <div className={`w-[25%] h-6 ${isMobile ? 'blur-md opacity-10' : 'blur-3xl opacity-20'} rounded-full ${theme.bg}`} />
           </div>
 
           {/* Mouth */}

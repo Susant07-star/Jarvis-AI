@@ -21,6 +21,7 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>('idle');
   const [showTaskPanel, setShowTaskPanel] = useState(false);
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [isVoiceOverlayMinimized, setIsVoiceOverlayMinimized] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const zoya = useZoyaVoice();
   const [memoryStats, setMemoryStats] = useState({ messageCount: 0, estimatedTokens: 0, maxMessages: 50 });
@@ -400,10 +401,40 @@ export default function App() {
             </div>
           </div>
 
-          {/* Mobile status indicator — compact */}
-          <div className="flex md:hidden items-center gap-1.5">
-            <span className={`text-[9px] font-mono font-bold tracking-wider ${statusColor}`}>{appState.toUpperCase()}</span>
-          </div>
+          {/* Live Link Controls (Header) */}
+          {zoya.isSessionActive && isVoiceOverlayMinimized ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsVoiceOverlayMinimized(false)}
+                className="px-2 md:px-3 py-1 bg-cyan-900/40 text-cyan-400 border border-cyan-500/30 rounded text-[9px] md:text-[10px] font-mono tracking-wider hover:bg-cyan-800/60 transition-colors"
+              >
+                MAXIMIZE
+              </button>
+              <button
+                onClick={() => {
+                  stopListening();
+                  setIsVoiceOverlayMinimized(false);
+                }}
+                className="px-2 md:px-3 py-1 bg-red-900/40 text-red-400 border border-red-500/30 rounded text-[9px] md:text-[10px] font-mono tracking-wider hover:bg-red-800/60 transition-colors"
+              >
+                END CALL
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (zoya.isSessionActive) {
+                  setIsVoiceOverlayMinimized(false);
+                } else {
+                  startListening(timezone);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/40 text-cyan-400 border border-cyan-800/50 hover:bg-cyan-900/60 rounded-lg text-[10px] font-mono tracking-widest transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)] active:scale-95"
+            >
+              <Activity className={`w-3.5 h-3.5 ${appState === 'listening' || appState === 'processing' || appState === 'speaking' ? 'animate-pulse' : ''}`} />
+              <span className="hidden md:inline">LIVE LINK</span>
+            </button>
+          )}
 
           {/* Task Panel Toggle */}
           <button 
@@ -495,25 +526,48 @@ export default function App() {
       </footer>
 
       {/* Holographic Voice Call Overlay (Mobile & Tablet only) */}
-      {zoya.isSessionActive && (
+      {zoya.isSessionActive && !isVoiceOverlayMinimized && (
         <div className="lg:hidden fixed inset-0 z-50 hologram-overlay flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {/* Hologram scanlines */}
           <div className="holo-scanline" />
           
           {/* Top Info HUD */}
-          <div className="w-full flex justify-between items-center border-b border-cyan-500/20 pb-2 md:pb-3 relative z-20">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-cyan-400 animate-ping" />
-              <span className="font-mono text-[10px] md:text-xs tracking-widest text-cyan-400 font-bold uppercase">VOICE_LINK</span>
+          <div className="w-full flex justify-between items-start relative z-20">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <span className="font-mono text-[10px] md:text-xs tracking-widest text-cyan-400 font-bold uppercase">VOICE_LINK</span>
+              </div>
+              <span className="font-mono text-[8px] md:text-[9px] text-cyan-600 tracking-wider">ENC_3.1 // ACTIVE</span>
             </div>
-            <span className="font-mono text-[8px] md:text-[9px] text-cyan-600 tracking-wider">ENC_3.1</span>
+            
+            {/* Window Controls */}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsVoiceOverlayMinimized(true)}
+                className="w-8 h-8 flex items-center justify-center bg-cyan-900/30 border border-cyan-500/30 rounded-full text-cyan-400 hover:bg-cyan-800/50 transition-colors"
+              >
+                <div className="w-3 h-[2px] bg-cyan-400 rounded-full" />
+              </button>
+              <button 
+                onClick={() => {
+                  stopListening();
+                  setIsVoiceOverlayMinimized(false);
+                }}
+                className="w-8 h-8 flex items-center justify-center bg-red-900/30 border border-red-500/30 rounded-full text-red-400 hover:bg-red-800/50 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           
           {/* Center holographic avatar */}
           <div className="flex-1 flex flex-col items-center justify-center relative z-20 my-4 md:my-6">
-            {/* Decorative scanning rings — scaled down for phones */}
-            <div className="absolute w-48 h-48 md:w-64 md:h-64 holo-ring pointer-events-none" />
-            <div className="absolute w-56 h-56 md:w-72 md:h-72 holo-ring-reverse pointer-events-none" />
+            {/* Decorative scanning rings — hidden on mobile for performance */}
+            <div className="hidden md:block absolute w-48 h-48 md:w-64 md:h-64 holo-ring pointer-events-none" />
+            <div className="hidden md:block absolute w-56 h-56 md:w-72 md:h-72 holo-ring-reverse pointer-events-none" />
             <div className="absolute w-64 h-64 md:w-80 md:h-80 border border-cyan-500/5 rounded-full pointer-events-none animate-pulse" />
             
             <div className="scale-110 md:scale-150 transition-all duration-300 relative z-30">
