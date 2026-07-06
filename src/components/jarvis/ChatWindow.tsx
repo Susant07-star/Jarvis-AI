@@ -529,7 +529,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               onFocus={playSound.tick}
               placeholder="Enter command..."
               disabled={isProcessing}
-              className="w-full bg-black/40 border border-cyan-800/40 rounded-xl py-3.5 md:py-4 pl-10 pr-14 text-cyan-50 font-mono text-sm md:text-base focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60"
+              className="w-full bg-black/40 border border-cyan-800/40 rounded-xl py-3.5 md:py-4 pl-10 pr-14 text-cyan-50 font-mono text-base focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60"
             />
             <button
               type="submit"
