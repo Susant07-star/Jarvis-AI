@@ -11,6 +11,17 @@
   --color-jarvis-panel: rgba(5, 11, 20, 0.9);
 }
 
+/* ── PWA & Mobile Foundation ──────────────────────────────────────────────── */
+html {
+  /* Respect iPhone notch / home indicator / Android cutouts */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* Eliminate 300ms tap delay on all mobile browsers */
+  touch-action: manipulation;
+  /* Prevent overscroll bounce on iOS PWA */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background-color: var(--color-jarvis-dark);
   color: var(--color-jarvis-cyan);
@@ -21,6 +32,20 @@ body {
   background-size: 100% 100%, 40px 40px, 40px 40px;
   background-position: center center;
   overflow: hidden;
+  /* Prevent pull-to-refresh in PWA */
+  overscroll-behavior-y: contain;
+}
+
+/* ── Mobile-specific overrides ────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Hide scrollbars on mobile for cleaner look */
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+
+  /* Smaller grid background on mobile for performance */
+  body {
+    background-size: 100% 100%, 30px 30px, 30px 30px;
+  }
 }
 
 /* Glassmorphism panels */
@@ -33,6 +58,14 @@ body {
     inset 0 0 30px rgba(0, 240, 255, 0.03),
     0 0 20px rgba(0, 240, 255, 0.06),
     0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Lighter glass on mobile for performance */
+@media (max-width: 767px) {
+  .glass-panel {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
 }
 
 .jarvis-border {
@@ -89,7 +122,7 @@ body {
   border-left: 2px solid rgba(0, 200, 255, 0.4);
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar (desktop only — hidden on mobile via media query above) */
 ::-webkit-scrollbar {
   width: 5px;
 }
@@ -123,6 +156,14 @@ body {
   background: radial-gradient(circle at 50% 50%, rgba(5, 20, 45, 0.9) 0%, rgba(2, 6, 12, 0.97) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+/* Lighter hologram on mobile */
+@media (max-width: 767px) {
+  .hologram-overlay {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }
 
 .holo-ring {
@@ -168,6 +209,14 @@ body {
   z-index: 10;
 }
 
+/* Lighter scanlines on mobile */
+@media (max-width: 767px) {
+  .holo-scanline {
+    background-size: 100% 3px, 4px 100%;
+    opacity: 0.6;
+  }
+}
+
 /* Glowing text and buttons */
 .jarvis-glow-amber {
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.6), 0 0 30px rgba(245, 158, 11, 0.2);
@@ -195,6 +244,17 @@ body {
 }
 .markdown-table tr:hover {
   background: rgba(0, 240, 255, 0.02);
+}
+
+/* Mobile-friendly tables */
+@media (max-width: 767px) {
+  .markdown-table {
+    font-size: 10px;
+  }
+  .markdown-table th,
+  .markdown-table td {
+    padding: 5px 6px;
+  }
 }
 
 /* Bullet list styling */

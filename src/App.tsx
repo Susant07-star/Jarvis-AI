@@ -269,14 +269,14 @@ export default function App() {
   const statusDot = appState === 'idle' ? 'bg-cyan-800' : appState === 'listening' ? 'bg-cyan-400 animate-pulse' : appState === 'processing' ? 'bg-indigo-400 animate-pulse' : 'bg-emerald-400 animate-pulse';
 
   return (
-    <div className="h-screen flex flex-col p-3 md:p-6 overflow-hidden relative">
+    <div className="h-screen flex flex-col p-2 md:p-6 overflow-hidden relative">
       {/* IDENTITY LOCKDOWN OVERLAY */}
       {showAuthPrompt && (
-        <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center">
-          <div className="glass-panel p-8 rounded-2xl flex flex-col items-center gap-6 max-w-sm w-full border border-indigo-500/30">
-            <Shield className="w-16 h-16 text-indigo-400 animate-pulse" />
+        <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center px-4" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="glass-panel p-6 md:p-8 rounded-2xl flex flex-col items-center gap-5 md:gap-6 max-w-sm w-full border border-indigo-500/30">
+            <Shield className="w-12 h-12 md:w-16 md:h-16 text-indigo-400 animate-pulse" />
             <div className="text-center">
-              <h2 className="text-xl font-bold text-indigo-400 font-mono mb-2">IDENTITY VERIFICATION</h2>
+              <h2 className="text-lg md:text-xl font-bold text-indigo-400 font-mono mb-2">IDENTITY VERIFICATION</h2>
               <p className="text-cyan-600/70 text-xs font-mono">
                 {authError || "Please authenticate to access J.A.R.V.I.S. neural link."}
               </p>
@@ -290,7 +290,7 @@ export default function App() {
                   });
                 }
               }}
-              className="w-full bg-indigo-900/40 hover:bg-indigo-800/60 border border-indigo-500/50 text-indigo-300 py-3 rounded-lg font-mono tracking-widest transition-all"
+              className="w-full bg-indigo-900/40 hover:bg-indigo-800/60 border border-indigo-500/50 text-indigo-300 py-3 rounded-lg font-mono tracking-widest transition-all active:scale-[0.98]"
             >
               LOGIN WITH GOOGLE
             </button>
@@ -300,11 +300,11 @@ export default function App() {
 
       {/* SECURITY LOCKDOWN OVERLAY */}
       {showPinPrompt && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center">
-          <div className="glass-panel p-8 rounded-2xl flex flex-col items-center gap-6 max-w-sm w-full border border-red-500/30">
-            <Shield className="w-16 h-16 text-red-500 animate-pulse" />
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center px-4" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="glass-panel p-6 md:p-8 rounded-2xl flex flex-col items-center gap-5 md:gap-6 max-w-sm w-full border border-red-500/30">
+            <Shield className="w-12 h-12 md:w-16 md:h-16 text-red-500 animate-pulse" />
             <div className="text-center">
-              <h2 className="text-xl font-bold text-red-400 font-mono mb-2">SYSTEM LOCKED</h2>
+              <h2 className="text-lg md:text-xl font-bold text-red-400 font-mono mb-2">SYSTEM LOCKED</h2>
               <p className="text-cyan-600/70 text-xs font-mono">Authentication required to access the neural link.</p>
             </div>
             <form 
@@ -320,12 +320,12 @@ export default function App() {
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="ENTER MASTER PIN"
-                className="w-full bg-cyan-950/50 border border-cyan-800 text-cyan-400 font-mono p-3 rounded text-center tracking-[0.5em] focus:outline-none focus:border-red-500 transition-colors"
+                className="w-full bg-cyan-950/50 border border-cyan-800 text-cyan-400 font-mono p-3 rounded text-center tracking-[0.5em] focus:outline-none focus:border-red-500 transition-colors text-base"
                 autoFocus
               />
               <button 
                 type="submit"
-                className="w-full py-3 bg-red-900/40 hover:bg-red-800/60 border border-red-500/50 text-red-200 font-mono text-sm tracking-widest rounded transition-all"
+                className="w-full py-3 bg-red-900/40 hover:bg-red-800/60 border border-red-500/50 text-red-200 font-mono text-sm tracking-widest rounded transition-all active:scale-[0.98]"
               >
                 AUTHORIZE
               </button>
@@ -338,10 +338,10 @@ export default function App() {
       <BrowserAgent />
       
       {/* Top HUD Bar */}
-      <header className="glass-panel rounded-xl px-4 py-2.5 mb-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <header className="glass-panel rounded-xl px-3 md:px-4 py-2 md:py-2.5 mb-2 md:mb-4 flex justify-between items-center">
+        <div className="flex items-center gap-2 md:gap-3">
           <div className={`w-2 h-2 rounded-full ${statusDot}`} />
-          <h1 className="text-lg md:text-2xl font-bold tracking-[0.15em] text-cyan-400 jarvis-glow" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="text-base md:text-2xl font-bold tracking-[0.15em] text-cyan-400 jarvis-glow" style={{ fontFamily: 'var(--font-display)' }}>
             J.A.R.V.I.S.
           </h1>
           <span className="hidden md:inline text-[9px] font-mono text-cyan-700 tracking-widest uppercase">
@@ -349,8 +349,8 @@ export default function App() {
           </span>
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Status indicators */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Status indicators — desktop only */}
           <div className="hidden md:flex items-center gap-4 text-cyan-600/70">
             <div className="flex items-center gap-1.5">
               <Activity className={`w-3.5 h-3.5 ${appState === 'listening' ? 'text-cyan-300 animate-pulse' : ''}`} />
@@ -400,16 +400,21 @@ export default function App() {
             </div>
           </div>
 
+          {/* Mobile status indicator — compact */}
+          <div className="flex md:hidden items-center gap-1.5">
+            <span className={`text-[9px] font-mono font-bold tracking-wider ${statusColor}`}>{appState.toUpperCase()}</span>
+          </div>
+
           {/* Task Panel Toggle */}
           <button 
             onClick={() => { playSound.click(); setShowTaskPanel(!showTaskPanel); }}
             onMouseEnter={playSound.tick}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
+            className="hidden md:flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
           >
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>
           
-          <div className="w-px h-6 bg-cyan-900/50 mx-1"></div>
+          <div className="hidden md:block w-px h-6 bg-cyan-900/50 mx-1"></div>
           
           {/* Timezone Clock */}
           <TimezoneClock timezone={timezone} onTimezoneChange={handleTimezoneChange} />
@@ -417,7 +422,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex gap-4 min-h-0 relative">
+      <main className="flex-1 flex gap-2 md:gap-4 min-h-0 relative">
         
         {/* Left: Voice (Gemini Live) */}
         <div className="hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0">
@@ -475,51 +480,52 @@ export default function App() {
       </main>
 
       {/* Bottom Status Bar */}
-      <footer className="mt-3 glass-panel rounded-lg px-3 md:px-4 py-1.5 flex flex-col sm:flex-row justify-between items-center gap-1.5 sm:gap-4 text-cyan-700 font-mono text-[9px] tracking-widest text-center sm:text-left">
+      {/* Footer — hidden on mobile for more chat space */}
+      <footer className="hidden md:flex mt-3 glass-panel rounded-lg px-4 py-1.5 flex-row justify-between items-center gap-4 text-cyan-700 font-mono text-[9px] tracking-widest">
         <div className="flex items-center gap-2">
           <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
           <span className={statusColor}>{appState.toUpperCase()}</span>
         </div>
         <div className="flex flex-wrap justify-center items-center gap-3">
           <span>KEY_POOL: ROTATING</span>
-          <span className="hidden sm:inline">MEM: ENCRYPTED</span>
-          <span className="hidden sm:inline">PROTOCOL: OMEGA</span>
+          <span>MEM: ENCRYPTED</span>
+          <span>PROTOCOL: OMEGA</span>
         </div>
         <div className="uppercase">STARK INDUSTRIES // AI DIV</div>
       </footer>
 
       {/* Holographic Voice Call Overlay (Mobile & Tablet only) */}
       {zoya.isSessionActive && (
-        <div className="lg:hidden fixed inset-0 z-50 hologram-overlay flex flex-col items-center justify-between p-6 overflow-hidden">
+        <div className="lg:hidden fixed inset-0 z-50 hologram-overlay flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {/* Hologram scanlines */}
           <div className="holo-scanline" />
           
           {/* Top Info HUD */}
-          <div className="w-full flex justify-between items-center border-b border-cyan-500/20 pb-3 relative z-20">
+          <div className="w-full flex justify-between items-center border-b border-cyan-500/20 pb-2 md:pb-3 relative z-20">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-              <span className="font-mono text-xs tracking-widest text-cyan-400 font-bold uppercase">ZOYA_VOICE_LINK</span>
+              <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="font-mono text-[10px] md:text-xs tracking-widest text-cyan-400 font-bold uppercase">VOICE_LINK</span>
             </div>
-            <span className="font-mono text-[9px] text-cyan-600 tracking-wider">ESTABLISHED // ENC_3.1</span>
+            <span className="font-mono text-[8px] md:text-[9px] text-cyan-600 tracking-wider">ENC_3.1</span>
           </div>
           
           {/* Center holographic avatar */}
-          <div className="flex-1 flex flex-col items-center justify-center relative z-20 my-6">
-            {/* Decorative scanning rings */}
-            <div className="absolute w-64 h-64 holo-ring pointer-events-none" />
-            <div className="absolute w-72 h-72 holo-ring-reverse pointer-events-none" />
-            <div className="absolute w-80 h-80 border border-cyan-500/5 rounded-full pointer-events-none animate-pulse" />
+          <div className="flex-1 flex flex-col items-center justify-center relative z-20 my-4 md:my-6">
+            {/* Decorative scanning rings — scaled down for phones */}
+            <div className="absolute w-48 h-48 md:w-64 md:h-64 holo-ring pointer-events-none" />
+            <div className="absolute w-56 h-56 md:w-72 md:h-72 holo-ring-reverse pointer-events-none" />
+            <div className="absolute w-64 h-64 md:w-80 md:h-80 border border-cyan-500/5 rounded-full pointer-events-none animate-pulse" />
             
-            <div className="scale-125 md:scale-150 transition-all duration-300 relative z-30">
+            <div className="scale-110 md:scale-150 transition-all duration-300 relative z-30">
               <ZoyaAvatar state={appState} emotion={zoya.emotion} />
             </div>
             
-            <div className="text-center mt-12 max-w-xs relative z-30">
+            <div className="text-center mt-8 md:mt-12 max-w-xs relative z-30">
               <div className="h-6">
-                {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse tracking-widest uppercase">Awaiting Input...</span>}
-                {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse tracking-widest uppercase">Analyzing...</span>}
-                {appState === 'speaking' && <span className="text-emerald-400 font-mono text-sm tracking-widest uppercase">Transmitting...</span>}
-                {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-sm tracking-widest uppercase">Standby</span>}
+                {appState === 'listening' && <span className="text-cyan-400 font-mono text-xs md:text-sm animate-pulse tracking-widest uppercase">Awaiting Input...</span>}
+                {appState === 'processing' && <span className="text-indigo-400 font-mono text-xs md:text-sm animate-pulse tracking-widest uppercase">Analyzing...</span>}
+                {appState === 'speaking' && <span className="text-emerald-400 font-mono text-xs md:text-sm tracking-widest uppercase">Transmitting...</span>}
+                {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-xs md:text-sm tracking-widest uppercase">Standby</span>}
               </div>
               
               {error && (
@@ -531,14 +537,14 @@ export default function App() {
           </div>
           
           {/* Bottom Visualizer and Controls */}
-          <div className="w-full flex flex-col items-center gap-6 relative z-20 pb-4">
+          <div className="w-full flex flex-col items-center gap-4 md:gap-6 relative z-20 pb-2 md:pb-4">
             <VoiceVisualizer 
               appState={appState} 
               onToggle={zoya.stopSession} 
               disabled={!hasRecognition}
             />
-            <p className="text-cyan-700/60 text-[9px] font-mono tracking-widest uppercase">
-              Tap visualizer to close connection
+            <p className="text-cyan-600/50 text-[10px] md:text-[9px] font-mono tracking-wider md:tracking-widest uppercase">
+              Tap to disconnect
             </p>
           </div>
         </div>

@@ -362,15 +362,15 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
                   {msg.timestamp.toLocaleTimeString([], { hour12: false })}
                 </span>
                 <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${msg.role === 'user' ? 'text-cyan-500' : 'text-cyan-300'}`}>
-                  {msg.role === 'user' ? 'USER' : `J.A.R.V.I.S.${msg.model ? ` (${msg.model}${msg.usedResearch ? ' ⚡' : ''})` : ''}`}
+                  {msg.role === 'user' ? 'USER' : <><span className="md:hidden">J.A.R.V.I.S.</span><span className="hidden md:inline">J.A.R.V.I.S.{msg.model ? ` (${msg.model}${msg.usedResearch ? ' ⚡' : ''})` : ''}</span></>}
                 </span>
-                {msg.tokens ? <span className="text-[8px] font-mono text-cyan-600/60">🪙 {msg.tokens}</span> : null}
+                {msg.tokens ? <span className="hidden md:inline text-[8px] font-mono text-cyan-600/60">🪙 {msg.tokens}</span> : null}
                 {getSourceBadge(msg.source)}
                 {getEmotionBadge(msg.emotion)}
               </div>
 
               {/* Message bubble */}
-              <div className={`relative max-w-[88%] p-3.5 font-sans text-sm leading-relaxed rounded-sm overflow-hidden
+              <div className={`relative max-w-[92%] md:max-w-[88%] p-3 md:p-3.5 font-sans text-sm leading-relaxed rounded-sm overflow-hidden
                 ${msg.role === 'user' ? 'msg-user text-cyan-100' : 'msg-jarvis text-cyan-50'}
               `}>
                 {/* Corner accents */}
@@ -499,26 +499,29 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
       </div>
 
       {/* Input Area */}
-      <div className="p-3 border-t border-cyan-500/20 bg-slate-900/60 backdrop-blur-md relative z-10">
-        <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
-          {/* Mobile voice button */}
+      <div 
+        className="p-3 md:p-4 border-t border-cyan-500/20 bg-slate-900/60 backdrop-blur-md relative z-10" 
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
+        <form onSubmit={handleSubmit} className="relative flex items-center gap-2 md:gap-3">
+          {/* Mobile voice button - larger touch target */}
           {onVoiceToggle && hasRecognition && (
             <button
               type="button"
               onClick={() => { playSound.click(); onVoiceToggle(); }}
               onMouseEnter={playSound.tick}
-              className={`lg:hidden p-2.5 rounded-lg transition-all cursor-pointer border ${
+              className={`lg:hidden p-3 md:p-3.5 rounded-xl transition-all cursor-pointer border active:scale-95 ${
                 isListening 
                   ? 'bg-red-950/40 text-red-400 border-red-500/55 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse' 
                   : 'bg-cyan-950/20 text-cyan-500 border-cyan-800/40 hover:text-cyan-300 hover:border-cyan-500/50'
               }`}
             >
-              {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
           )}
           
           <div className="flex-1 relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-mono text-sm font-bold">&gt;</div>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-600 font-mono text-sm md:text-base font-bold">&gt;</div>
             <input
               type="text"
               value={input}
@@ -526,16 +529,16 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               onFocus={playSound.tick}
               placeholder="Enter command..."
               disabled={isProcessing}
-              className="w-full bg-black/40 border border-cyan-800/40 rounded-lg py-3 pl-8 pr-12 text-cyan-50 font-mono text-sm focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60"
+              className="w-full bg-black/40 border border-cyan-800/40 rounded-xl py-3.5 md:py-4 pl-10 pr-14 text-cyan-50 font-mono text-sm md:text-base focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60"
             />
             <button
               type="submit"
               disabled={!input.trim() || isProcessing}
               onClick={() => playSound.click()}
               onMouseEnter={playSound.tick}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 bg-cyan-950/40 rounded text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-30 transition-all cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 md:p-2.5 bg-cyan-950/40 rounded-lg text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-30 transition-all cursor-pointer active:scale-95"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
         </form>
