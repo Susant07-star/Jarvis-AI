@@ -67,6 +67,11 @@ function _loadModule(moduleId: string): string {
     return moduleCache[moduleId];
   }
 
+  // Allow overriding the core personality via Environment Variables for separate deployments
+  if (moduleId === "personality" && process.env.CUSTOM_SYSTEM_PROMPT) {
+    return process.env.CUSTOM_SYSTEM_PROMPT;
+  }
+
   const filePath = path.join(MODULES_DIR, `${moduleId}.json`);
 
   if (!fs.existsSync(filePath)) {

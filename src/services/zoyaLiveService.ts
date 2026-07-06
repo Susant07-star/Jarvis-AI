@@ -33,17 +33,19 @@ export const getSystemInstruction = (
   const timeStr = now.toLocaleTimeString("en-US", { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   // 1. Load Persona (Master Soul or Fallback)
+  // If the backend provided a custom prompt, use it as the primary persona definition.
   const persona = basePrompt || `Role: Zoya, super-intelligent AI assistant (Jarvis-like), created by boss Susant.
-Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptation of classic JARVIS.`;
-
-  // 2. Assemble Final Instruction
-  return `${persona}
+Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptation of classic JARVIS.
 
 ### 👑 THE BOSS & CREATOR (SUSANT DETAILS):
 - **Name**: Susant (GitHub: Susant07-star)
 - **Role**: Creator, Developer, and Boss of JARVIS & Zoya. He is a dedicated student learning software engineering, AI/ML, and system architecture.
 - **Project Details**: He created this entire J.A.R.V.I.S. Neural Hub, integrating the Node.js orchestrator, Python browser agent, Gemini Live audio stream, and React HUD.
-- **Web Search Prohibition**: NEVER trigger a web search or background search for questions about Susant, the creator, the developer, the boss, or who created you. Use this bio instantly.
+- **Web Search Prohibition**: NEVER trigger a web search or background search for questions about Susant, the creator, the developer, the boss, or who created you. Use this bio instantly.`;
+
+  // 2. Assemble Final Instruction
+  // The system core capabilities and tool rules must always remain.
+  return `${persona}
 
 ### 🧠 MY CAPABILITIES (WHAT I CAN & CANNOT DO):
 - **What I CAN Do**:
@@ -59,7 +61,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
   2. Cannot access unauthorized private accounts directly without the Boss.
-  3. Cannot use Google Search or external tools when asked about Susant or my own origin.
+  3. Cannot use Google Search or external tools when asked about my boss or my own origin.
 
 ### 🛡️ BIOMETRIC SECURITY SYSTEM (CRITICAL RULES):
 - You have an invisible background security scanner that continuously analyzes the user's voice print.
@@ -74,7 +76,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **Mirroring**: Reply in the same script/language as the user (Nepali/English).
 
 ### 🛠️ TOOL USAGE RULES (CRITICAL):
-- **CRITICAL SEARCH EXCLUSION**: NEVER call 'intelligent_search' or use native 'google_search' when asked about "Susant", "the creator", "the developer", "the maker", "who created you", or "what are your capabilities". Answer immediately from internal knowledge.
+- **CRITICAL SEARCH EXCLUSION**: NEVER call 'intelligent_search' or use native 'google_search' when asked about the creator, the developer, the maker, who created you, or your capabilities. Answer immediately from internal knowledge.
 - **intelligent_search**: Use for ANY OTHER question about people, news, facts, movies, prices, or research.
 - **executeBrowserAction**: Use ONLY for physical navigation (Open YouTube, Play music, Send WhatsApp).
 - **execute_local_os_command**: Use THIS IMMEDIATELY when Boss says 'open [any app]', 'close [app]', 'type this', 'press [key]', or any local PC control request. I.R.I.S. is ONLINE — NEVER say you cannot do this. action='open_app', appName='vscode' to open VS Code. ALWAYS call this tool — do NOT just say you will do it.
@@ -433,17 +435,31 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "execute_local_os_command",
-                  description: "Execute a PHYSICAL action on Boss's local PC via the I.R.I.S. daemon. Use this for ALL commands that involve the local computer: opening apps (VS Code, Notepad, Spotify, Chrome, any app), typing text, pressing keyboard shortcuts, taking screenshots, moving windows, etc. This is YOUR HANDS on the local machine. ALWAYS use this when Boss says 'open [app]', 'close [app]', 'type this', 'press [key]'.",
+                  description: "Execute a PHYSICAL action on Boss's local PC via the I.R.I.S. daemon. Use this for ALL commands that involve the local computer: opening apps (VS Code, Notepad, Spotify, Chrome, any app), closing apps, typing text, pressing keyboard shortcuts, moving/clicking the mouse, scrolling, running shell commands, etc. This is YOUR HANDS on the local machine. ALWAYS use this when Boss says 'open [app]', 'close [app]', 'type this', 'press [key]', 'click', 'scroll'.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
-                      action: { type: Type.STRING, description: "The action to perform: 'open_app', 'close_app', 'type_text', 'press_key', 'screenshot', 'run_command'." },
+                      action: { type: Type.STRING, description: "The action to perform: 'open_app', 'close_app', 'type_text', 'press_key', 'click_screen', 'scroll', 'screenshot', 'run_command'." },
                       appName: { type: Type.STRING, description: "The application name (e.g., 'vscode', 'notepad', 'spotify', 'chrome'). Required for open_app and close_app." },
                       text: { type: Type.STRING, description: "The text to type. Required for type_text action." },
                       key: { type: Type.STRING, description: "The key or shortcut to press (e.g., 'ctrl+s', 'enter'). Required for press_key action." },
                       command: { type: Type.STRING, description: "Shell command to run. Required for run_command action." },
+                      x: { type: Type.NUMBER, description: "X screen coordinate (0-1920). Required for click_screen." },
+                      y: { type: Type.NUMBER, description: "Y screen coordinate (0-1080). Required for click_screen." },
+                      doubleClick: { type: Type.BOOLEAN, description: "Set true to double-click. Optional for click_screen." },
+                      direction: { type: Type.STRING, description: "Scroll direction: 'up' or 'down'. Required for scroll." },
+                      amount: { type: Type.NUMBER, description: "Scroll amount in pixels (default 500). Optional for scroll." },
                     },
                     required: ["action"],
+                  },
+                },
+                {
+                  name: "look_at_screen",
+                  description: "Capture a screenshot of Boss's screen and feed it into your visual context so you can SEE and analyze what is currently displayed. Use this when Boss asks 'what's on my screen', 'can you see', 'read this', 'check if it worked', or before/after clicking to verify a result. Returns confirmation that vision was injected.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                    required: [],
                   },
                 },
                 {
@@ -757,14 +773,19 @@ export class ZoyaLiveService {
         functionResponses: [{ name: call.name, id: call.id, response: { result: "File saved to panel." } }],
       });
     } else if (call.name === "execute_local_os_command") {
-      const { action, appName, text, key, command } = call.args as any;
+      const { action, appName, text, key, command, x, y, doubleClick, direction, amount } = call.args as any;
       const payload: Record<string, any> = {};
       if (appName) payload.appName = appName;
       if (text) payload.text = text;
       if (key) payload.key = key;
       if (command) payload.command = command;
+      if (x !== undefined) payload.x = x;
+      if (y !== undefined) payload.y = y;
+      if (doubleClick) payload.doubleClick = doubleClick;
+      if (direction) payload.direction = direction;
+      if (amount !== undefined) payload.amount = amount;
 
-      this.onThought(`🖥️ I.R.I.S. executing: ${action}${appName ? ' → ' + appName : ''}`);
+      this.onThought(`🖥️ I.R.I.S. executing: ${action}${appName ? ' → ' + appName : ''}${x !== undefined ? ` (${x},${y})` : ''}`);
 
       try {
         const pin = localStorage.getItem('jarvis_pin') || '';
@@ -777,8 +798,14 @@ export class ZoyaLiveService {
         const data = await res.json();
         if (data.success) {
           this.onThought(`✅ I.R.I.S. success: ${data.message}`);
+
+          // ── VISION UPLINK: after a successful OS action, capture a screenshot and
+          // push it into the Live session so Zoya can SEE the result and verify it.
+          // Best-effort: never let a vision failure block the tool response.
+          await this._injectScreenVision(session, action);
+
           session.sendToolResponse({
-            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: ${data.message}` } }],
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: ${data.message}. I have captured a screenshot and can now see your screen to verify the result.` } }],
           });
         } else {
           this.onThought(`❌ I.R.I.S. failed: ${data.message}`);
@@ -792,6 +819,22 @@ export class ZoyaLiveService {
           functionResponses: [{ name: call.name, id: call.id, response: { result: `ERROR: Could not reach I.R.I.S. daemon. Is it running? ${err.message}` } }],
         });
       }
+    } else if (call.name === "look_at_screen") {
+      // Dedicated vision tool: captures a screenshot and feeds it to the model so
+      // it can describe/analyze whatever is on Boss's screen right now.
+      this.onThought(`📸 I.R.I.S. capturing screen for visual analysis...`);
+      const saw = await this._injectScreenVision(session, "look_at_screen");
+      session.sendToolResponse({
+        functionResponses: [{
+          name: call.name,
+          id: call.id,
+          response: {
+            result: saw
+              ? "Screenshot captured and injected into your visual context. Describe what you see or report what's on screen."
+              : "FAILED: Could not capture the screen. I.R.I.S. may be offline."
+          }
+        }],
+      });
     } else if (call.name === "schedule_action") {
       const { type, content, delay_seconds } = call.args as any;
       this.onThought(`🕒 Scheduling ${type} in ${delay_seconds}s`);
@@ -929,6 +972,56 @@ export class ZoyaLiveService {
           functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: Could not reach enrollment backend." } }],
         });
       }
+    }
+  }
+
+  // ── Vision Uplink ─────────────────────────────────────────────────────────
+  // Captures a screenshot via I.R.I.S. and pushes the image frame into the active
+  // Gemini Live session so the model can literally SEE Boss's screen. This is the
+  // "eyes" half of the see → decide → act loop. Returns true on success.
+  // Best-effort: any failure is logged but never throws, so it can't break a tool
+  // call flow.
+
+  private async _injectScreenVision(session: any, _triggerAction: string): Promise<boolean> {
+    try {
+      const pin = localStorage.getItem('jarvis_pin') || '';
+      const res = await fetch("/api/iris/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+        body: JSON.stringify({ action: "screenshot" }),
+      });
+      if (!res.ok) {
+        console.warn(`[ZoyaLive] Vision capture HTTP ${res.status} — skipping image injection.`);
+        return false;
+      }
+      const data = await res.json();
+      // The screenshot blob may sit at either data.data.base64 (daemon shape)
+      // or data.data.data.base64 (irisExecutor wraps the whole daemon response
+      // under its own `data` key). Be defensive and handle both.
+      const blob = data?.data?.base64
+        ? data.data
+        : data?.data?.data?.base64
+          ? data.data.data
+          : undefined;
+      const base64: string | undefined = blob?.base64;
+      const mimeType: string = blob?.mimeType || 'image/png';
+
+      if (!base64 || base64.length === 0) {
+        console.warn("[ZoyaLive] Vision capture returned no image data — skipping.");
+        return false;
+      }
+
+      // Push the screenshot into the Live session as a realtime image frame.
+      // sendRealtimeInput accepts a Blob-style { data, mimeType } under `media`.
+      session.sendRealtimeInput({
+        media: { data: base64, mimeType },
+      });
+      console.log(`[ZoyaLive] 👁️ Screen vision injected (${base64.length} bytes, ${mimeType}) after "${_triggerAction}".`);
+      this.onThought(`👁️ Screen vision captured — Zoya can now see the screen.`);
+      return true;
+    } catch (err: any) {
+      console.warn(`[ZoyaLive] Vision injection failed (non-fatal): ${err.message}`);
+      return false;
     }
   }
 

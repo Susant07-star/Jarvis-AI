@@ -1189,6 +1189,39 @@ router.patch("/tasks/:id", async (req, res) => {
 
 
 /**
+ * POST /api/iris/execute
+ * Generic execution bridge used by the Live Voice UI (Zoya). The frontend
+ * posts a single I.R.I.S. action here, and we forward it to the local daemon
+ * via irisExecutor. Returns the daemon's structured {success, message, data}.
+ *
+ * NOTE: This is distinct from executeOnIrisWithVerification() used in the text
+ * chat planner — the Live UI wants a plain, fast passthrough so it can stream
+ * the result back to Gemini without an extra verification round-trip.
+ */
+router.post("/iris/execute", async (req, res) => {
+  const { action, ...payload } = req.body || {};
+  if (!action) {
+    return res.status(400).json({ success: false, message: "Missing 'action' in body." });
+  }
+  try {
+    const { executeOnIris } = await import("../irisExecutor");
+    const result = await executeOnIris(action, payload);
+    // Flatten the executor's double-wrap so the frontend sees the daemon's
+    // native shape: { success, message, data: { base64, mimeType, ... } }.
+    // executeOnIris nests the full daemon response under its own `data` key,
+    // so unwrap one level to expose data.base64 directly.
+    res.json({
+      success: result.success,
+      message: result.message,
+      data: (result.data as any)?.data ?? result.data,
+    });
+  } catch (err: any) {
+    logger.error("API", `POST /api/iris/execute error: ${err.message}`, err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
  * GET /api/iris/status
  * Real-time health check — J.A.R.V.I.S. pings I.R.I.S. to see if the Hands are alive.
  * The frontend UI can call this to show an "I.R.I.S. Connected 🟢" indicator.

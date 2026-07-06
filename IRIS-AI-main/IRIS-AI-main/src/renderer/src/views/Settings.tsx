@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as faceapi from 'face-api.js'
 import { GiArtificialIntelligence } from 'react-icons/gi'
-import { RiCloseLine } from 'react-icons/ri'
 import { FaMemory } from 'react-icons/fa6'
 import { HiComputerDesktop } from 'react-icons/hi2'
 import {
@@ -625,7 +624,77 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
                           UNLOCK
                         </button>
                       </div>
-</motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0a0a0c] p-6 rounded-3xl border border-white/5">
+                  <div className="bg-[#111113] border border-white/10 p-7 rounded-2xl flex flex-col gap-5">
+                    <span className={titleClass}>
+                      <RiLockPasswordLine className="text-zinc-400" size={18} /> Update Master PIN
+                    </span>
+                    <div className={inputContainerClass}>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        pattern="\d*"
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter new 4-digit PIN..."
+                        className="bg-transparent border-none outline-none text-sm font-mono text-zinc-100 w-full tracking-[0.3em]"
+                      />
+                      <button
+                        onClick={updateMasterPin}
+                        className="text-zinc-500 hover:text-white transition-colors ml-2 cursor-pointer"
+                      >
+                        <RiSave3Line size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#111113] border border-white/10 p-7 rounded-2xl flex flex-col gap-6">
+                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                      <span className={titleClass}>
+                        <RiScan2Line className="text-zinc-400" size={18} /> Biometric Registry
+                      </span>
+                      <span className="text-[10px] text-white font-mono tracking-widest bg-white/10 px-3 py-1.5 rounded-md font-semibold border border-white/5">
+                        {faceCount} ENROLLED
+                      </span>
+                    </div>
+
+                    {isScanningFace ? (
+                      <div className="flex items-center gap-4 bg-[#050505] p-3 rounded-xl border border-white/20">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          muted
+                          playsInline
+                          className="w-16 h-16 rounded-lg object-cover -scale-x-100 border border-white/10"
+                        />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[11px] text-white font-mono tracking-widest animate-pulse font-bold">
+                            {enrollStatus}
+                          </span>
+                          <span className="text-xs text-zinc-400">Keep head steady...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4 h-full justify-between">
+                        <p className="text-xs text-zinc-400 leading-relaxed">
+                          Enroll additional structural face descriptors. Data is mathematically
+                          encrypted and stored locally.
+                        </p>
+                        <button
+                          onClick={startFaceEnrollment}
+                          className="w-full py-3 rounded-lg bg-white text-black font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-auto cursor-pointer"
+                        >
+                          <RiAddLine size={18} /> ENROLL NEW IDENTITY
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             )}
 
             {/* --- TAB 5: MONITORING --- */}
@@ -705,12 +774,8 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
                     <div className="flex gap-3 pt-4">
                       <button
                         onClick={() => {
-                          // Send thresholds to JARVIS
-                          fetch('/api/system/thresholds', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ cpu: cpuThreshold, ram: ramThreshold, battery: batteryThreshold })
-                          }).then(() => alert('Thresholds saved'));
+                          // Send thresholds via IPC (dummy for now)
+                          alert('Thresholds saved');
                         }}
                         className="flex-1 py-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-400 hover:text-black font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 transition-all border border-cyan-500/50 cursor-pointer"
                       >
@@ -718,9 +783,7 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
                       </button>
                       <button
                         onClick={() => {
-                          const action = isMonitoringActive ? 'stop' : 'start';
-                          fetch(`/api/system/${action}`, { method: 'POST' })
-                            .then(() => setIsMonitoringActive(!isMonitoringActive));
+                          setIsMonitoringActive(!isMonitoringActive);
                         }}
                         className={`flex-1 py-3 rounded-lg font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 transition-all cursor-pointer ${isMonitoringActive ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'}`}
                       >
@@ -735,76 +798,6 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
                         Alerts will be sent via Telegram when thresholds are exceeded or suspicious processes are detected.
                       </p>
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            </AnimatePresence>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0a0a0c] p-6 rounded-3xl border border-white/5">
-                  <div className="bg-[#111113] border border-white/10 p-7 rounded-2xl flex flex-col gap-5">
-                    <span className={titleClass}>
-                      <RiLockPasswordLine className="text-zinc-400" size={18} /> Update Master PIN
-                    </span>
-                    <div className={inputContainerClass}>
-                      <input
-                        type="password"
-                        maxLength={4}
-                        pattern="\d*"
-                        value={newPin}
-                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter new 4-digit PIN..."
-                        className="bg-transparent border-none outline-none text-sm font-mono text-zinc-100 w-full tracking-[0.3em]"
-                      />
-                      <button
-                        onClick={updateMasterPin}
-                        className="text-zinc-500 hover:text-white transition-colors ml-2 cursor-pointer"
-                      >
-                        <RiSave3Line size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#111113] border border-white/10 p-7 rounded-2xl flex flex-col gap-6">
-                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                      <span className={titleClass}>
-                        <RiScan2Line className="text-zinc-400" size={18} /> Biometric Registry
-                      </span>
-                      <span className="text-[10px] text-white font-mono tracking-widest bg-white/10 px-3 py-1.5 rounded-md font-semibold border border-white/5">
-                        {faceCount} ENROLLED
-                      </span>
-                    </div>
-
-                    {isScanningFace ? (
-                      <div className="flex items-center gap-4 bg-[#050505] p-3 rounded-xl border border-white/20">
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          muted
-                          playsInline
-                          className="w-16 h-16 rounded-lg object-cover -scale-x-100 border border-white/10"
-                        />
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[11px] text-white font-mono tracking-widest animate-pulse font-bold">
-                            {enrollStatus}
-                          </span>
-                          <span className="text-xs text-zinc-400">Keep head steady...</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-4 h-full justify-between">
-                        <p className="text-xs text-zinc-400 leading-relaxed">
-                          Enroll additional structural face descriptors. Data is mathematically
-                          encrypted and stored locally.
-                        </p>
-                        <button
-                          onClick={startFaceEnrollment}
-                          className="w-full py-3 rounded-lg bg-white text-black font-bold tracking-widest text-[12px] flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-auto cursor-pointer"
-                        >
-                          <RiAddLine size={18} /> ENROLL NEW IDENTITY
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </motion.div>

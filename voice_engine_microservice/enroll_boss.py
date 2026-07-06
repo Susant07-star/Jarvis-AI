@@ -25,7 +25,7 @@ RECORD_SECONDS = 15
 WAVE_OUTPUT_FILENAME = "boss_voice_sample.wav"
 
 def record_audio():
-    """Record 5 seconds of audio from the default microphone."""
+    """Record 15 seconds of audio from the default microphone."""
     p = pyaudio.PyAudio()
 
     print("\n" + "="*50)
