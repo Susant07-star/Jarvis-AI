@@ -31,7 +31,7 @@ export class ThreadManager {
     try {
       const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.embedContent({
-        model: 'text-embedding-004',
+        model: 'gemini-embedding-001',
         contents: text,
       });
       return response.embeddings?.[0]?.values || null;

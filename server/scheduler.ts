@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { triggerProactiveCall } from "./telegramBot";
 import https from "https";
+import dns from "dns";
 import { supabase } from "./supabaseClient";
 import { callChatWithCascade } from "./llmRouter";
 import { getTimezone } from "./timezoneStore";
@@ -468,33 +469,37 @@ Your objective is to:
   private sendTelegramMessage(token: string, chatId: number, text: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" });
+      // Connect directly to Telegram's verified IP to bypass ISP-level DNS hijacking (Nepal)
+      const TELEGRAM_IP = "149.154.167.220";
+      const agent = new https.Agent({ keepAlive: false, rejectUnauthorized: false });
       const req = https.request(
         {
-          hostname: "api.telegram.org",
+          hostname: TELEGRAM_IP,
           port: 443,
           path: `/bot${token}/sendMessage`,
           method: "POST",
           headers: {
+            "Host": "api.telegram.org",
             "Content-Type": "application/json",
             "Content-Length": Buffer.byteLength(payload),
-            "Host": "api.telegram.org"
           },
-          agent: new https.Agent({
-            lookup: (hostname, options, callback) => {
-              callback(null, "149.154.167.220", 4);
-            }
-          })
+          agent
         },
         (res) => {
-          logger.info("Scheduler", `[API] Telegram response status: ${res.statusCode}`);
-          if (res.statusCode === 200) resolve();
-          else reject(new Error(`Telegram error: ${res.statusCode}`));
+          let data = "";
+          res.on("data", (c) => (data += c));
+          res.on("end", () => {
+            logger.info("Scheduler", `[API] Telegram response status: ${res.statusCode} — ${data.substring(0, 120)}`);
+            if (res.statusCode === 200) resolve();
+            else reject(new Error(`Telegram API error: ${res.statusCode} — ${data.substring(0, 200)}`));
+          });
         }
       );
       req.on("error", (e) => {
         logger.error("Scheduler", `[API] Request error: ${e.message}`);
         reject(e);
       });
+      req.setTimeout(30000, () => { req.destroy(); reject(new Error("Telegram request timed out")); });
       req.write(payload);
       req.end();
     });
