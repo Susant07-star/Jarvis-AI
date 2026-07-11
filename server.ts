@@ -91,6 +91,9 @@ async function startServer() {
   // Initialize Scheduler from Supabase
   await jarvisScheduler.init();
 
+  const { cronJobManager } = await import("./server/cronJobs");
+  await cronJobManager.init();
+
   // Start Hugging Face Voice Engine Heartbeat
   startVoiceEngineHeartbeat();
 

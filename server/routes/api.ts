@@ -1364,4 +1364,113 @@ router.post("/system/known-apps", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/jobs
+ * Returns all research jobs
+ */
+router.get("/jobs", async (req, res) => {
+  try {
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
+
+    const { data, error } = await supabase.from("research_jobs").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, jobs: data });
+  } catch (error: any) {
+    logger.error("API", "Failed to fetch jobs", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/jobs
+ * Create a new research job
+ */
+router.post("/jobs", async (req, res) => {
+  try {
+    const { topic, time_of_day, chat_id } = req.body;
+    if (!topic || !time_of_day) {
+      return res.status(400).json({ error: "Missing topic or time_of_day" });
+    }
+
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
+
+    const targetChatId = chat_id || 0; // The frontend or scheduler will resolve 0 to admin chat
+
+    const { data, error } = await supabase
+      .from("research_jobs")
+      .insert({ topic, time_of_day, chat_id: targetChatId, is_active: true })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const { cronJobManager } = await import("../cronJobs");
+    cronJobManager.scheduleJob(data);
+
+    res.json({ success: true, job: data });
+  } catch (error: any) {
+    logger.error("API", "Failed to create job", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/jobs/:id
+ */
+router.delete("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
+
+    const { error } = await supabase.from("research_jobs").delete().eq("id", id);
+    if (error) throw error;
+
+    const { cronJobManager } = await import("../cronJobs");
+    cronJobManager.unscheduleJob(id);
+
+    res.json({ success: true });
+  } catch (error: any) {
+    logger.error("API", "Failed to delete job", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PATCH /api/jobs/:id
+ * Toggle is_active
+ */
+router.patch("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
+
+    const { data, error } = await supabase
+      .from("research_jobs")
+      .update({ is_active })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const { cronJobManager } = await import("../cronJobs");
+    if (data.is_active) {
+      cronJobManager.scheduleJob(data);
+    } else {
+      cronJobManager.unscheduleJob(id);
+    }
+
+    res.json({ success: true, job: data });
+  } catch (error: any) {
+    logger.error("API", "Failed to update job", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

@@ -12,6 +12,7 @@ import { TimezoneClock } from './components/jarvis/TimezoneClock';
 import { NeuralCanvas } from './components/jarvis/NeuralCanvas';
 import { playSound } from './utils/soundEffects';
 import { TaskPanel } from './components/jarvis/TaskPanel';
+import { JobsPage } from './components/jarvis/JobsPage';
 
 type AppState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -20,6 +21,7 @@ export default function App() {
   const [browserProbed, setBrowserProbed] = useState(false);
   const [appState, setAppState] = useState<AppState>('idle');
   const [showTaskPanel, setShowTaskPanel] = useState(false);
+  const [activePage, setActivePage] = useState<'main' | 'jobs'>('main');
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [isVoiceOverlayMinimized, setIsVoiceOverlayMinimized] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -445,6 +447,15 @@ export default function App() {
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>
           
+          {/* Jobs Page Toggle */}
+          <button 
+            onClick={() => { playSound.click(); setActivePage('jobs'); }}
+            onMouseEnter={playSound.tick}
+            className="hidden md:flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
+          >
+            JOBS <ChevronRight className="w-3 h-3" />
+          </button>
+          
           <div className="hidden md:block w-px h-6 bg-cyan-900/50 mx-1"></div>
           
           {/* Timezone Clock */}
@@ -453,62 +464,66 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex gap-2 md:gap-4 min-h-0 relative">
-        
-        {/* Left: Voice (Gemini Live) */}
-        <div className="hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0">
-          <div className="mb-8 scale-110">
-            <ZoyaAvatar state={appState} emotion={zoya.emotion} />
-          </div>
+      {activePage === 'jobs' ? (
+        <JobsPage onBack={() => setActivePage('main')} />
+      ) : (
+        <main className="flex-1 flex gap-2 md:gap-4 min-h-0 relative">
           
-          <VoiceVisualizer 
-            appState={appState} 
-            onToggle={isListening ? stopListening : () => startListening(timezone)} 
-            disabled={!hasRecognition}
-          />
-          
-          <div className="text-center mt-12 max-w-xs">
-            <div className="h-6">
-              {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse">Awaiting Input...</span>}
-              {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse">Thinking...</span>}
-              {appState === 'speaking' && <span className="text-emerald-400 font-mono text-sm">Speaking...</span>}
-              {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-sm">Standby</span>}
+          {/* Left: Voice (Gemini Live) */}
+          <div className="hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0">
+            <div className="mb-8 scale-110">
+              <ZoyaAvatar state={appState} emotion={zoya.emotion} />
             </div>
-
-            {error && (
-              <div className="text-red-400 text-[10px] font-mono mt-3 border border-red-500/30 bg-red-950/30 p-2 rounded">
-                <span className="font-bold">ERR:</span> {error}
+            
+            <VoiceVisualizer 
+              appState={appState} 
+              onToggle={isListening ? stopListening : () => startListening(timezone)} 
+              disabled={!hasRecognition}
+            />
+            
+            <div className="text-center mt-12 max-w-xs">
+              <div className="h-6">
+                {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse">Awaiting Input...</span>}
+                {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse">Thinking...</span>}
+                {appState === 'speaking' && <span className="text-emerald-400 font-mono text-sm">Speaking...</span>}
+                {appState === 'idle' && <span className="text-cyan-700/60 font-mono text-sm">Standby</span>}
               </div>
-            )}
-            <p className="text-cyan-700/50 text-[10px] font-mono mt-6 uppercase tracking-widest">
-              Gemini Live Pipeline Active
-            </p>
+
+              {error && (
+                <div className="text-red-400 text-[10px] font-mono mt-3 border border-red-500/30 bg-red-950/30 p-2 rounded">
+                  <span className="font-bold">ERR:</span> {error}
+                </div>
+              )}
+              <p className="text-cyan-700/50 text-[10px] font-mono mt-6 uppercase tracking-widest">
+                Gemini Live Pipeline Active
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Center: Chat */}
-        <div className="flex-1 min-h-0">
-          <ChatWindow 
-            messages={messages} 
-            onSendMessage={handleSendMessage} 
-            isProcessing={isProcessing}
-            transcript={''} 
-            onVoiceToggle={isListening ? stopListening : startListening}
-            isListening={isListening}
-            hasRecognition={hasRecognition}
+          {/* Center: Chat */}
+          <div className="flex-1 min-h-0">
+            <ChatWindow 
+              messages={messages} 
+              onSendMessage={handleSendMessage} 
+              isProcessing={isProcessing}
+              transcript={''} 
+              onVoiceToggle={isListening ? stopListening : startListening}
+              isListening={isListening}
+              hasRecognition={hasRecognition}
+            />
+          </div>
+
+          {/* Right: Live Task Monitor Panel */}
+          {showTaskPanel && (
+            <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowTaskPanel(false)} />
+          )}
+          <TaskPanel
+            appState={appState}
+            showTaskPanel={showTaskPanel}
+            onClose={() => setShowTaskPanel(false)}
           />
-        </div>
-
-        {/* Right: Live Task Monitor Panel */}
-        {showTaskPanel && (
-          <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowTaskPanel(false)} />
-        )}
-        <TaskPanel
-          appState={appState}
-          showTaskPanel={showTaskPanel}
-          onClose={() => setShowTaskPanel(false)}
-        />
-      </main>
+        </main>
+      )}
 
       {/* Bottom Status Bar */}
       {/* Footer — hidden on mobile for more chat space */}
