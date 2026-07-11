@@ -100,7 +100,7 @@ export const jarvisTools = [
     type: "function",
     function: {
       name: "execute_local_os_command",
-      description: "Execute a physical OS command on the user's local computer via I.R.I.S. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen.",
+      description: "Execute a physical OS command on the user's local computer via I.R.I.S. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen. DO NOT use this to send Telegram or WhatsApp messages — use send_telegram_message instead.",
       parameters: {
         type: "object",
         properties: {
@@ -109,6 +109,21 @@ export const jarvisTools = [
           confirmation_message: { type: "string", description: "Natural confirmation spoken to the user. E.g., 'Right away boss, deploying phantom typer.'" }
         },
         required: ["action", "payload", "confirmation_message"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_telegram_message",
+      description: "Send an immediate Telegram message to Boss via the backend. Use this whenever Boss asks you to 'send a message on Telegram', 'message me on Telegram', or says 'send me a Telegram'. This works even when I.R.I.S. is offline.",
+      parameters: {
+        type: "object",
+        properties: {
+          text: { type: "string", description: "The message text to send to Boss on Telegram." },
+          confirmation_message: { type: "string", description: "Natural spoken confirmation. E.g., 'Done Boss, message sent to your Telegram.'" }
+        },
+        required: ["text", "confirmation_message"]
       }
     }
   }

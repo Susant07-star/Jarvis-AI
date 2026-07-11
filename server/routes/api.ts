@@ -602,6 +602,25 @@ if (toolCall.tool === 'execute_local_os_command') {
               toolMessage = "Failed to fetch frames or I.R.I.S is offline. Cannot see the screen.";
               executed = true;
             }
+          } else if (toolCall.tool === 'send_telegram_message') {
+            // Send directly via the backend scheduler — works even when I.R.I.S. is offline
+            try {
+              const { jarvisScheduler } = await import('../scheduler');
+              const targetChatId = jarvisScheduler.getAdminChatId() || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || '0');
+              const msgText = toolCall.text || toolCall.message || '';
+              if (targetChatId && msgText) {
+                jarvisScheduler.schedule(targetChatId, 'message', msgText, 0);
+                toolSuccess = true;
+                toolMessage = `Telegram message sent to Boss (ChatID: ${targetChatId}): "${msgText}"`;
+              } else {
+                toolSuccess = false;
+                toolMessage = `Could not send Telegram message: ${!targetChatId ? 'No Chat ID available.' : 'Empty message text.'}`;
+              }
+            } catch (e: any) {
+              toolSuccess = false;
+              toolMessage = `Telegram send error: ${e.message}`;
+            }
+            executed = true;
           }
 
           if (executed) {
