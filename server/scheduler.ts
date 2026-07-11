@@ -479,7 +479,11 @@ Your objective is to:
             "Content-Length": Buffer.byteLength(payload),
             "Host": "api.telegram.org"
           },
-          agent: false
+          agent: new https.Agent({
+            lookup: (hostname, options, callback) => {
+              callback(null, "149.154.167.220", 4);
+            }
+          })
         },
         (res) => {
           logger.info("Scheduler", `[API] Telegram response status: ${res.statusCode}`);

@@ -107,6 +107,8 @@ Available actions:
 ${memoryContext}
 ${getPlannerTimeContext()}
 
+CRITICAL MESSAGING RULE: If the user asks you to send a message via Telegram or WhatsApp, or just to "send a message", DO NOT use "open_url" or try to navigate the web. You MUST use the "schedule_message" tool with "delay_seconds": 0.
+
 SECURITY RULE: Set "requires_confirmation": true if actions include: youtube_comment, youtube_subscribe, youtube_like, type_secure, opening untrusted URLs, OR total steps > 3. Trusted domains: youtube.com, google.com, daraz.pk, facebook.com.
 
 REQUIRED OUTPUT FORMAT — always exactly this structure, nothing else:
@@ -169,6 +171,8 @@ Available actions:
 CRITICAL JSON RULE: For "media_control" steps, you MUST use the key "command" (NOT "action") for the sub-action.
 Correct:   { "action": "media_control", "command": "play" }
 INCORRECT: { "action": "media_control", "action": "play" }  <-- JSON KEY COLLISION, NEVER DO THIS
+
+CRITICAL MESSAGING RULE: If the user asks you to send a message via Telegram or WhatsApp, DO NOT use web navigation. You MUST use the "schedule_message" tool with "delay_seconds": 0.
 `;
 
     let domString = JSON.stringify(domElements, null, 2);
@@ -275,11 +279,13 @@ Available actions you can output in the "steps" array:
 - "youtube_search" (requires "query")
 - "go_back"
 - "wait" (requires "seconds")
+- "schedule_message" (requires "delay_seconds", "text")
 
 CRITICAL RULES:
 1. ONLY use "jarvis_id" numbers that you can clearly see in the screenshot.
 2. If you need to search Google or YouTube, you can use "open_url" or "youtube_search" directly without clicking the search bar.
 3. Keep your plans very short. Since the screen changes after every click, usually 1 or 2 steps is best.
+4. MESSAGING RULE: If the user asks to send a Telegram or WhatsApp message, DO NOT try to click or open a web browser. You MUST use the "schedule_message" tool with "delay_seconds": 0 and "text" containing the message.
 ${getPlannerTimeContext()}
 
 REQUIRED OUTPUT FORMAT:
