@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Bell, MessageSquare, Phone, Trash2, Edit3, Check, Clock, Loader2, ChevronRight } from 'lucide-react';
+import { X, Bell, MessageSquare, Phone, Trash2, Edit3, Check, Clock, Loader2 } from 'lucide-react';
 import { playSound } from '../../utils/soundEffects';
 
 export interface ScheduledTask {
@@ -12,7 +12,6 @@ export interface ScheduledTask {
 }
 
 interface TaskPanelProps {
-  appState: string;
   showTaskPanel: boolean;
   onClose: () => void;
 }
@@ -199,7 +198,7 @@ function EditModal({
 }
 
 // ── Main TaskPanel ────────────────────────────────────────────────────────────
-export function TaskPanel({ appState, showTaskPanel, onClose }: TaskPanelProps) {
+export function TaskPanel({ showTaskPanel, onClose }: TaskPanelProps) {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingTask, setEditingTask] = useState<ScheduledTask | null>(null);
@@ -286,30 +285,10 @@ export function TaskPanel({ appState, showTaskPanel, onClose }: TaskPanelProps) 
           </button>
         </div>
 
-        {/* System status items (always visible) */}
-        <div className="space-y-1.5 mb-3">
-          <div className="task-item-completed p-2 rounded">
-            <div className="text-emerald-400 text-[10px] font-mono">✓ Browser Control</div>
-            <div className="text-cyan-700 text-[9px] font-mono">Playwright initialized</div>
-          </div>
-          <div className="task-item-completed p-2 rounded">
-            <div className="text-emerald-400 text-[10px] font-mono">✓ Memory System</div>
-            <div className="text-cyan-700 text-[9px] font-mono">50-turn context active</div>
-          </div>
-          <div className="task-item-active p-2 rounded">
-            <div className="text-cyan-400 animate-pulse text-[10px] font-mono">● Voice Pipeline</div>
-            <div className="text-cyan-700 text-[9px] font-mono">
-              {appState === 'listening' ? 'Listening…' : appState === 'processing' ? 'Processing…' : appState === 'speaking' ? 'Speaking…' : 'Ready'}
-            </div>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-cyan-900/40 mb-3" />
 
         {/* Scheduled tasks */}
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] font-mono text-cyan-600 uppercase tracking-widest">Scheduled Tasks</span>
+          <span className="text-[9px] font-mono text-cyan-600 uppercase tracking-widest">One-Time Scheduled Tasks</span>
           {loading && <Loader2 className="w-2.5 h-2.5 text-cyan-600 animate-spin" />}
         </div>
 
@@ -317,7 +296,7 @@ export function TaskPanel({ appState, showTaskPanel, onClose }: TaskPanelProps) 
           {tasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 gap-2 text-cyan-800">
               <Clock className="w-5 h-5" />
-              <span className="text-[9px] font-mono uppercase tracking-widest">No pending tasks</span>
+              <span className="text-[9px] font-mono uppercase tracking-widest text-center">No one-time tasks queued</span>
             </div>
           ) : (
             <>
@@ -340,7 +319,7 @@ export function TaskPanel({ appState, showTaskPanel, onClose }: TaskPanelProps) 
         {/* Footer hint */}
         <div className="mt-2 pt-2 border-t border-cyan-900/30 text-[8px] font-mono text-cyan-800">
           <span>Say: </span>
-          <span className="text-cyan-600">"Remind me in 10 minutes to…"</span>
+          <span className="text-cyan-600">"Remind me in 10 minutes to..."</span>
         </div>
       </div>
     </>

@@ -442,7 +442,7 @@ export default function App() {
           <button 
             onClick={() => { playSound.click(); setShowTaskPanel(!showTaskPanel); }}
             onMouseEnter={playSound.tick}
-            className="hud-secondary-action flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
+            className="hud-secondary-action flex md:hidden items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
           >
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>
@@ -518,7 +518,6 @@ export default function App() {
             <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowTaskPanel(false)} />
           )}
           <TaskPanel
-            appState={appState}
             showTaskPanel={showTaskPanel}
             onClose={() => setShowTaskPanel(false)}
           />

@@ -56,8 +56,8 @@ export function TimezoneClock({ timezone, onTimezoneChange }: TimezoneClockProps
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full right-0 mt-2 w-[calc(100vw-32px)] md:w-48 max-w-[250px] bg-gray-900/95 backdrop-blur-md border border-cyan-800/50 rounded-lg shadow-xl shadow-cyan-900/20 z-50 overflow-hidden">
+          <div className="fixed inset-0 z-[240]" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full right-0 mt-2 w-[calc(100vw-32px)] md:w-48 max-w-[250px] bg-gray-900/95 backdrop-blur-md border border-cyan-800/50 rounded-lg shadow-xl shadow-cyan-900/20 z-[250] overflow-hidden">
             <div className="p-2 border-b border-cyan-800/30">
               <span className="text-[10px] font-mono text-cyan-600 uppercase tracking-widest px-2">Select Region</span>
             </div>

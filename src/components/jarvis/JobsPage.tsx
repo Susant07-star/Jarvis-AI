@@ -5,11 +5,24 @@ import { playSound } from '../../utils/soundEffects';
 interface ResearchJob {
   id: string;
   topic: string;
-  time_of_day: string; // Used as cron expression
+  time_of_day: string; // Cron expression for recurring execution
   chat_id: number;
   is_active: boolean;
 }
 
+
+function describeSchedule(cronExpr: string): string {
+  const daily = cronExpr.match(/^(\d{1,2}) (\d{1,2}) \* \* \*$/);
+  if (daily) {
+    const minutes = daily[1].padStart(2, '0');
+    const hours = daily[2].padStart(2, '0');
+    return `Daily at ${hours}:${minutes} NPT`;
+  }
+  if (cronExpr === '0 */6 * * *') return 'Every 6 hours';
+  if (cronExpr === '0 */12 * * *') return 'Every 12 hours';
+  if (cronExpr === '* * * * *') return 'Every minute (debug)';
+  return cronExpr;
+}
 interface JobsPageProps {
   onBack: () => void;
 }
@@ -115,10 +128,10 @@ export function JobsPage({ onBack }: JobsPageProps) {
           </button>
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-[0.15em] text-cyan-400 jarvis-glow font-display uppercase">
-              Automated Research Directives
+              Recurring Research Routines
             </h1>
             <p className="text-cyan-700 font-mono text-xs tracking-widest mt-1">
-              Configure background jobs for deep continuous research
+              Schedule recurring deep-research reports by time or interval
             </p>
           </div>
         </div>
@@ -128,7 +141,7 @@ export function JobsPage({ onBack }: JobsPageProps) {
           className="flex items-center gap-2 px-4 py-2 bg-cyan-900/40 border border-cyan-500/50 text-cyan-300 rounded font-mono text-xs uppercase tracking-widest hover:bg-cyan-800/60 transition-all active:scale-95"
         >
           {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'New Directive'}
+          {showForm ? 'Cancel' : 'New Routine'}
         </button>
       </header>
 
@@ -138,7 +151,7 @@ export function JobsPage({ onBack }: JobsPageProps) {
         {/* New Job Form */}
         {showForm && (
           <div className="glass-panel p-6 rounded-xl border border-cyan-500/30 mb-8 max-w-3xl mx-auto shadow-[0_0_30px_rgba(34,211,238,0.05)]">
-            <h2 className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-4 font-bold border-b border-cyan-900/50 pb-2">Create New Directive</h2>
+            <h2 className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-4 font-bold border-b border-cyan-900/50 pb-2">Create Recurring Research Routine</h2>
             
             <div className="space-y-4">
               <div>
@@ -187,7 +200,7 @@ export function JobsPage({ onBack }: JobsPageProps) {
                   className="flex items-center gap-2 px-6 py-3 bg-emerald-900/40 border border-emerald-500/50 text-emerald-300 rounded font-mono text-xs uppercase tracking-widest hover:bg-emerald-800/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Deploy Directive
+                  Deploy Routine
                 </button>
               </div>
             </div>
@@ -199,12 +212,12 @@ export function JobsPage({ onBack }: JobsPageProps) {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-cyan-600">
               <Loader2 className="w-8 h-8 animate-spin" />
-              <span className="font-mono uppercase tracking-widest text-xs">Retrieving Directives...</span>
+              <span className="font-mono uppercase tracking-widest text-xs">Retrieving Routines...</span>
             </div>
           ) : jobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-cyan-800">
               <Search className="w-12 h-12 opacity-50" />
-              <span className="font-mono uppercase tracking-widest text-sm">No active research directives</span>
+              <span className="font-mono uppercase tracking-widest text-sm">No recurring research routines</span>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,14 +231,14 @@ export function JobsPage({ onBack }: JobsPageProps) {
                       <button 
                         onClick={() => handleToggle(job.id, job.is_active)}
                         className={`p-1.5 rounded transition-colors ${job.is_active ? 'text-amber-400 hover:bg-amber-900/30' : 'text-emerald-400 hover:bg-emerald-900/30'}`}
-                        title={job.is_active ? 'Pause Directive' : 'Resume Directive'}
+                        title={job.is_active ? 'Pause Routine' : 'Resume Routine'}
                       >
                         {job.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                       </button>
                       <button 
                         onClick={() => handleDelete(job.id)}
                         className="p-1.5 rounded text-cyan-700 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                        title="Terminate Directive"
+                        title="Delete Routine"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -235,7 +248,7 @@ export function JobsPage({ onBack }: JobsPageProps) {
                   <div className="flex items-center gap-4 text-xs font-mono text-cyan-600 uppercase tracking-wider">
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>CRON: {job.time_of_day}</span>
+                      <span title={`Cron: ${job.time_of_day}`}>RUNS: {describeSchedule(job.time_of_day)}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1.5 h-1.5 rounded-full ${job.is_active ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
