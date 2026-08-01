@@ -272,7 +272,7 @@ export default function App() {
   const statusDot = appState === 'idle' ? 'bg-cyan-800' : appState === 'listening' ? 'bg-cyan-400 animate-pulse' : appState === 'processing' ? 'bg-indigo-400 animate-pulse' : 'bg-emerald-400 animate-pulse';
 
   return (
-    <div className="h-screen flex flex-col p-2 md:p-6 overflow-hidden relative">
+    <div className="jarvis-app-shell flex flex-col overflow-hidden relative">
       {/* IDENTITY LOCKDOWN OVERLAY */}
       {showAuthPrompt && (
         <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center px-4" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -341,10 +341,10 @@ export default function App() {
       <BrowserAgent />
       
       {/* Top HUD Bar */}
-      <header className="glass-panel rounded-xl px-3 md:px-4 py-2 md:py-2.5 mb-2 md:mb-4 flex justify-between items-center">
-        <div className="flex items-center gap-2 md:gap-3">
+      <header className="hud-topbar glass-panel rounded-xl px-3 md:px-4 py-2.5 md:py-3 mb-2 md:mb-4 flex justify-between items-center gap-3">
+        <div className="hud-brand flex items-center gap-2 md:gap-3 min-w-0">
           <div className={`w-2 h-2 rounded-full ${statusDot}`} />
-          <h1 className="text-base md:text-2xl font-bold tracking-[0.15em] text-cyan-400 jarvis-glow" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="text-base md:text-2xl font-bold tracking-[0.15em] text-cyan-400 jarvis-glow truncate" style={{ fontFamily: 'var(--font-display)' }}>
             J.A.R.V.I.S.
           </h1>
           <span className="hidden md:inline text-[9px] font-mono text-cyan-700 tracking-widest uppercase">
@@ -352,7 +352,7 @@ export default function App() {
           </span>
         </div>
         
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="hud-actions flex items-center gap-2 md:gap-4 min-w-0">
           {/* Status indicators — desktop only */}
           <div className="hidden md:flex items-center gap-4 text-cyan-600/70">
             <div className="flex items-center gap-1.5">
@@ -431,7 +431,7 @@ export default function App() {
                   startListening(timezone);
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/40 text-cyan-400 border border-cyan-800/50 hover:bg-cyan-900/60 rounded-lg text-[10px] font-mono tracking-widest transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)] active:scale-95"
+              className="hud-action-btn flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/40 text-cyan-400 border border-cyan-800/50 hover:bg-cyan-900/60 rounded-lg text-[10px] font-mono tracking-widest transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)] active:scale-95"
             >
               <Activity className={`w-3.5 h-3.5 ${appState === 'listening' || appState === 'processing' || appState === 'speaking' ? 'animate-pulse' : ''}`} />
               <span className="hidden md:inline">LIVE LINK</span>
@@ -442,7 +442,7 @@ export default function App() {
           <button 
             onClick={() => { playSound.click(); setShowTaskPanel(!showTaskPanel); }}
             onMouseEnter={playSound.tick}
-            className="hidden md:flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
+            className="hud-secondary-action flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
           >
             TASKS <ChevronRight className={`w-3 h-3 transition-transform ${showTaskPanel ? 'rotate-90' : ''}`} />
           </button>
@@ -451,7 +451,7 @@ export default function App() {
           <button 
             onClick={() => { playSound.click(); setActivePage('jobs'); }}
             onMouseEnter={playSound.tick}
-            className="hidden md:flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
+            className="hud-secondary-action flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-cyan-500 hover:text-cyan-300 hover:bg-cyan-900/30 transition-all cursor-pointer"
           >
             JOBS <ChevronRight className="w-3 h-3" />
           </button>
@@ -467,11 +467,11 @@ export default function App() {
       {activePage === 'jobs' ? (
         <JobsPage onBack={() => setActivePage('main')} />
       ) : (
-        <main className="flex-1 flex gap-2 md:gap-4 min-h-0 relative">
+        <main className="jarvis-main-grid flex-1 flex gap-2 md:gap-4 min-h-0 relative">
           
           {/* Left: Voice (Gemini Live) */}
-          <div className="hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0">
-            <div className="mb-8 scale-110">
+          <div className="cockpit-rail hidden lg:flex flex-col items-center justify-center w-80 flex-shrink-0 glass-panel rounded-xl relative overflow-hidden">
+            <div className="avatar-dock mb-8 scale-110">
               <ZoyaAvatar state={appState} emotion={zoya.emotion} />
             </div>
             
@@ -481,7 +481,7 @@ export default function App() {
               disabled={!hasRecognition}
             />
             
-            <div className="text-center mt-12 max-w-xs">
+            <div className="state-readout text-center mt-12 max-w-xs">
               <div className="h-6">
                 {appState === 'listening' && <span className="text-cyan-400 font-mono text-sm animate-pulse">Awaiting Input...</span>}
                 {appState === 'processing' && <span className="text-indigo-400 font-mono text-sm animate-pulse">Thinking...</span>}
@@ -501,7 +501,7 @@ export default function App() {
           </div>
 
           {/* Center: Chat */}
-          <div className="flex-1 min-h-0">
+          <div className="command-deck flex-1 min-h-0">
             <ChatWindow 
               messages={messages} 
               onSendMessage={handleSendMessage} 
@@ -527,7 +527,7 @@ export default function App() {
 
       {/* Bottom Status Bar */}
       {/* Footer — hidden on mobile for more chat space */}
-      <footer className="hidden md:flex mt-3 glass-panel rounded-lg px-4 py-1.5 flex-row justify-between items-center gap-4 text-cyan-700 font-mono text-[9px] tracking-widest">
+      <footer className="hud-footer hidden md:flex mt-3 glass-panel rounded-lg px-4 py-1.5 flex-row justify-between items-center gap-4 text-cyan-700 font-mono text-[9px] tracking-widest">
         <div className="flex items-center gap-2">
           <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
           <span className={statusColor}>{appState.toUpperCase()}</span>

@@ -295,9 +295,9 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
   };
 
   const getSourceBadge = (source?: string) => {
-    if (source === 'voice') return <span className="badge-voice text-[8px] font-mono px-1.5 py-0.5 rounded-full">🎙 VOICE</span>;
-    if (source === 'chat') return <span className="badge-chat text-[8px] font-mono px-1.5 py-0.5 rounded-full">⌨ CHAT</span>;
-    if (source === 'system') return <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-full bg-amber-900/20 text-amber-500 border border-amber-700/30">⚙ SYS</span>;
+    if (source === 'voice') return <span className="badge-voice text-[8px] font-mono px-1.5 py-0.5 rounded-full">VOICE</span>;
+    if (source === 'chat') return <span className="badge-chat text-[8px] font-mono px-1.5 py-0.5 rounded-full">CHAT</span>;
+    if (source === 'system') return <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-full bg-amber-900/20 text-amber-500 border border-amber-700/30">SYS</span>;
     return null;
   };
 
@@ -319,15 +319,15 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
   };
 
   return (
-    <div className="flex flex-col h-full w-full glass-panel rounded-xl overflow-hidden relative">
+    <div className="chat-command-panel flex flex-col h-full w-full glass-panel rounded-xl overflow-hidden relative">
       {/* Header */}
-      <div className="h-12 border-b border-cyan-500/20 flex items-center px-4 bg-cyan-950/30 relative overflow-hidden">
+      <div className="chat-command-header h-12 border-b border-cyan-500/20 flex items-center px-4 bg-cyan-950/30 relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(0,240,255,0.08),transparent)] -translate-x-full animate-[scanline-h_4s_linear_infinite]" />
         
         <div className="flex items-center relative z-10 w-full">
           <div className="flex items-center gap-2">
             <Terminal className="w-4 h-4 text-cyan-500" />
-            <span className="font-mono text-xs tracking-[0.15em] text-cyan-400 font-bold">COM_LINK</span>
+            <span className="font-mono text-xs tracking-[0.15em] text-cyan-400 font-bold">COMMAND_LINK</span>
           </div>
           
           <div className="ml-auto flex items-center gap-3">
@@ -346,7 +346,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-4 relative">
+      <div className="chat-scroll flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 relative">
         <AnimatePresence initial={false}>
           {messages.map((msg, index) => (
             <motion.div
@@ -359,18 +359,18 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               {/* Meta row: time + source badge */}
               <div className="flex items-center gap-2 mb-1 px-1">
                 <span className="text-[9px] font-mono text-cyan-700/70">
-                  {msg.timestamp.toLocaleTimeString([], { hour12: false })}
+                  {msg.timestamp.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${msg.role === 'user' ? 'text-cyan-500' : 'text-cyan-300'}`}>
-                  {msg.role === 'user' ? 'USER' : <><span className="md:hidden">J.A.R.V.I.S.</span><span className="hidden md:inline">J.A.R.V.I.S.{msg.model ? ` (${msg.model}${msg.usedResearch ? ' ⚡' : ''})` : ''}</span></>}
+                  {msg.role === 'user' ? 'BOSS' : <><span className="md:hidden">J.A.R.V.I.S.</span><span className="hidden md:inline">J.A.R.V.I.S.{msg.model ? ` (${msg.model}${msg.usedResearch ? ' / R' : ''})` : ''}</span></>}
                 </span>
-                {msg.tokens ? <span className="hidden md:inline text-[8px] font-mono text-cyan-600/60">🪙 {msg.tokens}</span> : null}
+                {msg.tokens ? <span className="hidden md:inline text-[8px] font-mono text-cyan-600/60">TOK {msg.tokens}</span> : null}
                 {getSourceBadge(msg.source)}
                 {getEmotionBadge(msg.emotion)}
               </div>
 
               {/* Message bubble */}
-              <div className={`relative max-w-[92%] md:max-w-[85%] p-3.5 md:p-4 font-sans text-[15px] leading-relaxed rounded-2xl shadow-lg backdrop-blur-sm
+              <div className={`jarvis-message-bubble relative max-w-[94%] md:max-w-[85%] p-3.5 md:p-4 font-sans text-[15px] leading-relaxed rounded-2xl shadow-lg backdrop-blur-sm
                 ${msg.role === 'user' 
                   ? 'bg-cyan-900/40 text-cyan-50 border border-cyan-500/20 rounded-tr-sm ml-auto' 
                   : 'bg-slate-800/60 text-cyan-50 border border-cyan-800/30 rounded-tl-sm'}
@@ -502,10 +502,21 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
 
       {/* Input Area */}
       <div 
-        className="p-3 md:p-4 border-t border-cyan-500/20 bg-slate-900/80 backdrop-blur-xl relative z-10" 
+        className="command-input-zone p-3 md:p-4 border-t border-cyan-500/20 bg-slate-900/80 backdrop-blur-xl relative z-10"
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <form onSubmit={handleSubmit} className="relative flex items-center gap-2 md:gap-3">
+          {onVoiceToggle && (
+            <button
+              type="button"
+              onClick={() => { playSound.click(); onVoiceToggle(); }}
+              disabled={!hasRecognition}
+              className={`voice-quick-toggle flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border font-mono transition-all active:scale-95 ${isListening ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.22)]' : 'border-cyan-800/50 bg-cyan-950/30 text-cyan-500 hover:border-cyan-500/60 hover:text-cyan-300'}`}
+              title={isListening ? "Stop voice link" : "Start voice link"}
+            >
+              {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            </button>
+          )}
           <div className="flex-1 relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-500 font-mono text-sm md:text-base font-bold transition-colors group-focus-within:text-cyan-300">&gt;</div>
             <input
@@ -513,7 +524,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onFocus={playSound.tick}
-              placeholder="Enter command..."
+              placeholder="Ask, command, debug..."
               disabled={isProcessing}
               className="w-full bg-black/50 border border-cyan-800/50 rounded-2xl py-3.5 md:py-4 pl-10 pr-14 text-cyan-50 font-sans text-base focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all placeholder-cyan-800/60 shadow-inner"
             />

@@ -275,3 +275,291 @@ body {
   font-size: 8px;
   top: 1px;
 }
+
+/* Phase 1 cockpit redesign */
+:root {
+  --jarvis-bg-deep: #02050a;
+  --jarvis-bg-panel: rgba(4, 14, 24, 0.82);
+  --jarvis-cyan-soft: rgba(34, 211, 238, 0.16);
+  --jarvis-cyan-line: rgba(103, 232, 249, 0.22);
+  --jarvis-amber-line: rgba(251, 191, 36, 0.2);
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.jarvis-app-shell {
+  min-height: 100dvh;
+  height: 100dvh;
+  padding: clamp(10px, 1.7vw, 24px);
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.08), transparent 22%),
+    radial-gradient(circle at 18% 18%, rgba(14, 165, 233, 0.14), transparent 30%),
+    radial-gradient(circle at 82% 0%, rgba(251, 191, 36, 0.08), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.08), transparent 26%);
+}
+
+.jarvis-app-shell::before,
+.jarvis-app-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.jarvis-app-shell::before {
+  background:
+    linear-gradient(90deg, transparent 0 9%, rgba(103, 232, 249, 0.08) 9.08%, transparent 9.2% 90.8%, rgba(103, 232, 249, 0.08) 90.92%, transparent 91%),
+    linear-gradient(0deg, transparent 0 12%, rgba(103, 232, 249, 0.045) 12.08%, transparent 12.2% 86.8%, rgba(103, 232, 249, 0.045) 86.92%, transparent 87%);
+  opacity: 0.75;
+}
+
+.jarvis-app-shell::after {
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.32));
+}
+
+.glass-panel {
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(9, 22, 36, 0.88), rgba(2, 8, 16, 0.72)),
+    var(--jarvis-bg-panel);
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 38px rgba(34, 211, 238, 0.035),
+    0 20px 55px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(15, 23, 42, 0.55);
+}
+
+.hud-topbar {
+  min-height: 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-topbar::before,
+.chat-command-header::before,
+.cockpit-rail::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.08), transparent);
+  transform: translateX(-100%);
+  animation: scanline-h 7s linear infinite;
+}
+
+.hud-brand h1 {
+  line-height: 1;
+}
+
+.hud-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.hud-action-btn,
+.hud-secondary-action,
+.voice-quick-toggle {
+  min-height: 36px;
+}
+
+.hud-secondary-action {
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  background: rgba(8, 47, 73, 0.16);
+}
+
+.jarvis-main-grid {
+  align-items: stretch;
+}
+
+.cockpit-rail {
+  padding: 28px 16px;
+}
+
+.cockpit-rail::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(103, 232, 249, 0.08);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.avatar-dock {
+  position: relative;
+}
+
+.avatar-dock::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 270px;
+  height: 270px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(34, 211, 238, 0.14);
+  box-shadow: inset 0 0 24px rgba(34, 211, 238, 0.05), 0 0 38px rgba(34, 211, 238, 0.08);
+}
+
+.state-readout {
+  padding: 14px 18px;
+  border: 1px solid rgba(34, 211, 238, 0.12);
+  border-radius: 10px;
+  background: rgba(2, 8, 16, 0.45);
+}
+
+.command-deck {
+  min-width: 0;
+}
+
+.chat-command-panel {
+  border-radius: 14px;
+}
+
+.chat-command-header {
+  min-height: 52px;
+  background:
+    linear-gradient(90deg, rgba(8, 47, 73, 0.38), rgba(15, 23, 42, 0.6)),
+    rgba(2, 8, 16, 0.68);
+}
+
+.chat-scroll {
+  background:
+    linear-gradient(rgba(34, 211, 238, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.022) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.jarvis-message-bubble {
+  overflow: hidden;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+}
+
+.command-input-zone {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 8, 16, 0.92));
+}
+
+.hud-footer {
+  min-height: 34px;
+}
+
+@media (max-width: 1023px) {
+  .jarvis-app-shell {
+    padding: 10px;
+  }
+
+  .hud-topbar {
+    min-height: unset;
+    align-items: flex-start;
+  }
+
+  .hud-actions {
+    gap: 6px;
+  }
+
+  .hud-action-btn span,
+  .hud-secondary-action svg {
+    display: none;
+  }
+
+  .hud-secondary-action {
+    min-width: 42px;
+    justify-content: center;
+  }
+
+  .jarvis-main-grid {
+    gap: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  html {
+    padding: 0;
+  }
+
+  .jarvis-app-shell {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .hud-topbar {
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .hud-brand {
+    flex: 1 1 150px;
+  }
+
+  .hud-brand h1 {
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+  }
+
+  .hud-actions {
+    flex: 0 1 auto;
+  }
+
+  .hud-action-btn,
+  .hud-secondary-action {
+    height: 34px;
+    min-height: 34px;
+    padding-inline: 10px;
+    border-radius: 8px;
+  }
+
+  .hud-secondary-action {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .chat-command-panel {
+    border-radius: 10px;
+  }
+
+  .chat-command-header {
+    height: 46px;
+    min-height: 46px;
+    padding-inline: 12px;
+  }
+
+  .chat-command-header .hidden.sm\:flex {
+    display: none;
+  }
+
+  .chat-scroll {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .jarvis-message-bubble {
+    font-size: 14px;
+    border-radius: 14px;
+  }
+
+  .command-input-zone {
+    padding: 10px !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .voice-quick-toggle {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hud-actions {
+    flex-wrap: nowrap;
+  }
+
+  .hud-actions > .hidden.md\:flex {
+    gap: 0.75rem;
+  }
+}
