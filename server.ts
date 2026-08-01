@@ -11,10 +11,12 @@ import { setupWebSocketServer } from "./server/websocket";
 import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
 import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
+import { isLogApiPath, registerLogPortalRoutes } from "./server/logPortal";
 
-import { logger } from "./server/logger";
+import { installConsoleLogCapture, logger } from "./server/logger";
 
 async function startServer() {
+  installConsoleLogCapture();
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -30,6 +32,10 @@ async function startServer() {
   });
 
   // ── Global Security Enforcement ──
+  // Public shell for the secure live log console. Log data is still protected
+  // by the /api/logs/raw credential check.
+  registerLogPortalRoutes(app);
+
   app.get("/api/config/auth", (req, res) => {
     res.json({
       supabaseUrl: process.env.SUPABASE_URL,
@@ -39,8 +45,10 @@ async function startServer() {
   });
 
   app.use("/api", (req, res, next) => {
-    // Skip PIN check for the auth config endpoint so frontend can load login screen
+    // Skip PIN check for auth config and log endpoints. Log routes enforce
+    // their own token/PIN check so they can support the standalone /log portal.
     if (req.path === '/config/auth') return next();
+    if (isLogApiPath(req.path)) return next();
 
     const requiredPin = process.env.JARVIS_PIN;
     if (requiredPin) {

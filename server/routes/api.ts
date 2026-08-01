@@ -15,6 +15,8 @@ import { callChatWithCascade, callResearchWithCascade } from "../llmRouter";
 import { ThreadManager } from "../threadManager";
 import { setTimezone, getTimezone } from "../timezoneStore";
 
+import { renderLogPortalHtml, requireLogAccess, sendLogTail } from "../logPortal";
+
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
@@ -82,118 +84,14 @@ router.get("/butler/results", async (req, res) => {
   }
 });
 
-// ── Remote Debugging Endpoint ──
-router.get("/logs", (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-  <title>JARVIS Live Telemetry</title>
-  <style>
-    body { background-color: #061118; color: #fff; font-family: 'Consolas', monospace; padding: 20px; margin: 0; }
-    h2 { color: #00e5ff; margin: 0; font-family: 'Segoe UI', sans-serif; letter-spacing: 4px; font-weight: 300; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #1a3c54; }
-    #logs-container { height: calc(100vh - 100px); overflow-y: auto; background: #02080d; padding: 15px; border: 1px solid #112d40; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05); }
-    .log-line { margin: 4px 0; padding: 4px 8px; border-bottom: 1px solid #0a1b26; line-height: 1.4; word-wrap: break-word; transition: background 0.2s; }
-    .log-line:hover { background: #0a1b26; }
-    .timestamp { color: #5a7b8c; font-size: 0.9em; }
-    .level-INFO { color: #00e5ff; font-weight: bold; }
-    .level-ERROR { color: #ff3366; font-weight: bold; text-shadow: 0 0 8px rgba(255, 51, 102, 0.5); }
-    .level-WARN { color: #ffcc00; font-weight: bold; }
-    .level-DEBUG { color: #888; }
-    .tag { color: #bd93f9; }
-    .toggle { display: flex; align-items: center; gap: 8px; color: #888; font-family: 'Segoe UI', sans-serif; font-size: 14px; cursor: pointer; }
-    input[type=checkbox] { accent-color: #00e5ff; transform: scale(1.2); cursor: pointer; }
-    
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 10px; }
-    ::-webkit-scrollbar-track { background: #02080d; }
-    ::-webkit-scrollbar-thumb { background: #1a3c54; border-radius: 5px; }
-    ::-webkit-scrollbar-thumb:hover { background: #00e5ff; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h2>J.A.R.V.I.S. TELEMETRY</h2>
-    <label class="toggle">
-      <input type="checkbox" id="autoscroll" checked> 
-      <span style="color: #00e5ff;">AUTO-SYNC</span>
-    </label>
-  </div>
-  <div id="logs-container"></div>
-  <script>
-    const container = document.getElementById('logs-container');
-    const autoscroll = document.getElementById('autoscroll');
-    
-    function escapeHtml(unsafe) {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    let renderedLineCount = 0;
-    
-    async function fetchLogs() {
-      try {
-        const res = await fetch('/api/logs/raw');
-        const text = await res.text();
-        const lines = text.split('\\n');
-        
-        if (lines.length === renderedLineCount) return;
-        
-        const isAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
-        let html = '';
-        
-        for(let i = renderedLineCount; i < lines.length; i++) {
-           const line = lines[i];
-           if(!line.trim() && i === lines.length - 1) continue;
-           const match = line.match(/^\\[(.*?)\\] \\[(.*?)\\] \\[(.*?)\\] (.*)$/);
-           if(match) {
-              const [_, time, level, tag, msg] = match;
-              html += \`<div class="log-line">
-                <span class="timestamp">[\${escapeHtml(time)}]</span> 
-                <span class="level-\${escapeHtml(level)}">[\${escapeHtml(level)}]</span> 
-                <span class="tag">[\${escapeHtml(tag)}]</span> 
-                <span style="color: \${level === 'ERROR' ? '#ff88aa' : '#e0f7fa'}">\${escapeHtml(msg)}</span>
-              </div>\`;
-           } else {
-              html += \`<div class="log-line" style="color: #888;">\${escapeHtml(line)}</div>\`;
-           }
-        }
-        
-        container.insertAdjacentHTML('beforeend', html);
-        renderedLineCount = lines.length;
-        
-        if(autoscroll.checked && isAtBottom) {
-          container.scrollTop = container.scrollHeight;
-        }
-      } catch(e) {
-        console.error("Failed to sync telemetry");
-      }
-    }
-    
-    fetchLogs();
-    setInterval(fetchLogs, 2000);
-  </script>
-</body>
-</html>
-  `);
+// Secure Remote Debugging Endpoint
+router.get("/logs", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(renderLogPortalHtml("/api/logs/raw"));
 });
 
-router.get("/logs/raw", (req, res) => {
-  const logPath = path.resolve(process.cwd(), 'logs', 'debug.log');
-  if (fs.existsSync(logPath)) {
-    res.setHeader('Content-Type', 'text/plain');
-    fs.createReadStream(logPath).pipe(res);
-  } else {
-    res.status(404).send("No debug.log found yet.");
-  }
-});
-
+router.get("/logs/raw", requireLogAccess, sendLogTail);
 router.get("/session-context", async (req, res) => {
   try {
     const context = await getSessionContextSummary();
