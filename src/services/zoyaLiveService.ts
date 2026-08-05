@@ -53,11 +53,12 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
   2. **Physical Browser Navigation**: Use 'executeBrowserAction' to open websites physically (YouTube, Spotify, WhatsApp, search pages).
   3. **Analyze Webpages**: Use 'readWebpage' to read and summarize any URL link the Boss provides.
   4. **Save Files**: Use 'saveFile' to pin documents, links, or articles directly to the HUD files panel.
-  5. **Schedule Alarms & Reminders**: Use 'schedule_action' to schedule future alerts, calls, or reminders relative to current time.
-  6. **List Scheduled Tasks**: Use 'get_scheduled_tasks' to check all active pending tasks, alarms, reminders, messages, or calls.
-  7. **Cancel Scheduled Task**: Use 'cancel_scheduled_task' to cancel/remove a specific pending task by its ID.
-  8. **Control Boss's Local PC via I.R.I.S.**: Use 'execute_local_os_command' to physically open apps (VS Code, Notepad, Spotify, Chrome, ANY app), close apps, type text, press keyboard shortcuts, run commands, and more on Boss's local machine. I.R.I.S. is ONLINE and connected to Boss's PC right now.
-  9. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
+  5. **Schedule One-Time Alarms & Reminders**: Use 'schedule_action' only for one-time future alerts, calls, or reminders relative to current time.
+  6. **Recurring Routines**: Use 'create_recurring_routine' for daily/weekly/every-morning reminders, messages, and research reports.
+  7. **List Scheduled Items**: Use 'get_scheduled_tasks' for one-time tasks and 'get_recurring_routines' for recurring jobs/routines.
+  8. **Edit/Delete Scheduled Items**: Use 'update_scheduled_task' or 'cancel_scheduled_task' for one-time tasks; use 'update_recurring_routine' or 'cancel_recurring_routine' for recurring routines.
+  9. **Control Boss's Local PC via I.R.I.S.**: Use 'execute_local_os_command' to physically open apps (VS Code, Notepad, Spotify, Chrome, ANY app), close apps, type text, press keyboard shortcuts, run commands, and more on Boss's local machine. I.R.I.S. is ONLINE and connected to Boss's PC right now.
+  10. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
   2. Cannot access unauthorized private accounts directly without the Boss.
@@ -79,7 +80,10 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **CRITICAL SEARCH EXCLUSION**: NEVER call 'intelligent_search' or use native 'google_search' when asked about the creator, the developer, the maker, who created you, or your capabilities. Answer immediately from internal knowledge.
 - **intelligent_search**: Use for ANY OTHER question about people, news, facts, movies, prices, or research.
 - **executeBrowserAction**: Use ONLY for physical navigation (Open YouTube, Play music, Send WhatsApp).
-- **execute_local_os_command**: Use THIS IMMEDIATELY when Boss says 'open [any app]', 'close [app]', 'type this', 'press [key]', or any local PC control request. I.R.I.S. is ONLINE — NEVER say you cannot do this. action='open_app', appName='vscode' to open VS Code. ALWAYS call this tool — do NOT just say you will do it.
+- **execute_local_os_command**: Use THIS IMMEDIATELY when Boss says 'open [any app]', 'close [app]', 'type this', 'press [key]', or any local PC control request. I.R.I.S. is ONLINE - NEVER say you cannot do this. action='open_app', appName='vscode' to open VS Code. ALWAYS call this tool - do NOT just say you will do it.
+- **schedule_action**: Use ONLY for one-time tasks like 'remind me in 10 minutes' or 'message me tomorrow at 8'.
+- **create_recurring_routine**: Use for repeat wording like every day, daily, every morning, weekly, recurring, routine, job, हरेक, दैनिक, or प्रत्येक. Type='research' when live/latest/news/research is needed; type='message' for greetings/general Telegram text; type='reminder' for medicine/water/task nudges.
+- **Editing/deleting**: Before editing or deleting, call the matching list tool when you do not already know the ID. Use recurring routine tools for daily/jobs/routines; use scheduled task tools for one-time pending tasks.
 
 ### 📅 CURRENT CONTEXT:
 - Timezone: ${timezone}
@@ -403,7 +407,7 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "schedule_action",
-                  description: "Schedule a future call or message. Use this for 'Remind me in X', 'Call me at Y', etc. You MUST calculate delay_seconds relative to NOW.",
+                  description: "Schedule a ONE-TIME future call, alarm, or message. Use for 'remind me in X', 'call me at Y', or a single non-repeating time. Do NOT use this for daily/every/recurring/job/routine requests.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
@@ -416,7 +420,7 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "get_scheduled_tasks",
-                  description: "Retrieve all currently active (pending) scheduled tasks, alarms, reminders, messages, or calls. Use this when the user asks what tasks are pending, what alarms are set, or wants to check scheduled messages/calls.",
+                  description: "Retrieve all currently active ONE-TIME pending tasks, alarms, reminders, messages, or calls. For daily/every/recurring jobs, use get_recurring_routines instead.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {},
@@ -424,11 +428,72 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "cancel_scheduled_task",
-                  description: "Cancel and remove a specific scheduled task, alarm, reminder, message, or call using its unique ID. Get the ID by first calling get_scheduled_tasks.",
+                  description: "Cancel and remove a specific ONE-TIME scheduled task, alarm, reminder, message, or call using its unique ID. Get the ID by first calling get_scheduled_tasks.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
                       id: { type: Type.STRING, description: "The unique ID of the scheduled task to cancel." }
+                    },
+                    required: ["id"],
+                  },
+                },
+                {
+                  name: "update_scheduled_task",
+                  description: "Edit/reschedule a ONE-TIME pending task using its ID. Use get_scheduled_tasks first if you do not know the ID. Do not use for recurring/daily/every jobs.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, description: "The one-time task ID." },
+                      type: { type: Type.STRING, description: "New action type: 'call', 'message', or 'alarm'." },
+                      content: { type: Type.STRING, description: "Updated reminder/message/alarm content." },
+                      delay_seconds: { type: Type.NUMBER, description: "New total seconds from now before execution." }
+                    },
+                    required: ["id", "type", "content", "delay_seconds"],
+                  },
+                },
+                {
+                  name: "create_recurring_routine",
+                  description: "Create a recurring Telegram routine/job. Use for every day, daily, every morning, weekly, recurring, routine, or job repeat wording. For latest/news/research use type='research'; for greetings/general text use type='message'; for medicine/water/task nudges use type='reminder'.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      type: { type: Type.STRING, description: "Routine type: 'reminder', 'message', or 'research'." },
+                      content: { type: Type.STRING, description: "The user's recurring intent/topic. Do not include the schedule here." },
+                      cron_expression: { type: Type.STRING, description: "5-field cron in Kathmandu time. Daily 8 AM = '0 8 * * *'. Every 6 hours = '0 */6 * * *'." }
+                    },
+                    required: ["type", "content", "cron_expression"],
+                  },
+                },
+                {
+                  name: "get_recurring_routines",
+                  description: "List all recurring routines/jobs, including daily reminders, recurring messages, and recurring research reports. Use before editing or deleting if the ID is unknown.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {},
+                  },
+                },
+                {
+                  name: "cancel_recurring_routine",
+                  description: "Delete a recurring routine/job by ID. Use only for daily/every/recurring reminders, messages, or research jobs.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, description: "The recurring routine/job ID." }
+                    },
+                    required: ["id"],
+                  },
+                },
+                {
+                  name: "update_recurring_routine",
+                  description: "Edit a recurring routine/job by ID. Use for changing content, type, schedule, or active/paused state of daily/every/recurring reminders, messages, or research jobs.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, description: "The recurring routine/job ID." },
+                      type: { type: Type.STRING, description: "Updated routine type: 'reminder', 'message', or 'research'. Optional." },
+                      content: { type: Type.STRING, description: "Updated recurring intent/topic. Optional." },
+                      cron_expression: { type: Type.STRING, description: "Updated 5-field cron in Kathmandu time. Optional." },
+                      is_active: { type: Type.BOOLEAN, description: "Set false to pause, true to resume. Optional." }
                     },
                     required: ["id"],
                   },
@@ -655,6 +720,34 @@ export class ZoyaLiveService {
 
   // ── Handle Gemini function calls ──────────────────────────────────────────
 
+  private _encodeRoutineTopic(type: string, content: string): string {
+    return `__JARVIS_ROUTINE__:${JSON.stringify({ version: 1, type, content })}`;
+  }
+
+  private _parseRoutineTopic(topic: string): { type: string; content: string } {
+    const prefix = "__JARVIS_ROUTINE__:";
+    if (topic?.startsWith(prefix)) {
+      try {
+        const payload = JSON.parse(topic.slice(prefix.length));
+        if (payload.type && typeof payload.content === "string") {
+          return { type: payload.type, content: payload.content };
+        }
+      } catch {}
+    }
+    return { type: "research", content: topic };
+  }
+
+  private _normalizeRoutineJob(job: any) {
+    const routine = this._parseRoutineTopic(job.topic || "");
+    return {
+      id: job.id,
+      type: routine.type,
+      content: routine.content,
+      cron_expression: job.time_of_day,
+      chat_id: job.chat_id,
+      is_active: job.is_active
+    };
+  }
   private async _handleFunctionCall(call: any) {
     const session = await this.sessionPromise;
     if (!session) return;
@@ -933,7 +1026,131 @@ export class ZoyaLiveService {
           }],
         });
       }
-    } else if (call.name === "enroll_guest_voice") {
+    } else if (call.name === "update_scheduled_task") {
+      const { id, type, content, delay_seconds } = call.args as any;
+      this.onThought(`Updating scheduled task: ${id}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch(`/api/tasks/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ type, content, delay_seconds })
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: res.ok ? `SUCCESS: Task updated. New task ID: ${data.newTaskId}` : `FAILURE: ${data.error || 'Task update failed.'}` }
+          }],
+        });
+        this.onThought(res.ok ? `Updated task ${id}.` : `Failed to update task ${id}.`);
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not connect to backend to update the task." } }],
+        });
+      }
+    } else if (call.name === "create_recurring_routine") {
+      const { type, content, cron_expression } = call.args as any;
+      this.onThought(`Creating recurring ${type}: ${cron_expression}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({
+            topic: this._encodeRoutineTopic(type, content),
+            time_of_day: cron_expression,
+            chat_id: this.currentChatId || 0
+          })
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: res.ok ? `SUCCESS: Recurring ${type} routine created. ID: ${data.job?.id}` : `FAILURE: ${data.error || 'Routine creation failed.'}` }
+          }],
+        });
+        this.onThought(res.ok ? `Recurring routine created.` : `Failed to create recurring routine.`);
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not connect to backend to create the routine." } }],
+        });
+      }
+    } else if (call.name === "get_recurring_routines") {
+      this.onThought("Retrieving recurring routines...");
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/jobs", { headers: { "X-Jarvis-Pin": pin } });
+        const data = await res.json();
+        const routines = (data.jobs || []).map((job: any) => this._normalizeRoutineJob(job));
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: JSON.stringify(routines) } }],
+        });
+        this.onThought(`Retrieved ${routines.length} recurring routines.`);
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not retrieve recurring routines." } }],
+        });
+      }
+    } else if (call.name === "cancel_recurring_routine") {
+      const { id } = call.args as any;
+      this.onThought(`Deleting recurring routine: ${id}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch(`/api/jobs/${id}`, {
+          method: "DELETE",
+          headers: { "X-Jarvis-Pin": pin }
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: res.ok ? "SUCCESS: Recurring routine deleted." : `FAILURE: ${data.error || 'Routine delete failed.'}` }
+          }],
+        });
+        this.onThought(res.ok ? `Deleted recurring routine ${id}.` : `Failed to delete recurring routine ${id}.`);
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "Error: Could not connect to backend to delete the routine." } }],
+        });
+      }
+    } else if (call.name === "update_recurring_routine") {
+      const { id, type, content, cron_expression, is_active } = call.args as any;
+      this.onThought(`Updating recurring routine: ${id}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const jobsRes = await fetch("/api/jobs", { headers: { "X-Jarvis-Pin": pin } });
+        const jobsData = await jobsRes.json();
+        const existing = (jobsData.jobs || []).find((job: any) => job.id === id);
+        if (!existing) throw new Error("Routine ID not found.");
+        const current = this._parseRoutineTopic(existing.topic || "");
+        const body: Record<string, any> = {};
+        if (type || content) body.topic = this._encodeRoutineTopic(type || current.type, content || current.content);
+        if (cron_expression) body.time_of_day = cron_expression;
+        if (typeof is_active === "boolean") body.is_active = is_active;
+
+        const res = await fetch(`/api/jobs/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{
+            name: call.name,
+            id: call.id,
+            response: { result: res.ok ? `SUCCESS: Recurring routine updated. ${JSON.stringify(this._normalizeRoutineJob(data.job))}` : `FAILURE: ${data.error || 'Routine update failed.'}` }
+          }],
+        });
+        this.onThought(res.ok ? `Updated recurring routine ${id}.` : `Failed to update recurring routine ${id}.`);
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `Error: ${err.message || 'Could not update recurring routine.'}` } }],
+        });
+      }    } else if (call.name === "enroll_guest_voice") {
       const { name } = call.args as any;
       this.onThought(`📝 Enrolling new guest voice: ${name}`);
 
@@ -1189,7 +1406,7 @@ export class ZoyaLiveService {
     this.isVerifyingVoice = true;
 
     // Check if voice biometrics is globally disabled
-    if (import.meta.env.VITE_ENABLE_VOICE_BIOMETRICS === "false") {
+    if ((import.meta as any).env.VITE_ENABLE_VOICE_BIOMETRICS === "false") {
       this.isVerifyingVoice = false;
       this.voiceBuffer = [];
       this.voiceBufferLength = 0;

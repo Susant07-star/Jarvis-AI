@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import * as cron from "node-cron";
 import { triggerProactiveCall } from "./telegramBot";
 import https from "https";
 import dns from "dns";
@@ -22,6 +23,60 @@ interface ActiveWatchdog {
   content: string;
   attempts: number;
   timer: NodeJS.Timeout;
+}
+
+type RoutineType = "research" | "reminder" | "message";
+type ScheduleScope = "one_time" | "recurring";
+
+interface ResearchJobRecord {
+  id: string;
+  topic: string;
+  time_of_day: string;
+  chat_id: number;
+  is_active: boolean;
+}
+
+interface ParsedRoutineTopic {
+  type: RoutineType;
+  content: string;
+}
+
+export const ROUTINE_PREFIX = "__JARVIS_ROUTINE__:";
+
+export function encodeRoutineTopic(type: RoutineType, content: string): string {
+  return `${ROUTINE_PREFIX}${JSON.stringify({ version: 1, type, content })}`;
+}
+
+export function parseRoutineTopic(topic: string): ParsedRoutineTopic {
+  if (topic.startsWith(ROUTINE_PREFIX)) {
+    try {
+      const payload = JSON.parse(topic.slice(ROUTINE_PREFIX.length));
+      if (["research", "reminder", "message"].includes(payload.type) && typeof payload.content === "string") {
+        return { type: payload.type, content: payload.content.trim() };
+      }
+    } catch {
+      // Old/manual rows should gracefully fall back to research below.
+    }
+  }
+
+  return { type: "research", content: topic };
+}
+
+function normalizeIdList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
+function normalizeRoutineType(value: unknown): RoutineType | undefined {
+  if (value === "research" || value === "reminder" || value === "message") return value;
+  return undefined;
+}
+
+function normalizeTaskType(value: unknown): "call" | "message" | "alarm" | undefined {
+  if (value === "call" || value === "message" || value === "alarm") return value;
+  if (value === "reminder") return "message";
+  return undefined;
 }
 
 class JarvisScheduler {
@@ -60,50 +115,65 @@ class JarvisScheduler {
     return true;
   }
 
-  public async parseAndSchedule(userInput: string, chatId: number): Promise<{ success: boolean; message: string; taskId?: string }> {
+  public async parseAndSchedule(userInput: string, chatId: number): Promise<{ success: boolean; message: string; taskId?: string; jobIds?: string[] }> {
     try {
       logger.info("Scheduler", `[DirectParse] Parsing scheduling request: "${userInput}"`);
       const tz = getTimezone ? getTimezone() : "Asia/Kathmandu";
       const now = new Date();
       const timeContext = `Current Time Context: Timezone=${tz}, Date=${now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long", year: "numeric", month: "long", day: "numeric" })}, Time=${now.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}`;
 
-      // Build active tasks context so LLM can cancel/modify existing ones
       const activeTasks = this.getActiveTasks(chatId);
       const activeTasksSummary = activeTasks.length > 0
-        ? `\n\nACTIVE TASKS (Boss currently has these scheduled):\n${activeTasks.map(t =>
-            `- ID: "${t.id}" | Type: ${t.type} | Content: "${t.content}" | Fires in: ${Math.round((t.executionTime - Date.now()) / 1000)}s`
-          ).join("\n")}`
-        : `\n\nACTIVE TASKS: None currently scheduled.`;
+        ? activeTasks.map(t => `- ${t.id} | one_time | ${t.type} | "${t.content}" | fires_in_seconds=${Math.max(0, Math.round((t.executionTime - Date.now()) / 1000))}`).join("\n")
+        : "None";
 
-      const systemPrompt = `You are J.A.R.V.I.S., the ultimate Susant assistant.
-Your job is to parse a user's scheduling/alarm/reminder request into structured JSON.
+      const recurringRoutines = await this.getRecurringRoutineRecords();
+      const recurringSummary = recurringRoutines.length > 0
+        ? recurringRoutines.map(job => {
+            const routine = parseRoutineTopic(job.topic);
+            return `- ${job.id} | recurring | ${routine.type} | active=${job.is_active} | cron="${job.time_of_day}" | content="${routine.content}"`;
+          }).join("\n")
+        : "None";
 
-ABSOLUTE RULE — You MUST return ONLY a valid JSON object with the following fields:
-- "action": Choose EXACTLY "create" (new task), "cancel" (cancel an existing task), or "modify" (cancel and replace an existing task).
-- "type": Choose EXACTLY "alarm", "message", or "call". Required for "create" and "modify".
-- "content": A clean, concise summary of the reminder. Required for "create" and "modify".
-- "delay_seconds": Seconds from NOW before executing. Required for "create" and "modify". Calculate carefully.
-- "target_task_id": The ID of the existing task to cancel. Required ONLY for "cancel" and "modify".
+      const systemPrompt = `You are J.A.R.V.I.S. scheduling control for Boss Susant.
+Parse the user's request into STRICT JSON only. No markdown, no prose.
 
-${timeContext}${activeTasksSummary}
+${timeContext}
 
-Examples:
-Input: "remind me in 5 minutes to drink water"
-Output: { "action": "create", "type": "message", "content": "Drink water", "delay_seconds": 300 }
+ACTIVE ONE-TIME TASKS:
+${activeTasksSummary}
 
-Input: "cancel my drink water alarm" (assuming active task with id task_123)
-Output: { "action": "cancel", "target_task_id": "task_123" }
+ACTIVE RECURRING ROUTINES/JOBS:
+${recurringSummary}
 
-Input: "change my drink water alarm to a message in 3 minutes" (assuming active task with id task_123)
-Output: { "action": "modify", "target_task_id": "task_123", "type": "message", "content": "Drink water", "delay_seconds": 180 }`;
+JSON schema:
+{
+  "action": "create" | "cancel" | "modify" | "list",
+  "scope": "one_time" | "recurring",
+  "type": "alarm" | "call" | "message" | "reminder" | "research",
+  "content": "clean user intent, if creating or changing content",
+  "delay_seconds": number,
+  "cron_expression": "5-field cron, if recurring",
+  "target_task_ids": ["one-time task ids to cancel/modify"],
+  "target_routine_ids": ["recurring routine ids to cancel/modify"],
+  "is_active": boolean
+}
 
-      const { callChatWithCascade } = await import("./llmRouter");
+Rules:
+- If the user says every, daily, each, weekly, monthly, routine, job, regular, every morning, every day, or equivalent Nepali wording like हरेक/दैनिक/प्रत्येक, use scope="recurring".
+- If the user says in X minutes/hours, tomorrow, today at a time, or a single future time without repeat wording, use scope="one_time".
+- Recurring cron_expression must be 5 fields. Daily at 08:00 = "0 8 * * *". Daily at 10:30 = "30 10 * * *". Every 6 hours = "0 */6 * * *".
+- For recurring research/news/latest/updates, type="research". For simple recurring good morning/text, type="message". For medicine/water/task nudges, type="reminder".
+- For one-time reminders, type="message" unless the user explicitly asks for alarm or call.
+- For cancel/modify, choose exact ids from the active lists. If the user says both/all matching items, include all matching ids.
+- If the user asks what is set, action="list".
+- Never pretend a recurring routine was created as a one-time task.`;
+
       const result = await callChatWithCascade([
         { role: "system", content: systemPrompt },
         { role: "user", content: `Parse this scheduling request: "${userInput}"` }
       ]);
 
-      // Extract JSON from the response (LLM may wrap it in markdown or conversational text)
       let jsonStr = result.content.trim();
       const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON object found in LLM response.");
@@ -111,59 +181,188 @@ Output: { "action": "modify", "target_task_id": "task_123", "type": "message", "
 
       const parsed = JSON.parse(jsonStr);
       const action = parsed.action || "create";
+      const scope: ScheduleScope = parsed.scope === "recurring" ? "recurring" : "one_time";
 
-      // --- CANCEL action ---
-      if (action === "cancel") {
-        if (!parsed.target_task_id) throw new Error("cancel action requires target_task_id.");
-        const cancelled = this.cancelTask(parsed.target_task_id);
-        const cancelledTask = activeTasks.find(t => t.id === parsed.target_task_id);
-        const msg = cancelled
-          ? `✅ Considered it cancelled, Boss. The scheduled task "${cancelledTask?.content ?? parsed.target_task_id}" has been removed from my queue.`
-          : `⚠️ I couldn't find that task in my active queue, Boss. It may have already executed or never existed.`;
-        return { success: cancelled, message: msg };
+      if (action === "list") {
+        return { success: true, message: this.formatScheduleInventory(activeTasks, recurringRoutines) };
       }
 
-      // --- MODIFY action ---
-      if (action === "modify") {
-        if (!parsed.target_task_id) throw new Error("modify action requires target_task_id.");
-        this.cancelTask(parsed.target_task_id);
-        // Fall through to create the replacement task below
+      if (scope === "recurring") {
+        return await this.handleRecurringRoutineCommand(parsed, chatId, recurringRoutines);
       }
 
-      // --- CREATE (or replacement after MODIFY) ---
-      if (!parsed.type || !parsed.content || parsed.delay_seconds === undefined) {
-        throw new Error("Parsed JSON is missing required fields for create/modify.");
-      }
-
-      const taskId = this.schedule(chatId, parsed.type, parsed.content, parsed.delay_seconds);
-
-      // Generate a witty J.A.R.V.I.S. confirmation message
-      const isModify = action === "modify";
-      const confirmSystem = `You are J.A.R.V.I.S., the wittily sarcastic AI butler created by Susant, your boss.
-Draft a classy, witty, and highly reassuring confirmation message.
-${isModify ? "Confirm that you have MODIFIED an existing task and" : "Confirm that you have"} scheduled a "${parsed.type}" action to: "${parsed.content}" in exactly ${Math.round(parsed.delay_seconds / 60)} minute(s).
-Keep it under 60 words.`;
-
-      const confirmResult = await callChatWithCascade([
-        { role: "system", content: confirmSystem },
-        { role: "user", content: "Write the confirmation reply." }
-      ]);
-
-      return {
-        success: true,
-        message: confirmResult.content || `Considered it done, sir! I've scheduled your reminder to: ${parsed.content}.`,
-        taskId
-      };
-
+      return await this.handleOneTimeScheduleCommand(parsed, chatId, activeTasks);
     } catch (err: any) {
       logger.error("Scheduler", `DirectParse failed: ${err.message}`);
       return {
         success: false,
-        message: `I apologize, Boss, but I encountered an error while trying to process that schedule request.`
+        message: "I could not safely update the schedule, Boss. Please say the time, repeat pattern, and what to send/remind again."
       };
     }
   }
 
+  private async getRecurringRoutineRecords(): Promise<ResearchJobRecord[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from("research_jobs")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      logger.warn("Scheduler", `Failed to load recurring routines: ${error.message}`);
+      return [];
+    }
+    return (data || []) as ResearchJobRecord[];
+  }
+
+  private formatScheduleInventory(tasks: ScheduledTask[], routines: ResearchJobRecord[]): string {
+    const oneTime = tasks.length
+      ? tasks.map(t => `- ${t.id}: ${t.type} "${t.content}" in ${Math.max(0, Math.round((t.executionTime - Date.now()) / 1000))}s`).join("\n")
+      : "- None";
+
+    const recurring = routines.length
+      ? routines.map(job => {
+          const routine = parseRoutineTopic(job.topic);
+          return `- ${job.id}: ${routine.type} "${routine.content}" at ${job.time_of_day} (${job.is_active ? "active" : "paused"})`;
+        }).join("\n")
+      : "- None";
+
+    return `Current schedule, Boss:\n\nOne-time tasks:\n${oneTime}\n\nRecurring routines:\n${recurring}`;
+  }
+
+  private async handleRecurringRoutineCommand(parsed: any, chatId: number, routines: ResearchJobRecord[]): Promise<{ success: boolean; message: string; jobIds?: string[] }> {
+    if (!supabase) {
+      return { success: false, message: "Recurring routines need Supabase, Boss, but Supabase is not configured on this server." };
+    }
+
+    const action = parsed.action || "create";
+    const targetChatId = chatId || this.cachedAdminChatId || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || "0");
+
+    if (action === "cancel") {
+      const ids = normalizeIdList(parsed.target_routine_ids).concat(normalizeIdList(parsed.target_routine_id));
+      const uniqueIds = Array.from(new Set(ids));
+      if (uniqueIds.length === 0) {
+        return { success: false, message: `I need to know which recurring routine to delete, Boss.\n\n${this.formatScheduleInventory([], routines)}` };
+      }
+
+      const { cronJobManager } = await import("./cronJobs");
+      for (const id of uniqueIds) {
+        const { error } = await supabase.from("research_jobs").delete().eq("id", id);
+        if (error) throw error;
+        cronJobManager.unscheduleJob(id);
+      }
+
+      return { success: true, message: `Done, Boss. Deleted ${uniqueIds.length} recurring routine${uniqueIds.length === 1 ? "" : "s"}.`, jobIds: uniqueIds };
+    }
+
+    if (action === "modify") {
+      const ids = normalizeIdList(parsed.target_routine_ids).concat(normalizeIdList(parsed.target_routine_id));
+      const uniqueIds = Array.from(new Set(ids));
+      if (uniqueIds.length === 0) {
+        return { success: false, message: `I need the routine to edit, Boss.\n\n${this.formatScheduleInventory([], routines)}` };
+      }
+
+      const { cronJobManager } = await import("./cronJobs");
+      const updatedIds: string[] = [];
+
+      for (const id of uniqueIds) {
+        const existing = routines.find(r => r.id === id);
+        if (!existing) continue;
+        const current = parseRoutineTopic(existing.topic);
+        const nextType = normalizeRoutineType(parsed.type) || normalizeRoutineType(parsed.routine_type) || current.type;
+        const nextContent = typeof parsed.content === "string" && parsed.content.trim() ? parsed.content.trim() : current.content;
+        const nextCron = typeof parsed.cron_expression === "string" && parsed.cron_expression.trim() ? parsed.cron_expression.trim() : existing.time_of_day;
+
+        if (!cron.validate(nextCron)) {
+          return { success: false, message: `That repeat schedule is not a valid cron expression, Boss: ${nextCron}` };
+        }
+
+        const updates: any = {
+          topic: encodeRoutineTopic(nextType, nextContent),
+          time_of_day: nextCron
+        };
+        if (typeof parsed.is_active === "boolean") updates.is_active = parsed.is_active;
+
+        const { data, error } = await supabase
+          .from("research_jobs")
+          .update(updates)
+          .eq("id", id)
+          .select()
+          .single();
+        if (error) throw error;
+
+        if (data.is_active) cronJobManager.scheduleJob(data);
+        else cronJobManager.unscheduleJob(id);
+        updatedIds.push(id);
+      }
+
+      return { success: true, message: `Done, Boss. Updated ${updatedIds.length} recurring routine${updatedIds.length === 1 ? "" : "s"}.`, jobIds: updatedIds };
+    }
+
+    const routineType = normalizeRoutineType(parsed.type) || normalizeRoutineType(parsed.routine_type) || "reminder";
+    const content = typeof parsed.content === "string" ? parsed.content.trim() : "";
+    const cronExpression = typeof parsed.cron_expression === "string" ? parsed.cron_expression.trim() : "";
+
+    if (!content || !cronExpression) {
+      return { success: false, message: "I need both the routine content and repeat time, Boss." };
+    }
+    if (!cron.validate(cronExpression)) {
+      return { success: false, message: `That repeat schedule is not valid yet, Boss: ${cronExpression}` };
+    }
+
+    const { data, error } = await supabase
+      .from("research_jobs")
+      .insert({ topic: encodeRoutineTopic(routineType, content), time_of_day: cronExpression, chat_id: targetChatId || 0, is_active: true })
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { cronJobManager } = await import("./cronJobs");
+    cronJobManager.scheduleJob(data);
+
+    return { success: true, message: `Done, Boss. Created a recurring ${routineType} routine for "${content}".`, jobIds: [data.id] };
+  }
+
+  private async handleOneTimeScheduleCommand(parsed: any, chatId: number, activeTasks: ScheduledTask[]): Promise<{ success: boolean; message: string; taskId?: string }> {
+    const action = parsed.action || "create";
+
+    if (action === "cancel") {
+      const ids = normalizeIdList(parsed.target_task_ids).concat(normalizeIdList(parsed.target_task_id));
+      const uniqueIds = Array.from(new Set(ids));
+      if (uniqueIds.length === 0) {
+        return { success: false, message: `I need to know which one-time task to cancel, Boss.\n\n${this.formatScheduleInventory(activeTasks, [])}` };
+      }
+      let cancelled = 0;
+      for (const id of uniqueIds) {
+        if (this.cancelTask(id)) cancelled += 1;
+      }
+      return { success: cancelled > 0, message: `Done, Boss. Cancelled ${cancelled} one-time task${cancelled === 1 ? "" : "s"}.` };
+    }
+
+    if (action === "modify") {
+      const ids = normalizeIdList(parsed.target_task_ids).concat(normalizeIdList(parsed.target_task_id));
+      const targetId = ids[0];
+      const original = activeTasks.find(t => t.id === targetId);
+      if (!original) {
+        return { success: false, message: `I could not find that one-time task, Boss.\n\n${this.formatScheduleInventory(activeTasks, [])}` };
+      }
+
+      const nextType = normalizeTaskType(parsed.type) || original.type;
+      const nextContent = typeof parsed.content === "string" && parsed.content.trim() ? parsed.content.trim() : original.content;
+      const nextDelay = typeof parsed.delay_seconds === "number" ? parsed.delay_seconds : Math.max(0, Math.round((original.executionTime - Date.now()) / 1000));
+      this.cancelTask(targetId);
+      const newTaskId = this.schedule(original.chatId, nextType, nextContent, nextDelay);
+      return { success: true, message: `Done, Boss. Updated the one-time ${nextType} task.`, taskId: newTaskId };
+    }
+
+    const type = normalizeTaskType(parsed.type) || "message";
+    const content = typeof parsed.content === "string" && parsed.content.trim() ? parsed.content.trim() : "Scheduled Voice Action";
+    if (typeof parsed.delay_seconds !== "number") {
+      return { success: false, message: "I need a single future time for that one-time task, Boss." };
+    }
+
+    const taskId = this.schedule(chatId, type, content, parsed.delay_seconds);
+    return { success: true, message: `Done, Boss. Scheduled the one-time ${type} task.`, taskId };
+  }
   public setAdminChatId(id: number) {
     if (id !== 0 && this.cachedAdminChatId !== id) {
       this.cachedAdminChatId = id;

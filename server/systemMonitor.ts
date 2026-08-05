@@ -57,18 +57,19 @@ let isAdminAlerted = false;
  */
 export async function getSystemMetrics(): Promise<SystemMetrics> {
   try {
-    const [cpuData, memData, batteryData, processListData] = await Promise.all([
+    const [cpuData, memData, batteryData, processListData, cpuInfo] = await Promise.all([
       si.currentLoad(),
       si.mem(),
       si.battery(),
       si.processLoad(''),
+      si.cpu(),
     ]);
 
     const metrics: SystemMetrics = {
       cpu: {
         usage: Math.round(cpuData.currentLoad),
-        load: cpuData.avgLoad,
-        cores: cpuData.cores,
+        load: [cpuData.avgLoad],
+        cores: cpuInfo.physicalCores,
       },
       memory: {
         total: memData.total,
@@ -79,12 +80,12 @@ export async function getSystemMetrics(): Promise<SystemMetrics> {
       battery: {
         hasBattery: batteryData.hasBattery,
         percent: batteryData.percent,
-        charging: batteryData.charging,
+        charging: batteryData.isCharging,
       },
-      processes: processListData.list.slice(0, 20).map(p => ({
-        name: p.name,
+      processes: processListData.slice(0, 20).map(p => ({
+        name: p.proc,
         cpu: p.cpu,
-        memory: p.memory,
+        memory: p.mem,
       })),
       timestamp: new Date().toISOString(),
     };
@@ -105,9 +106,9 @@ export async function updateKnownApplications(): Promise<void> {
     const processList = await si.processLoad('');
     
     // Add all currently running processes to known set
-    processList.list.forEach(p => {
-      if (p.name) {
-        knownApplications.add(p.name.toLowerCase());
+    processList.forEach(p => {
+      if (p.proc) {
+        knownApplications.add(p.proc.toLowerCase());
       }
     });
 

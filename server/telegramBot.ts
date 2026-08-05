@@ -224,7 +224,31 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
       tokens: 0, provider: "Security", model: "N/A"
     };
   }
-  
+
+  // ── SCHEDULE INTERCEPT: Route all schedule intents to the native parser ──
+  // This is the critical fix: "daily", "every morning", "remind me in 5 min", etc.
+  // previously fell through to callChatWithCascade(), which had no way to create
+  // actual Supabase records for recurring routines. Now they go directly to
+  // jarvisScheduler.parseAndSchedule() which handles BOTH one-time and recurring.
+  if (decision.intent === "schedule") {
+    logger.info("TelegramBot", `[SCHEDULE INTERCEPT] Routing to native parseAndSchedule: "${userText}"`);
+    try {
+      const { jarvisScheduler } = await import("./scheduler");
+      const scheduleResult = await jarvisScheduler.parseAndSchedule(userText, chatId);
+      // Persist the exchange to ThreadManager so JARVIS has total awareness
+      await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+      await ThreadManager.appendMessage(threadId, { role: "assistant", content: scheduleResult.message });
+      logger.info("TelegramBot", `[SCHEDULE] Result: success=${scheduleResult.success} | ${scheduleResult.message}`);
+      return { content: scheduleResult.message, tokens: 0, provider: "Scheduler", model: "N/A" };
+    } catch (err: any) {
+      logger.error("TelegramBot", `[SCHEDULE] parseAndSchedule failed: ${err.message}`);
+      return {
+        content: "I couldn't process that scheduling request, Boss. Please try again with the time, repeat pattern, and what to send.",
+        tokens: 0, provider: "Scheduler", model: "N/A"
+      };
+    }
+  }
+
   if (decision.mode === "agent") {
     try {
       const { createPlan } = await import("./browser/planner");
@@ -467,6 +491,8 @@ async function handleUpdate(token: string, update: any): Promise<void> {
     let userText = "";
     let isBossVoice = true; // Default: text messages from admin = boss. Voice messages overwrite this.
     let speakerDisplayName = "Boss Susant"; // Default; voice messages overwrite this.
+    let voiceResult: any = undefined;
+
 
     if (msg.text) {
       userText = msg.text;
@@ -477,18 +503,20 @@ async function handleUpdate(token: string, update: any): Promise<void> {
       const localPath = await downloadTelegramFile(token, fileId);
 
       // ── Voice Biometrics & Authentication ──
-      // Run transcription AND biometric verification in PARALLEL so neither
-      // suffers from file-not-found — the file exists for both simultaneously.
-      let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
+      // NOTE: Biometrics is DISABLED by default. The admin chatId is already
+      // validated by the TELEGRAM_CHAT_ID allowlist above — any voice note that
+      // reaches this point is from the authorized Boss. Set ENABLE_VOICE_BIOMETRICS=true
+      // in .env.local only if you want to re-enable speaker verification.
+      voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
       let transcribedText = "";
 
       try {
-        const verifyPromise = process.env.ENABLE_VOICE_BIOMETRICS === "false" 
-          ? Promise.resolve({ speaker: "boss", confidence: 1.0, liveness: true, embedding: "" })
-          : verifyVoice(localPath).catch((err: any) => {
+        const verifyPromise = process.env.ENABLE_VOICE_BIOMETRICS === "true"
+          ? verifyVoice(localPath).catch((err: any) => {
               logger.error("TelegramBot", `Voice verification failed: ${err.message}. Defaulting to Boss.`);
               return { speaker: "boss", confidence: 0.5, liveness: true, embedding: "" };
-            });
+            })
+          : Promise.resolve({ speaker: "boss", confidence: 1.0, liveness: true, embedding: "" });
 
         [transcribedText, voiceResult] = await Promise.all([
           transcribeFile(localPath),

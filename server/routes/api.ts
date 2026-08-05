@@ -1301,11 +1301,20 @@ router.get("/jobs", async (req, res) => {
 
 /**
  * POST /api/jobs
- * Create a new research job
+ * Create a new recurring routine job.
+ *
+ * Body:
+ *   topic        — Human-readable intent (e.g. "drink water", "check crypto prices")
+ *   routine_type — "research" | "reminder" | "message"  (default: "research")
+ *   time_of_day  — 5-field cron expression (e.g. "0 8 * * *")
+ *   chat_id      — optional Telegram chat ID (defaults to 0 = admin)
+ *
+ * The topic is encoded via encodeRoutineTopic() so cronJobs.ts can distinguish
+ * research vs reminder vs message routines at execution time.
  */
 router.post("/jobs", async (req, res) => {
   try {
-    const { topic, time_of_day, chat_id } = req.body;
+    const { topic, routine_type, time_of_day, chat_id } = req.body;
     if (!topic || !time_of_day) {
       return res.status(400).json({ error: "Missing topic or time_of_day" });
     }
@@ -1313,11 +1322,24 @@ router.post("/jobs", async (req, res) => {
     const { supabase } = await import("../supabaseClient");
     if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
 
-    const targetChatId = chat_id || 0; // The frontend or scheduler will resolve 0 to admin chat
+    const targetChatId = chat_id || 0;
+
+    // Validate and normalize routine_type; default to "research" for back-compat.
+    const validTypes = ["research", "reminder", "message"];
+    const resolvedType: "research" | "reminder" | "message" = validTypes.includes(routine_type)
+      ? routine_type
+      : "research";
+
+    // Encode the topic so cronJobs.ts can identify the routine type at fire time.
+    // If the topic is already encoded (e.g. sent by parseAndSchedule), leave it as-is.
+    const { encodeRoutineTopic, ROUTINE_PREFIX } = await import("../scheduler");
+    const encodedTopic = topic.startsWith(ROUTINE_PREFIX)
+      ? topic
+      : encodeRoutineTopic(resolvedType, topic);
 
     const { data, error } = await supabase
       .from("research_jobs")
-      .insert({ topic, time_of_day, chat_id: targetChatId, is_active: true })
+      .insert({ topic: encodedTopic, time_of_day, chat_id: targetChatId, is_active: true })
       .select()
       .single();
 
@@ -1326,6 +1348,7 @@ router.post("/jobs", async (req, res) => {
     const { cronJobManager } = await import("../cronJobs");
     cronJobManager.scheduleJob(data);
 
+    logger.info("API", `[Jobs] Created ${resolvedType} routine: "${topic}" @ cron: ${time_of_day}`);
     res.json({ success: true, job: data });
   } catch (error: any) {
     logger.error("API", "Failed to create job", error);
@@ -1357,19 +1380,43 @@ router.delete("/jobs/:id", async (req, res) => {
 
 /**
  * PATCH /api/jobs/:id
- * Toggle is_active
+ * Update a recurring routine. Supports toggling is_active, changing topic/cron/chat_id.
+ *
+ * When sending a plain-text topic (not already encoded), also send routine_type
+ * so we know how to encode it correctly. Defaults to "research" for back-compat.
  */
 router.patch("/jobs/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { is_active } = req.body;
-    
+    const { is_active, topic, routine_type, time_of_day, chat_id } = req.body;
+
+    const updates: Record<string, any> = {};
+    if (typeof is_active === "boolean") updates.is_active = is_active;
+    if (typeof time_of_day === "string" && time_of_day.trim()) updates.time_of_day = time_of_day.trim();
+    if (chat_id !== undefined) updates.chat_id = chat_id || 0;
+
+    // Encode the topic when updating — preserve encoding if already structured.
+    if (typeof topic === "string" && topic.trim()) {
+      const { encodeRoutineTopic, ROUTINE_PREFIX } = await import("../scheduler");
+      const validTypes = ["research", "reminder", "message"];
+      const resolvedType: "research" | "reminder" | "message" = validTypes.includes(routine_type)
+        ? routine_type
+        : "research";
+      updates.topic = topic.trim().startsWith(ROUTINE_PREFIX)
+        ? topic.trim()
+        : encodeRoutineTopic(resolvedType, topic.trim());
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No supported job fields provided" });
+    }
+
     const { supabase } = await import("../supabaseClient");
     if (!supabase) return res.status(503).json({ error: "Supabase not configured" });
 
     const { data, error } = await supabase
       .from("research_jobs")
-      .update({ is_active })
+      .update(updates)
       .eq("id", id)
       .select()
       .single();
@@ -1383,11 +1430,11 @@ router.patch("/jobs/:id", async (req, res) => {
       cronJobManager.unscheduleJob(id);
     }
 
+    logger.info("API", `[Jobs] Updated job ${id}: is_active=${data.is_active}`);
     res.json({ success: true, job: data });
   } catch (error: any) {
     logger.error("API", "Failed to update job", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 export default router;

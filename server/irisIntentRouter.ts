@@ -1,4 +1,4 @@
-import { logger } from "../logger";
+import { logger } from "./logger";
 
 // ── I.R.I.S. Intent Router ───────────────────────────────────────────────────────
 // Detects website/app requests and routes them through I.R.I.S. instead of browser

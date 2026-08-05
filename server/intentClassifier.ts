@@ -26,6 +26,13 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     "change my alarm", "change my reminder", "change the alarm", "update my alarm",
     "update my reminder", "modify alarm", "reschedule alarm", "reschedule reminder",
     "move my alarm", "postpone alarm",
+    // Recurring routines / jobs
+    "every day", "everyday", "daily", "every morning", "each morning", "each day",
+    "every week", "weekly", "monthly", "recurring", "routine", "routines", "job", "jobs",
+    "regular reminder", "regular message", "regular research", "morning message",
+    // Nepali/Hinglish scheduling words commonly produced by STT
+    "हरेक", "दैनिक", "प्रत्येक", "बिहान", "सम्झाउनु", "सम्झाइ", "रिमाइन्ड",
+    "म्यासेज", "मेसेज", "सन्देश", "डिलिट", "हटाउ", "मेटाउ", "क्यान्सिल",
   ];
   if (scheduleKeywords.some(k => lower.includes(k))) {
     logger.info("Classifier", `[LocalGuard] Match schedule intent: "${text}"`);

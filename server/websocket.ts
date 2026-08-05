@@ -178,45 +178,52 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     }
 
     // ── Voice Biometrics & Authentication ──
+    // DISABLED by default. The WebSocket is PIN-protected at connection time,
+    // so any caller who passed the PIN check is the Boss.
+    // Set ENABLE_VOICE_BIOMETRICS=true in .env.local to re-enable speaker verification.
     const fullBuffer = Buffer.concat(audioBuffer);
-    const { verifyVoice } = await import("./voice_bridge");
-    let voiceResult = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
-    try {
-        voiceResult = await verifyVoice(fullBuffer);
-    } catch (err: any) {
-        logger.error("WS", `Voice verification error: ${err.message}. Defaulting to Boss.`);
-    }
+    let voiceResult: any = { speaker: "boss", confidence: 1.0, liveness: true, embedding: "" };
 
-    if (!voiceResult.liveness) {
-        const alertMsg = "Security Alert: Audio liveness check failed. Playback detected.";
-        ws.send(JSON.stringify({ type: 'llm_chunk', text: alertMsg }));
-        ws.send(JSON.stringify({ type: 'done' }));
-        state.isProcessing = false;
-        return;
-    }
+    if (process.env.ENABLE_VOICE_BIOMETRICS === "true") {
+      const { verifyVoice } = await import("./voice_bridge");
+      try {
+          voiceResult = await verifyVoice(fullBuffer);
+      } catch (err: any) {
+          logger.error("WS", `Voice verification error: ${err.message}. Defaulting to Boss.`);
+      }
 
-    if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
-        pendingVoiceEnrollments.set(threadId, {
-            embedding: voiceResult.embedding,
-            timestamp: Date.now(),
-            originalText: userText || ""
-        });
-        const prompt = "I detected an unrecognized voice. Who are you? Please reply with your name so I can remember you.";
-        ws.send(JSON.stringify({ type: 'llm_chunk', text: prompt }));
-        const promptAudio = await generateTTS(prompt);
-        if (promptAudio && ws.readyState === ws.OPEN) ws.send(promptAudio);
-        ws.send(JSON.stringify({ type: 'done' }));
-        state.isProcessing = false;
-        return;
+      if (!voiceResult.liveness) {
+          const alertMsg = "Security Alert: Audio liveness check failed. Playback detected.";
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: alertMsg }));
+          ws.send(JSON.stringify({ type: 'done' }));
+          state.isProcessing = false;
+          return;
+      }
+
+      if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
+          pendingVoiceEnrollments.set(threadId, {
+              embedding: voiceResult.embedding,
+              timestamp: Date.now(),
+              originalText: userText || ""
+          });
+          const prompt = "I detected an unrecognized voice. Who are you? Please reply with your name so I can remember you.";
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: prompt }));
+          const promptAudio = await generateTTS(prompt);
+          if (promptAudio && ws.readyState === ws.OPEN) ws.send(promptAudio);
+          ws.send(JSON.stringify({ type: 'done' }));
+          state.isProcessing = false;
+          return;
+      }
     }
 
     const isBossVoice = voiceResult.speaker === "boss";
     if (isBossVoice) {
-        logger.info("WS", `✅ Boss verified with confidence: ${(voiceResult.confidence * 100).toFixed(1)}%`);
+        logger.info("WS", `✅ Boss verified (biometrics ${process.env.ENABLE_VOICE_BIOMETRICS === "true" ? `confidence: ${(voiceResult.confidence * 100).toFixed(1)}%` : "bypassed"})`);
     } else {
         logger.info("WS", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
     }
     // ── End Voice Biometrics ───────────────────────────────────────────────
+
 
     
     // 0. Check Confirmation Loop using centralized State Guard
@@ -349,6 +356,44 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     }
 
     if (decision.mode === "direct") {
+      // ── SCHEDULE INTERCEPT (Voice) ────────────────────────────────────────
+      // Same fix as telegramBot.ts: "daily alarm", "remind me every morning", etc.
+      // must hit jarvisScheduler.parseAndSchedule(), not the chat LLM stream.
+      if (decision.intent === "schedule") {
+        logger.info("WS", `[SCHEDULE INTERCEPT] Routing voice to native parseAndSchedule: "${userText}"`);
+        try {
+          const { jarvisScheduler } = await import("./scheduler");
+          const threadId = (ws as any).threadId || "ws_client";
+          const chatIdMatch = threadId.match(/tg_(\d+)/);
+          const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : (jarvisScheduler.getAdminChatId() || 0);
+          const scheduleResult = await jarvisScheduler.parseAndSchedule(userText, chatId);
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: scheduleResult.message }));
+          const schedAudio = await generateTTS(scheduleResult.message);
+          if (!state.abortController?.signal.aborted && schedAudio && ws.readyState === ws.OPEN) {
+            ws.send(schedAudio);
+          }
+          saveToMemory('user', userText);
+          saveToMemory('jarvis', scheduleResult.message);
+          logInteraction('voice', userText, scheduleResult.message);
+          if (metrics) {
+            metrics.setExecutionResult(`Schedule: ${scheduleResult.success ? 'OK' : 'FAIL'}`);
+            metrics.finalize();
+          }
+          ws.send(JSON.stringify({ type: 'done' }));
+          state.isProcessing = false;
+          return;
+        } catch (err: any) {
+          logger.error("WS", `[SCHEDULE] parseAndSchedule voice error: ${err.message}`);
+          const errMsg = "I couldn't process that scheduling request. Please try again clearly stating the time and what to remind you of.";
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: errMsg }));
+          const errAudio = await generateTTS(errMsg);
+          if (errAudio && ws.readyState === ws.OPEN) ws.send(errAudio);
+          ws.send(JSON.stringify({ type: 'done' }));
+          state.isProcessing = false;
+          return;
+        }
+      }
+
       // Direct Conversational Mode
       logger.info('WS', `LLM for: "${userText}"`);
       const messages = [

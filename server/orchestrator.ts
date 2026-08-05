@@ -50,8 +50,12 @@ export async function determineOrchestrationMode(userInput: string): Promise<Orc
   let mode: OrchestratorMode;
   let requiresPlanning = false;
 
-  if (classification === "task" || classification === "schedule") {
-    // Action required in browser or scheduler
+  if (classification === "schedule") {
+    // Scheduling is handled by the native scheduler parser, not the browser planner.
+    mode = "direct";
+    requiresPlanning = false;
+  } else if (classification === "task") {
+    // Action required in browser or research agent.
     mode = "agent";
     requiresPlanning = true;
   } else {
