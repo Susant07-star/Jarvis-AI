@@ -84,6 +84,8 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **schedule_action**: Use ONLY for one-time tasks like 'remind me in 10 minutes' or 'message me tomorrow at 8'.
 - **create_recurring_routine**: Use for repeat wording like every day, daily, every morning, weekly, recurring, routine, job, हरेक, दैनिक, or प्रत्येक. Type='research' when live/latest/news/research is needed; type='message' for greetings/general Telegram text; type='reminder' for medicine/water/task nudges.
 - **Editing/deleting**: Before editing or deleting, call the matching list tool when you do not already know the ID. Use recurring routine tools for daily/jobs/routines; use scheduled task tools for one-time pending tasks.
+- **update_guest_voice**: When a user corrects their name (e.g., "I am [NewName], not [OldName]") because you misidentified their voice, immediately call this tool to update their voice profile name.
+
 
 ### 📅 CURRENT CONTEXT:
 - Timezone: ${timezone}
@@ -536,6 +538,18 @@ export class ZoyaLiveService {
                       name: { type: Type.STRING, description: "The guest's name as they introduced themselves." },
                     },
                     required: ["name"],
+                  },
+                },
+                {
+                  name: "update_guest_voice",
+                  description: "Call this when Jarvis configures/identifies the wrong voice for a person, and the person corrects you (e.g., 'I am xyz not abc'). This updates their voice profile name in the system.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      old_name: { type: Type.STRING, description: "The incorrect name Jarvis recognized." },
+                      new_name: { type: Type.STRING, description: "The correct actual name of the person." },
+                    },
+                    required: ["old_name", "new_name"],
                   },
                 },
               ],
@@ -1187,6 +1201,37 @@ export class ZoyaLiveService {
         this.onThought(`❌ Enrollment network error.`);
         session.sendToolResponse({
           functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: Could not reach enrollment backend." } }],
+        });
+      }
+    } else if (call.name === "update_guest_voice") {
+      const { old_name, new_name } = call.args as any;
+      this.onThought(`🔄 Updating guest voice name: ${old_name} -> ${new_name}`);
+
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/update-guest-name", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ old_name, new_name }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          this.currentTurnIdentity = new_name;
+          this.onThought(`✅ Voice profile updated to: ${new_name}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: Voice profile name updated from ${old_name} to ${new_name}.` } }],
+          });
+        } else {
+          this.onThought(`❌ Failed to update voice name: ${data.error}`);
+          session.sendToolResponse({
+            functionResponses: [{ name: call.name, id: call.id, response: { result: `FAILURE: ${data.error}` } }],
+          });
+        }
+      } catch (err: any) {
+        this.onThought(`❌ Update network error.`);
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: Could not reach update backend." } }],
         });
       }
     }

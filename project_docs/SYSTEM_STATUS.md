@@ -16,7 +16,7 @@
 - **Transcription**: Native Nepali detection active on Telegram voice notes.
 - **Search Cascade**: Success-logging and fallback logic verified.
 - **I.R.I.S. Host OS Layer**: Secure Cloudflare tunnel established. Desktop daemon successfully executes native OS commands (screenshot, keyboard, mouse, app control) via the `/api/iris/execute` bridge.
-- **Voice Biometrics & Authentication**: Fully active. 1:N dynamic speaker matching via Hugging Face. Live Call and Telegram Voice notes automatically identify the Boss, seamlessly auto-enroll new guests to Supabase, and reject spoofing attempts.
+- **Voice Biometrics & Authentication**: Fully active. 1:N dynamic speaker matching via Hugging Face. Live Call and Telegram Voice notes automatically identify the Boss, seamlessly auto-enroll new guests to Supabase, support natural voice profile name editing (`update_guest_voice`), and reject spoofing attempts.
 
 ## 🟡 Under Development
 - **Dropdown Thinking**: UI component for reasoning visibility.

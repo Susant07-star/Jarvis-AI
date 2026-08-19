@@ -166,6 +166,43 @@ router.post("/enroll-voice", async (req, res) => {
   }
 });
 
+// ── Update an existing guest voice name ──
+router.post("/update-guest-name", async (req, res) => {
+  try {
+    const { old_name, new_name } = req.body;
+    if (!old_name || !new_name) {
+      return res.status(400).json({ success: false, error: "Missing old_name or new_name" });
+    }
+
+    // Security: block attempts to register as the boss
+    const forbidden = ["boss", "susant", "admin", "jarvis", "creator"];
+    if (forbidden.some(f => new_name.toLowerCase().includes(f))) {
+      return res.status(403).json({ success: false, error: "That name is reserved. Nice try." });
+    }
+
+    const { supabase } = await import("../supabaseClient");
+    if (!supabase) {
+      return res.status(503).json({ success: false, error: "Supabase not configured" });
+    }
+
+    const { error } = await supabase
+      .from("voice_profiles")
+      .update({ name: new_name })
+      .eq("name", old_name);
+
+    if (error) {
+      logger.error("API", `Voice name update failed for "${old_name}" to "${new_name}": ${error.message}`);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    logger.info("API", `✅ Voice profile name updated from ${old_name} to ${new_name}`);
+    res.json({ success: true, old_name, new_name });
+  } catch (err: any) {
+    logger.error("API", `Update-guest-name error: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /**
  * Handle text-based chat interactions.
  */

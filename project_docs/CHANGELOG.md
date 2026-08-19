@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Voice Profile Reconfiguration & Name Correction**: Added `update_guest_voice` tool in `zoyaLiveService.ts` and `/api/update-guest-name` backend route in `server/routes/api.ts`. Allows JARVIS/Zoya to dynamically reconfigure or edit a misidentified speaker's profile name in Supabase when corrected naturally (e.g., "I am [NewName] not [OldName]") with built-in security protections preventing unauthorized overrides of the Boss identity.
 - **System-Wide Total Awareness**: Fixed "amnesia gaps" by injecting intermediate tool execution results, background tasks (Scheduler, Butler), and I.R.I.S. failure states directly into the `ThreadManager` as `[SYSTEM - TOOL RESULT]` or `[SYSTEM NOTIFICATION]`. This ensures the LLM has perfect memory of its own actions and won't hallucinate successful execution when a tool fails.
 - Implemented State Guard in `server/orchestrator.ts` to handle confirmation inputs before intent classification, preventing confirmation bypass.
 - Refactored `server/browser/executor.ts` to ensure full sequential execution of all steps in a plan, fixing execution drop after the first step.
 
 ### Updated
-- Updated documentation to reflect new confirmation handling and executor behavior.
+- Updated documentation to reflect new voice profile editing tool, confirmation handling, and executor behavior.
 
 ### [2026-06-07] Phase 7: Voice Biometrics & Autonomous Enrollment
 - **Feature — Real-Time Voice Biometrics**: Integrated Hugging Face microservice to verify incoming live audio and Telegram voice notes against a known profile embedding.

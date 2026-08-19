@@ -104,6 +104,7 @@ To bypass Render's Free Tier RAM limits (512MB), avoid paid cloud APIs, and ensu
 - **Audio Interception**: Before sending audio to Whisper STT, the Render server makes a rapid API call to the Hugging Face Space with the audio chunk.
 - **Authentication**: The extracted voice print is matched against a hardcoded, encrypted "Boss Profile". If it fails, the system cross-references the dynamic `voice_profiles` table in **Supabase**.
 - **Dynamic Enrollment**: If the voice is completely unknown, J.A.R.V.I.S. halts the standard LLM response and triggers a specialized "Who are you?" intent to register the new speaker dynamically into Supabase.
+- **Voice Profile Reconfiguration & Name Correction**: If a speaker's voice is misidentified or needs updating (e.g. "I am xyz not abc"), the `update_guest_voice` tool calls `/api/update-guest-name` to edit the profile in Supabase while enforcing immutability on Boss credentials.
 
 ### Anti-Spoofing & Target Extraction
 Because the Hugging Face Space has ample RAM, we can run state-of-the-art models:
