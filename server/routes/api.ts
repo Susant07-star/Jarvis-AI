@@ -141,10 +141,10 @@ router.post("/enroll-voice", async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing name or embedding_b64" });
     }
 
-    // Security: block attempts to register as the boss
-    const forbidden = ["boss", "susant", "admin", "jarvis", "creator"];
+    // Security: block attempts to register as the boss or generic unknown identities
+    const forbidden = ["boss", "susant", "admin", "jarvis", "creator", "stranger", "unknown", "guest", "someone", "anonymous", "person"];
     if (forbidden.some(f => name.toLowerCase().includes(f))) {
-      return res.status(403).json({ success: false, error: "That name is reserved. Nice try." });
+      return res.status(403).json({ success: false, error: "Invalid or reserved name. Please provide a real human name." });
     }
 
     const { supabase } = await import("../supabaseClient");
@@ -174,10 +174,10 @@ router.post("/update-guest-name", async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing old_name or new_name" });
     }
 
-    // Security: block attempts to register as the boss
-    const forbidden = ["boss", "susant", "admin", "jarvis", "creator"];
+    // Security: block attempts to register as the boss or generic unknown identities
+    const forbidden = ["boss", "susant", "admin", "jarvis", "creator", "stranger", "unknown", "guest", "someone", "anonymous", "person"];
     if (forbidden.some(f => new_name.toLowerCase().includes(f))) {
-      return res.status(403).json({ success: false, error: "That name is reserved. Nice try." });
+      return res.status(403).json({ success: false, error: "Invalid or reserved name. Please provide a real human name." });
     }
 
     const { supabase } = await import("../supabaseClient");

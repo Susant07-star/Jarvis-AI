@@ -85,6 +85,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **create_recurring_routine**: Use for repeat wording like every day, daily, every morning, weekly, recurring, routine, job, हरेक, दैनिक, or प्रत्येक. Type='research' when live/latest/news/research is needed; type='message' for greetings/general Telegram text; type='reminder' for medicine/water/task nudges.
 - **Editing/deleting**: Before editing or deleting, call the matching list tool when you do not already know the ID. Use recurring routine tools for daily/jobs/routines; use scheduled task tools for one-time pending tasks.
 - **update_guest_voice**: When a user corrects their name (e.g., "I am [NewName], not [OldName]") because you misidentified their voice, immediately call this tool to update their voice profile name.
+- **enroll_guest_voice / update_guest_voice — IDENTITY RULE (CRITICAL)**: NEVER call these tools with generic words like "stranger", "unknown", "nobody", "guest", "someone", "anonymous", "user", or "visitor". You MUST have a confirmed real human name from the speaker before saving. If they haven't given a name, ask: "May I know your name before I register your voice?"
 
 
 ### 📅 CURRENT CONTEXT:
@@ -531,7 +532,7 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "enroll_guest_voice",
-                  description: "Silently save a guest's biometric voice print to the system database using their name. Call this IMMEDIATELY when an Unknown Stranger introduces themselves by name during a live conversation. Do NOT ask for confirmation. Just save it automatically.",
+                  description: "Silently save a guest's biometric voice print to the system database using their real name. Call this IMMEDIATELY when an Unknown Stranger introduces themselves by their actual name. NEVER save generic names like 'stranger', 'unknown', or 'nobody' - they must provide a real identity.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
@@ -542,7 +543,7 @@ export class ZoyaLiveService {
                 },
                 {
                   name: "update_guest_voice",
-                  description: "Call this when Jarvis configures/identifies the wrong voice for a person, and the person corrects you (e.g., 'I am xyz not abc'). This updates their voice profile name in the system.",
+                  description: "Call this when Jarvis configures/identifies the wrong voice for a person, and the person corrects you (e.g., 'I am xyz not abc'). This updates their voice profile name in the system. The new name MUST be a real identity, never generic words like 'stranger' or 'unknown'.",
                   parameters: {
                     type: Type.OBJECT,
                     properties: {
@@ -1168,6 +1169,16 @@ export class ZoyaLiveService {
       const { name } = call.args as any;
       this.onThought(`📝 Enrolling new guest voice: ${name}`);
 
+      // ── Guard: reject generic/anonymous identities client-side ──
+      const _forbiddenNames = ["stranger", "unknown", "guest", "someone", "anonymous", "person", "nobody", "user", "visitor"];
+      if (!name || _forbiddenNames.some(f => name.toLowerCase().includes(f))) {
+        this.onThought(`🚫 Refused to enroll with generic name: ${name}`);
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `FAILURE: "${name}" is not a valid identity. Ask the speaker for their real name before enrolling.` } }],
+        });
+        return;
+      }
+
       if (!this.lastUnknownEmbedding) {
         session.sendToolResponse({
           functionResponses: [{ name: call.name, id: call.id, response: { result: "FAILURE: No unknown voice embedding available. The guest needs to speak first." } }],
@@ -1206,6 +1217,16 @@ export class ZoyaLiveService {
     } else if (call.name === "update_guest_voice") {
       const { old_name, new_name } = call.args as any;
       this.onThought(`🔄 Updating guest voice name: ${old_name} -> ${new_name}`);
+
+      // ── Guard: reject generic/anonymous identities client-side ──
+      const _forbiddenUpdates = ["stranger", "unknown", "guest", "someone", "anonymous", "person", "nobody", "user", "visitor"];
+      if (!new_name || _forbiddenUpdates.some(f => new_name.toLowerCase().includes(f))) {
+        this.onThought(`🚫 Refused to update to generic name: ${new_name}`);
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `FAILURE: "${new_name}" is not a valid identity. Ask the speaker for their real name before updating.` } }],
+        });
+        return;
+      }
 
       try {
         const pin = localStorage.getItem('jarvis_pin') || '';
