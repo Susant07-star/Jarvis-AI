@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Trash2, RefreshCw, Zap, Server, ChevronDown, ChevronUp, AlertCircle, CheckCircle } from "lucide-react";
 
 interface McpServer {

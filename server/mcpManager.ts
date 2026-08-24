@@ -95,7 +95,7 @@ export class McpManager {
 
       const client = new Client(
         { name: "jarvis-hub", version: "1.0.0" },
-        { capabilities: { tools: {} } }
+        { capabilities: {} }
       );
 
       await client.connect(transport);
@@ -165,7 +165,10 @@ export class McpManager {
         return `Error from MCP Server: ${JSON.stringify(result.content)}`;
       }
 
-      return result.content.map((c: any) => c.type === 'text' ? c.text : JSON.stringify(c)).join('\n');
+      if (Array.isArray(result.content)) {
+        return result.content.map((c: any) => c.type === 'text' ? c.text : JSON.stringify(c)).join('\n');
+      }
+      return JSON.stringify(result.content);
     } catch (err: any) {
       logger.error("MCP", `Tool execution failed: ${err.message}`);
       return `Error executing tool: ${err.message}`;
