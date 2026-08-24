@@ -229,10 +229,6 @@ router.post("/knowledge/search", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-    logger.error("API", `Update-guest-name error: ${err.message}`);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 /**
  * Handle text-based chat interactions.
