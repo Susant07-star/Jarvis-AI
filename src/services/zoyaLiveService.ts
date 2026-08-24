@@ -122,6 +122,7 @@ export interface ZoyaMessage {
   sender: "user" | "zoya";
   text: string;
   emotion?: ZoyaEmotion;
+  timestamp: Date;
 }
 
 // ── Auto-reconnect constants ──────────────────────────────────────────────────
@@ -152,6 +153,7 @@ export class ZoyaLiveService {
   private currentZoyaMsgId: string = "";
   private currentZoyaTranscript: string = "";
   private currentEmotion: ZoyaEmotion = "neutral";
+  private _currentZoyaMsgTimestamp: Date | null = null;
 
   public isMuted = false;
   public manuallyStopped = false;
@@ -553,6 +555,34 @@ export class ZoyaLiveService {
                     required: ["old_name", "new_name"],
                   },
                 },
+                {
+                  name: "save_knowledge",
+                  description: "Save an important note, document, or piece of knowledge for long-term recall. Use this when the Boss asks you to remember something, save a note, or learn a fact.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING, description: "A short, descriptive title for the knowledge." },
+                      content: { type: Type.STRING, description: "The detailed content, facts, or document to save." },
+                      tags: { 
+                        type: Type.ARRAY, 
+                        items: { type: Type.STRING },
+                        description: "An array of keyword tags (e.g. ['physics', 'quantum', 'notes'])"
+                      },
+                    },
+                    required: ["title", "content", "tags"],
+                  },
+                },
+                {
+                  name: "search_knowledge",
+                  description: "Search the long-term knowledge base for notes, documents, or facts previously saved. Use this when the Boss asks 'what did I say about X' or 'what do you know about Y'.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      query: { type: Type.STRING, description: "The semantic search query to find the knowledge." },
+                    },
+                    required: ["query"],
+                  },
+                },
               ],
             },
           ],
@@ -675,7 +705,8 @@ export class ZoyaLiveService {
         id: this.currentZoyaMsgId,
         sender: "zoya",
         text: clean,
-        emotion: this.currentEmotion
+        emotion: this.currentEmotion,
+        timestamp: this._currentZoyaMsgTimestamp || (this._currentZoyaMsgTimestamp = new Date())
       });
     }
 
@@ -689,6 +720,7 @@ export class ZoyaLiveService {
         // Reset for the next turn
         this.currentZoyaMsgId = "";
         this.currentZoyaTranscript = "";
+        this._currentZoyaMsgTimestamp = null;
       }
     }
 
@@ -702,7 +734,7 @@ export class ZoyaLiveService {
     const userText = (message as any).serverContent?.inputTranscription?.text;
     if (userText) {
       const msgId = `user-${crypto.randomUUID()}`;
-      this.onMessage({ id: msgId, sender: "user", text: userText });
+      this.onMessage({ id: msgId, sender: "user", text: userText, timestamp: new Date() });
       this._syncMemory("user", userText);
     }
 
@@ -943,6 +975,44 @@ export class ZoyaLiveService {
           }
         }],
       });
+    } else if (call.name === "save_knowledge") {
+      const { title, content, tags } = call.args as any;
+      this.onThought(`🧠 Saving knowledge: ${title}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/knowledge/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ title, content, tags }),
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: data.success ? "Knowledge saved successfully." : "Failed to save knowledge." } }],
+        });
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `Error saving knowledge: ${err.message}` } }],
+        });
+      }
+    } else if (call.name === "search_knowledge") {
+      const { query } = call.args as any;
+      this.onThought(`🧠 Searching knowledge: ${query}`);
+      try {
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const res = await fetch("/api/knowledge/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Jarvis-Pin": pin },
+          body: JSON.stringify({ query }),
+        });
+        const data = await res.json();
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: data.success ? data.results : "Failed to search knowledge." } }],
+        });
+      } catch (err: any) {
+        session.sendToolResponse({
+          functionResponses: [{ name: call.name, id: call.id, response: { result: `Error searching knowledge: ${err.message}` } }],
+        });
+      }
     } else if (call.name === "schedule_action") {
       const { type, content, delay_seconds } = call.args as any;
       this.onThought(`🕒 Scheduling ${type} in ${delay_seconds}s`);

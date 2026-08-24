@@ -126,5 +126,41 @@ export const jarvisTools = [
         required: ["text", "confirmation_message"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_knowledge",
+      description: "Save an important note, document, or piece of knowledge for long-term recall. Use this when the Boss asks you to remember something, save a note, or learn a fact.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "A short, descriptive title for the knowledge." },
+          content: { type: "string", description: "The detailed content, facts, or document to save." },
+          tags: { 
+            type: "array", 
+            items: { type: "string" },
+            description: "An array of keyword tags (e.g. ['physics', 'quantum', 'notes'])"
+          },
+          confirmation_message: { type: "string", description: "Natural confirmation. E.g., 'Stored in my memory banks, Boss.'" }
+        },
+        required: ["title", "content", "tags", "confirmation_message"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_knowledge",
+      description: "Search the long-term knowledge base for notes, documents, or facts previously saved. Use this when the Boss asks 'what did I say about X' or 'what do you know about Y'.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "The semantic search query to find the knowledge." },
+          confirmation_message: { type: "string", description: "Natural confirmation. E.g., 'Searching my archives for that, Boss.'" }
+        },
+        required: ["query", "confirmation_message"]
+      }
+    }
   }
 ];

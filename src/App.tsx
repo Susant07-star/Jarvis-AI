@@ -62,7 +62,7 @@ export default function App() {
       id: m.id,
       role: m.sender === "zoya" ? "jarvis" : "user",
       content: m.text,
-      timestamp: new Date(),
+      timestamp: m.timestamp,
       source: "voice",
       model: zoya.activeModel.replace("-native-audio-dialog", "").replace("-live-001", ""),
       emotion: m.sender === "zoya" ? m.emotion : undefined

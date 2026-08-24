@@ -359,7 +359,7 @@ export function ChatWindow({ messages, onSendMessage, isProcessing, transcript, 
               {/* Meta row: time + source badge */}
               <div className="flex items-center gap-2 mb-1 px-1">
                 <span className="text-[9px] font-mono text-cyan-700/70">
-                  {msg.timestamp.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                  {msg.timestamp.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })} {msg.timestamp.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
                 <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${msg.role === 'user' ? 'text-cyan-500' : 'text-cyan-300'}`}>
                   {msg.role === 'user' ? 'BOSS' : <><span className="md:hidden">J.A.R.V.I.S.</span><span className="hidden md:inline">J.A.R.V.I.S.{msg.model ? ` (${msg.model}${msg.usedResearch ? ' / R' : ''})` : ''}</span></>}

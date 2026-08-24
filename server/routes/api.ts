@@ -198,6 +198,37 @@ router.post("/update-guest-name", async (req, res) => {
     logger.info("API", `✅ Voice profile name updated from ${old_name} to ${new_name}`);
     res.json({ success: true, old_name, new_name });
   } catch (err: any) {
+    logger.error("API", `Update guest name error: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── Knowledge Base Routes (for Zoya UI to access KnowledgeManager) ──
+router.post("/knowledge/save", async (req, res) => {
+  try {
+    const { title, content, tags } = req.body;
+    if (!title || !content) return res.status(400).json({ success: false, error: "Missing title or content" });
+    const { KnowledgeManager } = await import("../knowledgeManager");
+    const success = await KnowledgeManager.saveKnowledge(title, content, tags || []);
+    res.json({ success });
+  } catch (err: any) {
+    logger.error("API", `Knowledge save error: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post("/knowledge/search", async (req, res) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ success: false, error: "Missing query" });
+    const { KnowledgeManager } = await import("../knowledgeManager");
+    const results = await KnowledgeManager.searchKnowledge(query);
+    res.json({ success: true, results });
+  } catch (err: any) {
+    logger.error("API", `Knowledge search error: ${err.message}`);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
     logger.error("API", `Update-guest-name error: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
   }
@@ -487,8 +518,17 @@ router.post("/chat", async (req, res) => {
       const history = await ThreadManager.getHistory(threadId, 20);
       
       const systemPrompt = buildPrompt("voice"); 
+
+      // ── Semantic Memory Recall ─────────────────────────────────────────────
+      // Search vector DB for past conversations relevant to this message.
+      // Each match includes its exact timestamp so Jarvis can cite when it happened.
+      const relevantMemories = await ThreadManager.searchMemory(message, 3);
+      const memoryBlock = relevantMemories.length > 0
+        ? `\n\n### 🧠 RELEVANT PAST CONVERSATIONS (with exact timestamps):\n${relevantMemories.join('\n')}\n\nUse these timestamps to answer questions like "when did we talk about X?" accurately.`
+        : "";
+
       const messages = [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + memoryBlock },
         ...history,
         { role: "user", content: message }
       ];

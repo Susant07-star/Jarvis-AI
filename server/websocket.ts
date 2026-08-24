@@ -453,12 +453,17 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       if (!state.abortController?.signal.aborted) {
         logger.info('WS', `Stream complete: ${fullResponse.length} chars`);
         
-        // ── I.R.I.S. Neural Uplink for Voice UI ──────────────────────────────
-        if (fullResponse.includes('"tool"') && fullResponse.includes('execute_local_os_command')) {
+        // ── Universal Tool Handler ──────────────────────────────
+        if (fullResponse.includes('"tool"')) {
           try {
-            const jsonMatch = fullResponse.match(/\{[\s\S]*"tool"\s*:\s*"execute_local_os_command"[\s\S]*\}/);
+            const jsonMatch = fullResponse.match(/\{[\s\S]*"tool"[\s\S]*\}/);
             const rawJson = jsonMatch ? jsonMatch[0] : fullResponse;
             const toolCall = JSON.parse(rawJson);
+            
+            let toolSuccess = false;
+            let toolMessage = "";
+            let executed = false;
+
             if (toolCall.tool === 'execute_local_os_command') {
               logger.info("WS", `Executing I.R.I.S. command: ${toolCall.action}`);
               const { executeOnIris } = await import('./irisExecutor');
@@ -467,15 +472,27 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
                 : (toolCall.payload || {});
               
               const irisResult = await executeOnIris(toolCall.action, parsedPayload);
-              const spokenReply = irisResult.success
-                ? (toolCall.confirmation_message || irisResult.message)
-                : `I encountered an issue with your local machine: ${irisResult.message}`;
-              
-              // Send the exact output from I.R.I.S. back to the Chat UI so the user can see what happened
-              ws.send(JSON.stringify({ type: 'llm_chunk', text: `\n\n**[I.R.I.S. Action: ${irisResult.success ? 'Success' : 'Failed'}]**\n\`\`\`\n${irisResult.message}\n\`\`\`` }));
+              toolSuccess = irisResult.success;
+              toolMessage = `\n\n**[I.R.I.S. Action: ${irisResult.success ? 'Success' : 'Failed'}]**\n\`\`\`\n${irisResult.message}\n\`\`\``;
+              executed = true;
+            } else if (toolCall.tool === 'save_knowledge') {
+              const { KnowledgeManager } = await import('./knowledgeManager');
+              toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
+              toolMessage = `\n\n**[Knowledge Base: ${toolSuccess ? 'Saved' : 'Failed'}]**\n${toolCall.title}`;
+              executed = true;
+            } else if (toolCall.tool === 'search_knowledge') {
+              const { KnowledgeManager } = await import('./knowledgeManager');
+              const results = await KnowledgeManager.searchKnowledge(toolCall.query);
+              toolMessage = `\n\n**[Knowledge Base Search]**\n${results}`;
+              toolSuccess = true;
+              executed = true;
+            }
+
+            if (executed) {
+              ws.send(JSON.stringify({ type: 'llm_chunk', text: toolMessage }));
             }
           } catch (err: any) {
-            logger.error("WS", `[IRIS Uplink Error] Failed to parse or execute IRIS tool call via WS. Error: ${err.message}`, err);
+            logger.error("WS", `Failed to parse or execute tool call via WS. Error: ${err.message}`, err);
           }
         }
 

@@ -350,6 +350,17 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
             toolMessage = `Error reading webpage: ${err.message}`;
           }
           executed = true;
+        } else if (toolCall.tool === 'save_knowledge') {
+          const { KnowledgeManager } = await import('./knowledgeManager');
+          toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
+          toolMessage = toolSuccess ? "Knowledge saved successfully." : "Failed to save knowledge.";
+          executed = true;
+        } else if (toolCall.tool === 'search_knowledge') {
+          const { KnowledgeManager } = await import('./knowledgeManager');
+          toolMessage = await KnowledgeManager.searchKnowledge(toolCall.query);
+          toolSuccess = true; // the search itself ran, whether it found something or not
+          executed = true;
+        }
         } else if (toolCall.tool === 'saveFile') {
           toolSuccess = true;
           toolMessage = "File saved successfully.";
