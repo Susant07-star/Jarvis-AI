@@ -116,6 +116,28 @@ class ButlerQueue {
           role: "user",
           content: `[SYSTEM NOTIFICATION: Background research for "${task.query}" has completed. Findings:\n${task.result}\n\nYou do not need to reply to this unless the user asks about it.]`
         }).catch(e => logger.warn("Butler", "Failed to inject awareness to ThreadManager", e));
+
+        // 4. Auto-save ALL research to Knowledge Base for long-term recall
+        try {
+          const { KnowledgeManager } = await import("./knowledgeManager");
+          const tags = task.query.toLowerCase()
+            .replace(/[^a-z0-9 ]/g, "")
+            .split(" ")
+            .filter(w => w.length > 3)
+            .slice(0, 5);
+          const saved = await KnowledgeManager.saveKnowledge(
+            `Research: ${task.query}`,
+            task.result,
+            [...new Set(tags)]
+          );
+          if (saved) {
+            logger.info("Butler", `[KB] Auto-saved research "${task.query}" to Knowledge Base.`);
+          } else {
+            logger.warn("Butler", `[KB] Auto-save failed for "${task.query}".`);
+          }
+        } catch (kbErr: any) {
+          logger.warn("Butler", `[KB] Auto-save error: ${kbErr.message}`);
+        }
       }
     } catch (err: any) {
       task.status = "failed";
