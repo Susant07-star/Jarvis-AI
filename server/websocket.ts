@@ -10,6 +10,9 @@ import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { logInteraction, trackBrowserTask } from "./browser/jarvisBridge";
 import { logger } from "./logger";
 import { MetricsTracker } from "./utils/metrics";
+import { runAutonomousLoop } from "./agenticLoop";
+import { ThreadManager } from "./threadManager";
+import { jarvisScheduler } from "./scheduler";
 
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation, checkConfirmationInput } from "./confirmationState";
 
@@ -451,58 +454,48 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       }
 
       if (!state.abortController?.signal.aborted) {
-        logger.info('WS', `Stream complete: ${fullResponse.length} chars`);
+        logger.info('WS', `Initial stream complete: ${fullResponse.length} chars`);
 
-        // ── Universal Tool Handler ──────────────────────────────
+        // ── Autonomous Tool Handler (ReAct loop) ──────────────────────────────
+        // After the initial voice stream, check if a tool was called.
+        // If so, run the full autonomous loop to handle chained tool calls.
         if (fullResponse.includes('"tool"')) {
           try {
-            const jsonMatch = fullResponse.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-            const rawJson = jsonMatch ? jsonMatch[0] : fullResponse;
-            const toolCall = JSON.parse(rawJson);
+            // Get thread for context
+            const adminChatId = jarvisScheduler.getAdminChatId();
+            const threadId = adminChatId ? `tg_${adminChatId}` : 'ws_default';
+            await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+            await ThreadManager.appendMessage(threadId, { role: "assistant", content: fullResponse });
 
-            let toolSuccess = false;
-            let toolMessage = "";
-            let executed = false;
+            // Build messages so the loop can continue from where stream left off
+            const loopMessages = [
+              { role: "system", content: buildPrompt("voice") },
+              ...compressedMemory,
+              { role: "user", content: userText },
+              { role: "assistant", content: fullResponse } // the streamed tool call
+            ];
 
-            if (toolCall.tool === 'execute_local_os_command') {
-              logger.info("WS", `Executing I.R.I.S. command: ${toolCall.action}`);
-              const { executeOnIris } = await import('./irisExecutor');
-              const parsedPayload = typeof toolCall.payload === 'string'
-                ? JSON.parse(toolCall.payload)
-                : (toolCall.payload || {});
+            const loopResult = await runAutonomousLoop(loopMessages as any, {
+              threadId,
+              chatId: adminChatId || undefined,
+              useVerification: false,
+              onStreamEvent: (type, data) => {
+                ws.send(JSON.stringify({ type: 'tool_event', event: type, data }));
+              }
+            }, 7);
 
-              const irisResult = await executeOnIris(toolCall.action, parsedPayload);
-              toolSuccess = irisResult.success;
-              toolMessage = `\n\n**[I.R.I.S. Action: ${irisResult.success ? 'Success' : 'Failed'}]**\n\`\`\`\n${irisResult.message}\n\`\`\``;
-              executed = true;
-            } else if (toolCall.tool === 'save_knowledge') {
-              const { KnowledgeManager } = await import('./knowledgeManager');
-              toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
-              toolMessage = `\n\n**[Knowledge Base: ${toolSuccess ? 'Saved' : 'Failed'}]**\n${toolCall.title}`;
-              executed = true;
-            } else if (toolCall.tool === 'search_knowledge') {
-              const { KnowledgeManager } = await import('./knowledgeManager');
-              const results = await KnowledgeManager.searchKnowledge(toolCall.query);
-              toolMessage = `\n\n**[Knowledge Base Search]**\n${results}`;
-              toolSuccess = true;
-              executed = true;
-            } else if (toolCall.tool.startsWith('mcp_')) {
-              const { McpManager } = await import('./mcpManager');
-              const result = await McpManager.callTool(toolCall.tool, toolCall);
-              toolMessage = `\n\n**[MCP Action: ${toolCall.tool}]**\n\`\`\`\n${result}\n\`\`\``;
-              toolSuccess = !result.startsWith('Error');
-              executed = true;
-            }
-
-            if (executed) {
-              ws.send(JSON.stringify({ type: 'llm_chunk', text: toolMessage }));
-            }
+            // Send loop result as a final text chunk + TTS
+            ws.send(JSON.stringify({ type: 'llm_chunk', text: `\n\n${loopResult.content}` }));
+            const audioBuf = await generateTTS(loopResult.content);
+            if (audioBuf && ws.readyState === ws.OPEN) ws.send(audioBuf);
+            saveToMemory('jarvis', loopResult.content);
           } catch (err: any) {
-            logger.error("WS", `Failed to parse or execute tool call via WS. Error: ${err.message}`, err);
+            logger.error("WS", `[ReAct Loop Error]: ${err.message}`);
           }
+        } else {
+          saveToMemory('jarvis', fullResponse);
         }
 
-        saveToMemory('jarvis', fullResponse);
         logInteraction('voice', userText, fullResponse);
         if (metrics) metrics.setExecutionResult('Direct chat complete');
         ws.send(JSON.stringify({ type: 'done' }));

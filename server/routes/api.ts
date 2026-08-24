@@ -11,7 +11,8 @@ import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
 import { logger } from "../logger";
 import { MetricsTracker } from "../utils/metrics";
 import { getPendingConfirmation, setPendingPlanWithMetadata, clearPendingConfirmation, hasPendingConfirmation } from "../confirmationState";
-import { callChatWithCascade, callResearchWithCascade } from "../llmRouter";
+import { callChatWithCascade, callResearchWithCascade, getRandomKey, silenceKey } from "../llmRouter";
+import { runAutonomousLoop } from "../agenticLoop";
 import { ThreadManager } from "../threadManager";
 import { setTimezone, getTimezone } from "../timezoneStore";
 
@@ -529,144 +530,29 @@ router.post("/chat", async (req, res) => {
         { role: "user", content: message }
       ];
 
-      let result = await callChatWithCascade(messages as any);
-
-      // ── Universal Tool Handler (Agentic Loop) ─────────────────────────────
-      // We intercept any JSON tool call, dispatch it, and narrate the result.
-      if (result.content.includes('"tool"')) {
-        try {
-          const jsonMatch = result.content.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-          const rawJson = jsonMatch ? jsonMatch[0] : result.content;
-          const toolCall = JSON.parse(rawJson);
-          
-          let toolSuccess = false;
-          let toolMessage = "";
-          let executed = false;
-          let visionFramesForNextCall: string[] | undefined = undefined;
-
-if (toolCall.tool === 'execute_local_os_command') {
-             const { executeOnIrisWithVerification } = await import('../irisExecutor');
-             const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
-             const irisResult = await executeOnIrisWithVerification(toolCall.action, parsedPayload);
-             toolSuccess = irisResult.success;
-             toolMessage = irisResult.message;
-             // Include verification data if available
-             if (irisResult.verification?.screenshotTaken) {
-               toolMessage += "\n[Verified via screenshot]";
-             }
-             executed = true;
-          } else if (toolCall.tool === 'saveFile') {
-            toolSuccess = true;
-            toolMessage = "File saved successfully to the frontend panel.";
-            // Fire an event to UI via websocket or rely on the final response
-            executed = true;
-          } else if (toolCall.tool === 'look_at_screen') {
-            const { getVisionBuffer } = await import('../irisExecutor');
-            const visionFrames = await getVisionBuffer();
-            if (visionFrames && visionFrames.length > 0) {
-              visionFramesForNextCall = visionFrames;
-              toolSuccess = true;
-              toolMessage = `I.R.I.S Photographic Memory buffer successfully attached to your visual cortex. Describe what you see, or verify if the action was successful.`;
-              executed = true;
-            } else {
-              toolSuccess = false;
-              toolMessage = "Failed to fetch frames or I.R.I.S is offline. Cannot see the screen.";
-              executed = true;
-            }
-          } else if (toolCall.tool === 'send_telegram_message') {
-            // Send directly via the backend scheduler — works even when I.R.I.S. is offline
-            try {
-              const { jarvisScheduler } = await import('../scheduler');
-              const targetChatId = jarvisScheduler.getAdminChatId() || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || '0');
-              const msgText = toolCall.text || toolCall.message || '';
-              if (targetChatId && msgText) {
-                jarvisScheduler.schedule(targetChatId, 'message', msgText, 0);
-                toolSuccess = true;
-                toolMessage = `Telegram message sent to Boss (ChatID: ${targetChatId}): "${msgText}"`;
-              } else {
-                toolSuccess = false;
-                toolMessage = `Could not send Telegram message: ${!targetChatId ? 'No Chat ID available.' : 'Empty message text.'}`;
-              }
-            } catch (e: any) {
-              toolSuccess = false;
-              toolMessage = `Telegram send error: ${e.message}`;
-            }
-            executed = true;
-          } else if (toolCall.tool === 'save_knowledge') {
-            const { KnowledgeManager } = await import('../knowledgeManager');
-            toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
-            toolMessage = toolSuccess ? `Knowledge "${toolCall.title}" saved successfully.` : "Failed to save knowledge.";
-            executed = true;
-          } else if (toolCall.tool === 'search_knowledge') {
-            const { KnowledgeManager } = await import('../knowledgeManager');
-            toolMessage = await KnowledgeManager.searchKnowledge(toolCall.query);
-            toolSuccess = true;
-            executed = true;
-          } else if (toolCall.tool.startsWith('mcp_')) {
-            const { McpManager } = await import('../mcpManager');
-            toolMessage = await McpManager.callTool(toolCall.tool, toolCall);
-            toolSuccess = !toolMessage.startsWith('Error');
-            executed = true;
-          }
-
-          if (executed) {
-            messages.push({ role: "assistant", content: result.content });
-            const sysResultMsg = `[SYSTEM - TOOL RESULT]\nSuccess: ${toolSuccess}\nMessage/Output:\n${toolMessage}\n\nPlease summarize this result naturally for the user.`;
-            messages.push({ role: "user", content: sysResultMsg });
-            
-            const finalResult = await callChatWithCascade(messages as any, visionFramesForNextCall);
-            const spokenReply = finalResult.content;
-
-            // Persist the ENTIRE agentic loop to memory (Total Awareness)
-            await ThreadManager.appendMessage(threadId, { role: 'user', content: message });
-            await ThreadManager.appendMessage(threadId, { role: 'assistant', content: result.content });
-            await ThreadManager.appendMessage(threadId, { role: 'user', content: sysResultMsg });
-            await ThreadManager.appendMessage(threadId, { role: 'assistant', content: spokenReply });
-
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.write(`data: ${JSON.stringify({ metadata: { model: finalResult.model, provider: finalResult.provider, iris_action: toolCall.tool } })}\n\n`);
-            res.write(`data: ${JSON.stringify({ content: spokenReply })}\n\n`);
-            res.write(`data: [DONE]\n\n`);
-            if (metrics) { metrics.setExecutionResult(`Tool ${toolCall.tool}: ${toolSuccess ? 'OK' : 'FAIL'}`); metrics.finalize(); }
-            return res.end();
-          }
-        } catch (err: any) {
-          logger.error("API", `[Tool Uplink Error] Failed to parse or execute tool call. Error: ${err.message}`, err);
-          logger.debug("API", `[Tool Uplink Error] Raw content was: ${result.content}`);
-          // Fall through to normal streaming if JSON parse failed
-        }
-      }
-      // ── End Universal Tool Handler ─────────────────────────────────────────
-
-      // Save to persistent thread memory
       await ThreadManager.appendMessage(threadId, { role: "user", content: message });
-      await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+      
+      const finalResult = await runAutonomousLoop(messages as any, {
+        threadId,
+        chatId: adminChatId || undefined,
+        useVerification: true,
+        onStreamEvent: (type, data) => {
+          // If we had a socket connection here we could stream it, but for REST we wait for final
+          logger.info("API", `[Stream Event] ${type} - ${JSON.stringify(data)}`);
+        }
+      }, 7);
+
+      const spokenReply = finalResult.content;
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-
-      // Send model metadata first
-      res.write(`data: ${JSON.stringify({ metadata: { model: result.model, provider: result.provider, tokens: result.tokens } })}\n\n`);
-
-      const words = result.content.split(' ');
-      for (let i = 0; i < words.length; i++) {
-        res.write(`data: ${JSON.stringify({ content: words[i] + (i === words.length - 1 ? "" : " ") })}\n\n`);
-        if (words.length > 50 && i % 5 === 0) await new Promise(r => setTimeout(r, 10));
-      }
-      
-      logInteraction('chat', message, result.content);
-      
-      if (metrics) {
-        metrics.addTokens('direct', result.tokens || 0);
-        metrics.setExecutionResult(`Chat via ${result.model}`);
-        metrics.finalize();
-      }
-      
+      res.write(`data: ${JSON.stringify({ metadata: { model: finalResult.model, provider: finalResult.provider } })}\n\n`);
+      res.write(`data: ${JSON.stringify({ content: spokenReply })}\n\n`);
       res.write(`data: [DONE]\n\n`);
+      if (metrics) { metrics.setExecutionResult(`Chat/Agent OK`); metrics.finalize(); }
       return res.end();
+
     } else {
       // Agent Task Mode (Strict Planning -> Execution)
       const { planWithVisualAgent } = await import("../browser/planner");

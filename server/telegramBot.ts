@@ -26,6 +26,7 @@ import Groq from "groq-sdk";
 import { logger } from "./logger";
 import { determineOrchestrationMode } from "./orchestrator";
 import { callChatWithCascade, callResearchWithCascade, getRandomKey, silenceKey, PlannerResponse } from "./llmRouter";
+import { runAutonomousLoop } from "./agenticLoop";
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { ThreadManager, ThreadMessage } from "./threadManager";
 import { verifyVoice } from "./voice_bridge";
@@ -311,90 +312,29 @@ async function processMessage(userText: string, chatId: number, isBossVerified: 
   ];
 
   try {
-    let result = await callChatWithCascade(messages);
-    
-    // ── Universal Tool Handler (Agentic Loop) ──────────────────────────────
-    // Only Boss can execute system tools (I.R.I.S., search, file ops)
-    if (result.content.includes('"tool"') && isBossVerified) {
-      try {
-        const jsonMatch = result.content.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-        const rawJson = jsonMatch ? jsonMatch[0] : result.content;
-        const toolCall = JSON.parse(rawJson);
-        
-        let toolSuccess = false;
-        let toolMessage = "";
-        let executed = false;
+    // Save user message immediately
+    await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
 
-        if (toolCall.tool === 'execute_local_os_command') {
-          const { executeOnIris } = await import('./irisExecutor');
-          const parsedPayload = typeof toolCall.payload === 'string' ? JSON.parse(toolCall.payload) : (toolCall.payload || {});
-          const irisResult = await executeOnIris(toolCall.action, parsedPayload);
-          toolSuccess = irisResult.success;
-          toolMessage = irisResult.message;
-          executed = true;
-        } else if (toolCall.tool === 'intelligent_search') {
-          const { butlerQueue } = await import('./butlerQueue');
-          const query = toolCall.query || toolCall.payload?.query || "General Research";
-          butlerQueue.dispatch('research', query, chatId);
-          toolSuccess = true;
-          toolMessage = `Background research task for "${query}" dispatched successfully. I will let the Boss know naturally as soon as the results are ready.`;
-          executed = true;
-        } else if (toolCall.tool === 'readWebpage') {
-          const url = toolCall.url || toolCall.payload?.url;
-          try {
-            const r = await fetch(`https://r.jina.ai/${url}`);
-            toolMessage = (await r.text()).substring(0, 12000);
-            toolSuccess = true;
-          } catch (err: any) {
-            toolSuccess = false;
-            toolMessage = `Error reading webpage: ${err.message}`;
-          }
-          executed = true;
-        } else if (toolCall.tool === 'search_knowledge') {
-          const { KnowledgeManager } = await import('./knowledgeManager');
-          toolMessage = await KnowledgeManager.searchKnowledge(toolCall.query);
-          toolSuccess = true;
-          executed = true;
-        } else if (toolCall.tool === 'save_knowledge') {
-          const { KnowledgeManager } = await import('./knowledgeManager');
-          toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
-          toolMessage = toolSuccess ? "Knowledge saved successfully." : "Failed to save knowledge.";
-          executed = true;
-        } else if (toolCall.tool === 'saveFile') {
-          toolSuccess = true;
-          toolMessage = "File saved successfully.";
-          executed = true;
+    let finalResult: PlannerResponse;
+    if (isBossVerified) {
+      // Use full autonomous loop for Boss
+      finalResult = await runAutonomousLoop(messages, { 
+        threadId, 
+        chatId, 
+        useVerification: false,
+        onStreamEvent: (type, data) => {
+          logger.info("TelegramBot", `[Stream Event] ${type} - ${JSON.stringify(data)}`);
+          // Optionally, we could send intermediate telegram messages here like "Executing search..."
         }
-
-
-        if (executed) {
-          messages.push({ role: "assistant", content: result.content });
-          const sysResultMsg = `[SYSTEM - TOOL RESULT]\nSuccess: ${toolSuccess}\nMessage/Output:\n${toolMessage}\n\nPlease summarize this result naturally for the user.`;
-          messages.push({ role: "user", content: sysResultMsg });
-          
-          logger.info("TelegramBot", `[AGENT LOOP] Re-prompting LLM with Tool result...`);
-          const finalResult = await callChatWithCascade(messages);
-
-          // Persist the ENTIRE agentic loop to memory (Total Awareness)
-          await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
-          await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
-          await ThreadManager.appendMessage(threadId, { role: "user", content: sysResultMsg });
-          await ThreadManager.appendMessage(threadId, { role: "assistant", content: finalResult.content });
-
-          logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${finalResult.model}] | Time: ${Date.now() - startTime}ms`);
-          return finalResult;
-        }
-      } catch (err: any) {
-        logger.error("TelegramBot", `[Tool Uplink Error] Failed to parse or execute tool call via Telegram. Error: ${err.message}`, err);
-      }
+      }, 7);
+    } else {
+      // Guests don't get tools, just a direct chat reply
+      finalResult = await callChatWithCascade(messages);
+      await ThreadManager.appendMessage(threadId, { role: "assistant", content: finalResult.content });
     }
     
-    // Fallback: Persist normal conversation
-    await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
-    await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
-    
-    logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${result.model}] | Time: ${Date.now() - startTime}ms | Tokens: ${result.tokens}`);
-    return result;
+    logger.info("TelegramBot", `[NEURAL END] [BRAIN: ${finalResult.model}] | Time: ${Date.now() - startTime}ms`);
+    return finalResult;
   } catch (err: any) {
     logger.error("TelegramBot", `[FATAL] Chat failed: ${err.message}`);
     return { content: `Sorry boss, all my brains are busy right now.`, tokens: 0, provider: "Error", model: "N/A" };
