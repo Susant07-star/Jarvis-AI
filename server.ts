@@ -105,6 +105,11 @@ async function startServer() {
   // Start Hugging Face Voice Engine Heartbeat
   startVoiceEngineHeartbeat();
 
+  // Initialize MCP servers from saved config
+  const { McpManager } = await import("./server/mcpManager");
+  await McpManager.initialize();
+
+
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);
   });

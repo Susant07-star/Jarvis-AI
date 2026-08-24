@@ -13,6 +13,13 @@ J.A.R.V.I.S. features long-term semantic memory for facts, documents, and notes,
 - **Universal Tooling**: Exposes `save_knowledge` and `search_knowledge` tools to all interfaces (Web, Telegram, Voice).
 - **Semantic Matching**: Uses the `match_knowledge` RPC function for cosine similarity matching, allowing Jarvis to instantly recall stored knowledge when asked "what do you know about X".
 
+### Model Context Protocol (`mcpManager.ts`)
+J.A.R.V.I.S. supports the MCP standard to dynamically connect to external tool servers without writing custom code.
+- **Dynamic Tool Discovery**: On startup, `McpManager.initialize()` reads `data/mcp_config.json` and spawns MCP servers as child processes over `stdio`.
+- **Universal Execution**: Any tool returned by an MCP server is automatically available to Jarvis. If Jarvis calls a tool whose name begins with `mcp_`, the execution fallback fires in `api.ts`, `websocket.ts`, and `telegramBot.ts`.
+- **Zero-Cost**: MCP servers run locally on the Render dyno as child processes — no paid API calls required.
+- **UI Management**: A dedicated `McpSettings` tab in the web UI allows adding, viewing, and removing integrations at runtime (e.g., GitHub, Filesystem, Brave Search) without any code changes.
+
 ### Modular Prompt Assembly (`prompt_builder.ts`)
 The system uses a **"Soul vs. Skills"** architecture for system instructions.
 - **Soul (`personality.json`)**: Defines the core identity (JARVIS, aristocratic, concise, Nepali-mirroring). Shared by ALL agents.

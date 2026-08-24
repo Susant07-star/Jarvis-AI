@@ -4,7 +4,7 @@ import { getGroqClient, summarizeMemory, logTokenUsage, callWithRetry } from "./
 import { transcribeAudio } from "./stt";
 import { generateTTS } from "./tts";
 import { saveToMemory, loadMemory } from "./memory";
-import { jarvisTools } from "./tools";
+import { getJarvisTools } from "./tools";
 import { performSearch } from "./search";
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { logInteraction, trackBrowserTask } from "./browser/jarvisBridge";
@@ -41,7 +41,7 @@ export function setupWebSocketServer(server: Server) {
     }
 
     logger.info('WS', 'New connection established');
-    
+
     const state: ConnectionState = {
       audioBuffer: [],
       isProcessing: false,
@@ -67,10 +67,10 @@ export function setupWebSocketServer(server: Server) {
             console.warn('[WebSocket] Received invalid JSON:', data.toString());
             return;
           }
-          
+
           if (parsedData.type === 'speech_start') {
             state.isSpeaking = true;
-            
+
             if (state.isProcessing && state.abortController) {
               console.log('[WebSocket] User interrupted. Aborting current generation.');
               state.abortController.abort();
@@ -80,17 +80,17 @@ export function setupWebSocketServer(server: Server) {
             }
           } else if (parsedData.type === 'speech_end') {
             state.isSpeaking = false;
-            
+
             if (state.isProcessing) {
               console.log('[WebSocket] Already processing. Ignoring speech_end.');
               return;
             }
-            
+
             const currentAudio = state.audioBuffer;
             state.audioBuffer = []; // Reset buffer immediately for next utterance
-            
+
             state.abortController = new AbortController();
-            
+
             // Fire and forget, state is managed inside
             handleSpeechEnd(ws, currentAudio, state).catch(e => {
               if (e.name !== 'AbortError') {
@@ -119,25 +119,25 @@ export function setupWebSocketServer(server: Server) {
  */
 async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: ConnectionState) {
   logger.info('WS', `Received speech_end. Processing ${audioBuffer.length} chunks.`);
-  
+
   if (audioBuffer.length === 0) {
     logger.info('WS', 'Audio buffer empty. Sending done.');
     ws.send(JSON.stringify({ type: 'done' }));
     return;
   }
-  
+
   state.isProcessing = true;
   ws.send(JSON.stringify({ type: 'processing' }));
-  
+
   let metrics: MetricsTracker | null = null;
-  
+
   try {
     const groq = getGroqClient();
-    
+
     // 1. STT: Transcribe
     let userText = await transcribeAudio(audioBuffer, groq);
     metrics = new MetricsTracker(userText || '');
-    
+
     // Send final STT transcription back to UI so it displays immediately
     if (userText) {
       ws.send(JSON.stringify({ type: 'final', text: userText }));
@@ -147,34 +147,34 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     const threadId = (ws as any).threadId || "ws_client";
     const { pendingVoiceEnrollments } = await import("./voiceEnrollmentCache");
     if (pendingVoiceEnrollments.has(threadId)) {
-        const pending = pendingVoiceEnrollments.get(threadId)!;
-        if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
-            pendingVoiceEnrollments.delete(threadId);
-        } else {
-            const nameMatch = (userText || "").match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
-            const extractedName = nameMatch ? nameMatch[1].trim() : (userText || "").trim();
-            const { supabase } = await import("./supabaseClient");
-            if (supabase) {
-                await supabase.from("voice_profiles").insert({
-                    name: extractedName,
-                    embedding_b64: pending.embedding
-                });
-                logger.info("WS", `Successfully enrolled unknown voice as: ${extractedName}`);
-                const reply = `Got it. Biometric profile saved for ${extractedName}. I will remember this voice.`;
-                ws.send(JSON.stringify({ type: 'llm_chunk', text: reply }));
-                const replyAudio = await generateTTS(reply);
-                if (replyAudio && ws.readyState === ws.OPEN) ws.send(replyAudio);
-            }
-            pendingVoiceEnrollments.delete(threadId);
-            if (pending.originalText) {
-                userText = `(My name is ${extractedName}) ${pending.originalText}`;
-                // Fall through to LLM processing
-            } else {
-                ws.send(JSON.stringify({ type: 'done' }));
-                state.isProcessing = false;
-                return;
-            }
+      const pending = pendingVoiceEnrollments.get(threadId)!;
+      if (Date.now() - pending.timestamp > 5 * 60 * 1000) {
+        pendingVoiceEnrollments.delete(threadId);
+      } else {
+        const nameMatch = (userText || "").match(/(?:my name is|his name is|her name is|they are|this is|it is|it's) ([\w\s]+)/i);
+        const extractedName = nameMatch ? nameMatch[1].trim() : (userText || "").trim();
+        const { supabase } = await import("./supabaseClient");
+        if (supabase) {
+          await supabase.from("voice_profiles").insert({
+            name: extractedName,
+            embedding_b64: pending.embedding
+          });
+          logger.info("WS", `Successfully enrolled unknown voice as: ${extractedName}`);
+          const reply = `Got it. Biometric profile saved for ${extractedName}. I will remember this voice.`;
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: reply }));
+          const replyAudio = await generateTTS(reply);
+          if (replyAudio && ws.readyState === ws.OPEN) ws.send(replyAudio);
         }
+        pendingVoiceEnrollments.delete(threadId);
+        if (pending.originalText) {
+          userText = `(My name is ${extractedName}) ${pending.originalText}`;
+          // Fall through to LLM processing
+        } else {
+          ws.send(JSON.stringify({ type: 'done' }));
+          state.isProcessing = false;
+          return;
+        }
+      }
     }
 
     // ── Voice Biometrics & Authentication ──
@@ -187,58 +187,58 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     if (process.env.ENABLE_VOICE_BIOMETRICS === "true") {
       const { verifyVoice } = await import("./voice_bridge");
       try {
-          voiceResult = await verifyVoice(fullBuffer);
+        voiceResult = await verifyVoice(fullBuffer);
       } catch (err: any) {
-          logger.error("WS", `Voice verification error: ${err.message}. Defaulting to Boss.`);
+        logger.error("WS", `Voice verification error: ${err.message}. Defaulting to Boss.`);
       }
 
       if (!voiceResult.liveness) {
-          const alertMsg = "Security Alert: Audio liveness check failed. Playback detected.";
-          ws.send(JSON.stringify({ type: 'llm_chunk', text: alertMsg }));
-          ws.send(JSON.stringify({ type: 'done' }));
-          state.isProcessing = false;
-          return;
+        const alertMsg = "Security Alert: Audio liveness check failed. Playback detected.";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: alertMsg }));
+        ws.send(JSON.stringify({ type: 'done' }));
+        state.isProcessing = false;
+        return;
       }
 
       if (voiceResult.speaker === "unknown" && voiceResult.embedding) {
-          pendingVoiceEnrollments.set(threadId, {
-              embedding: voiceResult.embedding,
-              timestamp: Date.now(),
-              originalText: userText || ""
-          });
-          const prompt = "I detected an unrecognized voice. Who are you? Please reply with your name so I can remember you.";
-          ws.send(JSON.stringify({ type: 'llm_chunk', text: prompt }));
-          const promptAudio = await generateTTS(prompt);
-          if (promptAudio && ws.readyState === ws.OPEN) ws.send(promptAudio);
-          ws.send(JSON.stringify({ type: 'done' }));
-          state.isProcessing = false;
-          return;
+        pendingVoiceEnrollments.set(threadId, {
+          embedding: voiceResult.embedding,
+          timestamp: Date.now(),
+          originalText: userText || ""
+        });
+        const prompt = "I detected an unrecognized voice. Who are you? Please reply with your name so I can remember you.";
+        ws.send(JSON.stringify({ type: 'llm_chunk', text: prompt }));
+        const promptAudio = await generateTTS(prompt);
+        if (promptAudio && ws.readyState === ws.OPEN) ws.send(promptAudio);
+        ws.send(JSON.stringify({ type: 'done' }));
+        state.isProcessing = false;
+        return;
       }
     }
 
     const isBossVoice = voiceResult.speaker === "boss";
     if (isBossVoice) {
-        logger.info("WS", `✅ Boss verified (biometrics ${process.env.ENABLE_VOICE_BIOMETRICS === "true" ? `confidence: ${(voiceResult.confidence * 100).toFixed(1)}%` : "bypassed"})`);
+      logger.info("WS", `✅ Boss verified (biometrics ${process.env.ENABLE_VOICE_BIOMETRICS === "true" ? `confidence: ${(voiceResult.confidence * 100).toFixed(1)}%` : "bypassed"})`);
     } else {
-        logger.info("WS", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
+      logger.info("WS", `👤 Known speaker (${voiceResult.speaker}) — chat-only mode.`);
     }
     // ── End Voice Biometrics ───────────────────────────────────────────────
 
 
-    
+
     // 0. Check Confirmation Loop using centralized State Guard
     const confirmationResult = checkConfirmationInput(userText || '');
     if (confirmationResult.handled) {
       const { type, plan, message } = confirmationResult;
-      
+
       if (type === 'confirmed' && plan) {
         logger.info("Confirmation", "Approved pending WS plan");
-        const browserActions = plan.actions.filter((s:any) => s.action !== 'serp_api_search');
+        const browserActions = plan.actions.filter((s: any) => s.action !== 'serp_api_search');
         const execMsg = message || `Executing confirmed steps.`;
         ws.send(JSON.stringify({ type: 'llm_chunk', text: execMsg + " " }));
         const execAudio = await generateTTS(execMsg);
         if (execAudio && ws.readyState === ws.OPEN) ws.send(execAudio);
-        
+
         if (browserActions.length > 0) {
           ws.send(JSON.stringify({ type: 'browser_commands', commands: browserActions }));
           try {
@@ -251,8 +251,8 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
             const pythonData = await response.json();
             const hasFailure = pythonData.results && Array.isArray(pythonData.results) && pythonData.results.some((r: any) => r.status === 'failure');
             if (hasFailure) {
-                const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
-                throw new Error(`Browser execution failed: ${errors}`);
+              const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
+              throw new Error(`Browser execution failed: ${errors}`);
             }
           } catch (e: any) {
             logger.error('WS', `Python agent execution failed: ${e.message}`);
@@ -268,13 +268,13 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
             return;
           }
         }
-        
+
         const successReply = message || `Confirmed task executed.`;
         saveToMemory('user', userText || '');
         saveToMemory('jarvis', successReply);
         logInteraction('voice', userText || '', successReply, { browserCommands: plan.actions });
         trackBrowserTask('voice', userText || '', plan.actions);
-        
+
         ws.send(JSON.stringify({ type: 'done' }));
         if (metrics) {
           metrics.setExecutionResult('Success via confirmation');
@@ -289,7 +289,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
         const cancelAudio = await generateTTS(cancelReply);
         if (cancelAudio && ws.readyState === ws.OPEN) ws.send(cancelAudio);
         ws.send(JSON.stringify({ type: 'done' }));
-        
+
         if (metrics) { metrics.setExecutionResult('Cancelled by user'); metrics.finalize(); }
         state.isProcessing = false;
         return;
@@ -310,21 +310,21 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     }
 
     if (state.abortController?.signal.aborted) throw new Error('AbortError');
-    
+
     if (!userText) {
       logger.info('WS', 'Transcription empty.');
       state.isProcessing = false;
       ws.send(JSON.stringify({ type: 'done' }));
       return;
     }
-    
+
     // NOTE: { type: 'final' } was already sent at line ~130 immediately after STT.
     // Sending it again here would cause React to skip the useEffect (same value, no re-render).
     saveToMemory('user', userText);
 
     const memory = loadMemory();
     const compressedMemory = await summarizeMemory(memory, groq);
-    
+
     if (state.abortController?.signal.aborted) throw new Error('AbortError');
 
     // 3. LLM: Prepare messages
@@ -346,13 +346,13 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     let sentenceBuffer = '';
 
     if (!isBossVoice && decision.mode !== "direct") {
-       const restrictedMsg = "I'm sorry, but system commands, scheduling, and browser actions are restricted to the Boss only. I can still chat with you though!";
-       ws.send(JSON.stringify({ type: 'llm_chunk', text: restrictedMsg }));
-       const restrictedAudio = await generateTTS(restrictedMsg);
-       if (restrictedAudio && ws.readyState === ws.OPEN) ws.send(restrictedAudio);
-       ws.send(JSON.stringify({ type: 'done' }));
-       state.isProcessing = false;
-       return;
+      const restrictedMsg = "I'm sorry, but system commands, scheduling, and browser actions are restricted to the Boss only. I can still chat with you though!";
+      ws.send(JSON.stringify({ type: 'llm_chunk', text: restrictedMsg }));
+      const restrictedAudio = await generateTTS(restrictedMsg);
+      if (restrictedAudio && ws.readyState === ws.OPEN) ws.send(restrictedAudio);
+      ws.send(JSON.stringify({ type: 'done' }));
+      state.isProcessing = false;
+      return;
     }
 
     if (decision.mode === "direct") {
@@ -408,33 +408,33 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
         max_tokens: 1024
       });
 
-      ws.send(JSON.stringify({ 
-        type: 'metadata', 
-        metadata: { 
-          model: "llama-3.3-70b-versatile", 
-          provider: "Groq" 
-        } 
+      ws.send(JSON.stringify({
+        type: 'metadata',
+        metadata: {
+          model: "llama-3.3-70b-versatile",
+          provider: "Groq"
+        }
       }));
       ws.send(JSON.stringify({ type: 'llm_start' }));
 
       for await (const chunk of stream) {
         if (state.abortController?.signal.aborted) throw new Error('AbortError');
-        
+
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullResponse += content;
           sentenceBuffer += content;
-          
+
           ws.send(JSON.stringify({ type: 'llm_chunk', text: content }));
-          
+
           let sentenceMatch;
           while ((sentenceMatch = sentenceBuffer.match(/.*?[.!?]+(?=\s|$)/))) {
             const sentence = sentenceMatch[0];
             sentenceBuffer = sentenceBuffer.substring(sentence.length).trimStart();
-            
+
             const audioBuf = await generateTTS(sentence);
             if (state.abortController?.signal.aborted) throw new Error('AbortError');
-            
+
             if (audioBuf && ws.readyState === ws.OPEN) {
               ws.send(audioBuf);
             }
@@ -452,14 +452,14 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
       if (!state.abortController?.signal.aborted) {
         logger.info('WS', `Stream complete: ${fullResponse.length} chars`);
-        
+
         // ── Universal Tool Handler ──────────────────────────────
         if (fullResponse.includes('"tool"')) {
           try {
             const jsonMatch = fullResponse.match(/\{[\s\S]*"tool"[\s\S]*\}/);
             const rawJson = jsonMatch ? jsonMatch[0] : fullResponse;
             const toolCall = JSON.parse(rawJson);
-            
+
             let toolSuccess = false;
             let toolMessage = "";
             let executed = false;
@@ -470,7 +470,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
               const parsedPayload = typeof toolCall.payload === 'string'
                 ? JSON.parse(toolCall.payload)
                 : (toolCall.payload || {});
-              
+
               const irisResult = await executeOnIris(toolCall.action, parsedPayload);
               toolSuccess = irisResult.success;
               toolMessage = `\n\n**[I.R.I.S. Action: ${irisResult.success ? 'Success' : 'Failed'}]**\n\`\`\`\n${irisResult.message}\n\`\`\``;
@@ -485,6 +485,12 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
               const results = await KnowledgeManager.searchKnowledge(toolCall.query);
               toolMessage = `\n\n**[Knowledge Base Search]**\n${results}`;
               toolSuccess = true;
+              executed = true;
+            } else if (toolCall.tool.startsWith('mcp_')) {
+              const { McpManager } = await import('./mcpManager');
+              const result = await McpManager.callTool(toolCall.tool, toolCall);
+              toolMessage = `\n\n**[MCP Action: ${toolCall.tool}]**\n\`\`\`\n${result}\n\`\`\``;
+              toolSuccess = !result.startsWith('Error');
               executed = true;
             }
 
@@ -507,7 +513,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
     } else {
       // Agent Task Mode (Strict Planning -> Execution)
       const { planWithVisualAgent } = await import("./browser/planner");
-      
+
       // LLM start signal, but no verbose audio
       ws.send(JSON.stringify({ type: 'llm_start' }));
 
@@ -515,15 +521,15 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       let base64Image = "";
       let elementsMap = [];
       try {
-        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', { 
-            method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
+        const pythonRes = await fetch('http://127.0.0.1:8000/mark-page', {
+          method: 'POST', body: JSON.stringify({}), headers: { 'Content-Type': 'application/json' }
         });
         const markData = await pythonRes.json();
         if (markData.status === "success") {
           base64Image = markData.image;
           elementsMap = markData.elements || [];
         }
-      } catch(e) {
+      } catch (e) {
         logger.warn("WS", "Could not fetch marked screenshot, running blind planner");
       }
 
@@ -538,10 +544,10 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
 
       // B. Create Strict JSON Plan
       const { actions: plannedSteps, tokens: plannerTokens, requires_confirmation, errorFallback, internal_steps, model, provider } = await planWithVisualAgent(goal, base64Image, elementsMap) as any;
-      
-      ws.send(JSON.stringify({ 
-        type: 'metadata', 
-        metadata: { model, provider } 
+
+      ws.send(JSON.stringify({
+        type: 'metadata',
+        metadata: { model, provider }
       }));
       if (metrics) {
         metrics.addTokens('planner', plannerTokens);
@@ -550,7 +556,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       logger.info("WS", `Planner output: ${JSON.stringify(plannedSteps)}`);
 
       if (internal_steps && internal_steps.length > 0) {
-          ws.send(JSON.stringify({ type: 'thoughts', thoughts: internal_steps }));
+        ws.send(JSON.stringify({ type: 'thoughts', thoughts: internal_steps }));
       }
 
       if (!plannedSteps || plannedSteps.length === 0) {
@@ -575,123 +581,123 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
         const confirmMsg = `I am about to navigate to an untrusted website or perform a sensitive action. Should I proceed?`;
         saveToMemory('jarvis', confirmMsg);
         logInteraction('voice', userText, confirmMsg);
-        
+
         ws.send(JSON.stringify({ type: 'llm_chunk', text: confirmMsg }));
         const confirmAudio = await generateTTS(confirmMsg);
         if (confirmAudio && ws.readyState === ws.OPEN) ws.send(confirmAudio);
         ws.send(JSON.stringify({ type: 'done' }));
-        
+
         if (metrics) {
-            metrics.setExecutionResult('Pending Confirmation');
-            metrics.finalize();
+          metrics.setExecutionResult('Pending Confirmation');
+          metrics.finalize();
         }
         state.isProcessing = false;
         return;
       }
 
       // D. Node Action Execution (SerpAPI, Scheduler)
-      const nodeActions = plannedSteps.filter((s:any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
-      const browserActions = plannedSteps.filter((s:any) => !['serp_api_search', 'schedule_call', 'schedule_message'].includes(s.action));
+      const nodeActions = plannedSteps.filter((s: any) => s.action === 'serp_api_search' || s.action === 'schedule_call' || s.action === 'schedule_message');
+      const browserActions = plannedSteps.filter((s: any) => !['serp_api_search', 'schedule_call', 'schedule_message'].includes(s.action));
 
       for (const na of nodeActions) {
-         if (na.action === 'serp_api_search') {
-            logger.info("WS", `[TOOL] Executing SerpAPI: ${na.query}`);
-            ws.send(JSON.stringify({ type: 'llm_chunk', text: `[SerpAPI] Searched for: ${na.query} ` }));
-         } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
-            const { jarvisScheduler } = await import('./scheduler');
-            const threadId = (ws as any).threadId || "ws_client";
-            const chatIdMatch = threadId.match(/tg_(\d+)/);
-            const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
+        if (na.action === 'serp_api_search') {
+          logger.info("WS", `[TOOL] Executing SerpAPI: ${na.query}`);
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: `[SerpAPI] Searched for: ${na.query} ` }));
+        } else if (na.action === 'schedule_call' || na.action === 'schedule_message') {
+          const { jarvisScheduler } = await import('./scheduler');
+          const threadId = (ws as any).threadId || "ws_client";
+          const chatIdMatch = threadId.match(/tg_(\d+)/);
+          const chatId = chatIdMatch ? parseInt(chatIdMatch[1]) : 0;
 
-            const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
-            logger.info("WS", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
-            ws.send(JSON.stringify({ type: 'llm_chunk', text: `[Scheduler] Set timer for ${na.delay_seconds} seconds. ` }));
-         }
-         if (metrics) metrics.addTokens('planner', 50);
+          const taskId = jarvisScheduler.schedule(chatId, na.action === 'schedule_call' ? 'call' : 'message', na.reason || na.text || "Scheduled task", na.delay_seconds || 0);
+          logger.info("WS", `[TOOL] Scheduler registered: ${na.action} (TaskID: ${taskId}) in ${na.delay_seconds}s`);
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: `[Scheduler] Set timer for ${na.delay_seconds} seconds. ` }));
+        }
+        if (metrics) metrics.addTokens('planner', 50);
       }
 
       // E. Execute via Python Layer
       if (browserActions.length > 0) {
         if (process.env.USE_BROWSER_AGENT !== "true") {
-           logger.info("WS", "Browser agent is disabled. Falling back to direct conversational response.");
-           
-           const fallbackNotice = `*(Notice: Browser automation is currently offline/disabled. Here is an answer based on my general knowledge)*\n\n`;
-           ws.send(JSON.stringify({ type: 'llm_chunk', text: fallbackNotice }));
-           
-           const { ThreadManager } = await import("./threadManager");
-           const { callChatWithCascade } = await import("./llmRouter");
-           
-           const threadId = (ws as any).threadId || "ws_client";
-           const history = await ThreadManager.getHistory(threadId, 20);
-           
-           const systemPrompt = buildPrompt("voice"); 
-           const messages = [
-             { role: "system", content: systemPrompt },
-             ...history,
-             { role: "user", content: userText }
-           ];
+          logger.info("WS", "Browser agent is disabled. Falling back to direct conversational response.");
 
-           const result = await callChatWithCascade(messages as any);
-           
-           ws.send(JSON.stringify({ 
-             type: 'metadata', 
-             metadata: { model: result.model, provider: result.provider } 
-           }));
-           
-           ws.send(JSON.stringify({ type: 'llm_chunk', text: result.content }));
-           const ttsAudio = await generateTTS(result.content);
-           if (ttsAudio && ws.readyState === ws.OPEN) {
-             ws.send(ttsAudio);
-           }
-           
-           await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
-           await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
-           
-           ws.send(JSON.stringify({ type: 'done' }));
-           if (metrics) {
-             metrics.setExecutionResult('Success (Direct Fallback)');
-             metrics.finalize();
-           }
-           state.isProcessing = false;
-           return;
+          const fallbackNotice = `*(Notice: Browser automation is currently offline/disabled. Here is an answer based on my general knowledge)*\n\n`;
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: fallbackNotice }));
+
+          const { ThreadManager } = await import("./threadManager");
+          const { callChatWithCascade } = await import("./llmRouter");
+
+          const threadId = (ws as any).threadId || "ws_client";
+          const history = await ThreadManager.getHistory(threadId, 20);
+
+          const systemPrompt = buildPrompt("voice");
+          const messages = [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: userText }
+          ];
+
+          const result = await callChatWithCascade(messages as any);
+
+          ws.send(JSON.stringify({
+            type: 'metadata',
+            metadata: { model: result.model, provider: result.provider }
+          }));
+
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: result.content }));
+          const ttsAudio = await generateTTS(result.content);
+          if (ttsAudio && ws.readyState === ws.OPEN) {
+            ws.send(ttsAudio);
+          }
+
+          await ThreadManager.appendMessage(threadId, { role: "user", content: userText });
+          await ThreadManager.appendMessage(threadId, { role: "assistant", content: result.content });
+
+          ws.send(JSON.stringify({ type: 'done' }));
+          if (metrics) {
+            metrics.setExecutionResult('Success (Direct Fallback)');
+            metrics.finalize();
+          }
+          state.isProcessing = false;
+          return;
         }
 
         const execMsg = `Executing ${browserActions.length} step${browserActions.length > 1 ? 's' : ''}.`;
         ws.send(JSON.stringify({ type: 'llm_chunk', text: execMsg + " " }));
         const execAudio = await generateTTS(execMsg);
         if (execAudio && ws.readyState === ws.OPEN) ws.send(execAudio);
-  
+
         ws.send(JSON.stringify({ type: 'browser_commands', commands: browserActions }));
-  
+
         try {
-            const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ commands: browserActions })
-            });
-            logger.info("WS", `Python executor returned: ${pythonRes.status}`);
-            
-            const pythonData = await pythonRes.json();
-            const hasFailure = pythonData.results && Array.isArray(pythonData.results) && pythonData.results.some((r: any) => r.status === 'failure');
-            if (hasFailure) {
-                const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
-                throw new Error(`Browser execution failed: ${errors}`);
-            }
+          const pythonRes = await fetch('http://127.0.0.1:8000/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commands: browserActions })
+          });
+          logger.info("WS", `Python executor returned: ${pythonRes.status}`);
+
+          const pythonData = await pythonRes.json();
+          const hasFailure = pythonData.results && Array.isArray(pythonData.results) && pythonData.results.some((r: any) => r.status === 'failure');
+          if (hasFailure) {
+            const errors = pythonData.results.filter((r: any) => r.status === 'failure').map((r: any) => `${r.action}: ${r.details}`).join(', ');
+            throw new Error(`Browser execution failed: ${errors}`);
+          }
         } catch (e: any) {
-            logger.error('WS', `Python agent execution failed: ${e.message}`);
-            const failReply = `❌ Execution failed: ${e.message}`;
-            ws.send(JSON.stringify({ type: 'llm_chunk', text: failReply }));
-            const failAudio = await generateTTS(failReply);
-            if (failAudio && ws.readyState === ws.OPEN) ws.send(failAudio);
-            saveToMemory('jarvis', failReply);
-            logInteraction('voice', userText || goal, failReply);
-            ws.send(JSON.stringify({ type: 'done' }));
-            if (metrics) { metrics.setExecutionResult('Failure'); metrics.finalize(); }
-            state.isProcessing = false;
-            return;
+          logger.error('WS', `Python agent execution failed: ${e.message}`);
+          const failReply = `❌ Execution failed: ${e.message}`;
+          ws.send(JSON.stringify({ type: 'llm_chunk', text: failReply }));
+          const failAudio = await generateTTS(failReply);
+          if (failAudio && ws.readyState === ws.OPEN) ws.send(failAudio);
+          saveToMemory('jarvis', failReply);
+          logInteraction('voice', userText || goal, failReply);
+          ws.send(JSON.stringify({ type: 'done' }));
+          if (metrics) { metrics.setExecutionResult('Failure'); metrics.finalize(); }
+          state.isProcessing = false;
+          return;
         }
       }
-      
+
       fullResponse = "I have executed your instructions.";
       ws.send(JSON.stringify({ type: 'llm_chunk', text: fullResponse }));
       const doneAudio = await generateTTS(fullResponse);
@@ -703,7 +709,7 @@ async function handleSpeechEnd(ws: WebSocket, audioBuffer: Buffer[], state: Conn
       trackBrowserTask('voice', userText, plannedSteps);
       if (metrics) { metrics.setExecutionResult('Success'); metrics.finalize(); }
     }
-    
+
   } catch (err: any) {
     if (err.message === 'AbortError') {
       logger.info('WS', 'Aborted by user.');

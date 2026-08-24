@@ -13,6 +13,7 @@ import { NeuralCanvas } from './components/jarvis/NeuralCanvas';
 import { playSound } from './utils/soundEffects';
 import { TaskPanel } from './components/jarvis/TaskPanel';
 import { JobsPage } from './components/jarvis/JobsPage';
+import McpSettings from './components/jarvis/McpSettings';
 
 type AppState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -21,7 +22,7 @@ export default function App() {
   const [browserProbed, setBrowserProbed] = useState(false);
   const [appState, setAppState] = useState<AppState>('idle');
   const [showTaskPanel, setShowTaskPanel] = useState(false);
-  const [activePage, setActivePage] = useState<'main' | 'jobs'>('main');
+  const [activePage, setActivePage] = useState<'main' | 'jobs' | 'mcp'>('main');
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [isVoiceOverlayMinimized, setIsVoiceOverlayMinimized] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -455,6 +456,15 @@ export default function App() {
           >
             JOBS <ChevronRight className="w-3 h-3" />
           </button>
+
+          {/* MCP Settings Toggle */}
+          <button 
+            onClick={() => { playSound.click(); setActivePage('mcp'); }}
+            onMouseEnter={playSound.tick}
+            className="hud-secondary-action flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-purple-400 hover:text-purple-200 hover:bg-purple-900/30 transition-all cursor-pointer"
+          >
+            MCP <ChevronRight className="w-3 h-3" />
+          </button>
           
           <div className="hidden md:block w-px h-6 bg-cyan-900/50 mx-1"></div>
           
@@ -466,6 +476,18 @@ export default function App() {
       {/* Main Content */}
       {activePage === 'jobs' ? (
         <JobsPage onBack={() => setActivePage('main')} />
+      ) : activePage === 'mcp' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div style={{ padding: '8px 16px', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setActivePage('main')}
+              style={{ background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', fontSize: '12px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              ← BACK TO MAIN
+            </button>
+          </div>
+          <McpSettings />
+        </div>
       ) : (
         <main className="jarvis-main-grid flex-1 flex gap-2 md:gap-4 min-h-0 relative">
           

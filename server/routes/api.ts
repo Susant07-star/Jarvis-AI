@@ -5,7 +5,7 @@ import path from "path";
 import { getGroqClient, summarizeMemory, logTokenUsage, logFeedback, callWithRetry } from "../llm";
 import { performSearch } from "../search";
 import { saveToMemory, loadMemory, getSessionContextSummary, getMemoryStats } from "../memory";
-import { jarvisTools } from "../tools";
+import { getJarvisTools, baseJarvisTools } from "../tools";
 import { buildPrompt } from "../agent_prompts/prompt_builder";
 import { logInteraction, trackBrowserTask } from "../browser/jarvisBridge";
 import { logger } from "../logger";
@@ -595,6 +595,21 @@ if (toolCall.tool === 'execute_local_os_command') {
               toolSuccess = false;
               toolMessage = `Telegram send error: ${e.message}`;
             }
+            executed = true;
+          } else if (toolCall.tool === 'save_knowledge') {
+            const { KnowledgeManager } = await import('../knowledgeManager');
+            toolSuccess = await KnowledgeManager.saveKnowledge(toolCall.title, toolCall.content, toolCall.tags);
+            toolMessage = toolSuccess ? `Knowledge "${toolCall.title}" saved successfully.` : "Failed to save knowledge.";
+            executed = true;
+          } else if (toolCall.tool === 'search_knowledge') {
+            const { KnowledgeManager } = await import('../knowledgeManager');
+            toolMessage = await KnowledgeManager.searchKnowledge(toolCall.query);
+            toolSuccess = true;
+            executed = true;
+          } else if (toolCall.tool.startsWith('mcp_')) {
+            const { McpManager } = await import('../mcpManager');
+            toolMessage = await McpManager.callTool(toolCall.tool, toolCall);
+            toolSuccess = !toolMessage.startsWith('Error');
             executed = true;
           }
 
@@ -1514,4 +1529,52 @@ router.patch("/jobs/:id", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// ── MCP Server Management Routes ──────────────────────────────────────────────
+router.get("/mcp/list", async (_req, res) => {
+  try {
+    const { McpManager } = await import("../mcpManager");
+    const config = McpManager.getConfig();
+    const tools = await McpManager.getAllTools();
+    res.json({ success: true, servers: config, toolCount: tools.length });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post("/mcp/add", async (req, res) => {
+  try {
+    const { id, name, command, args, env } = req.body;
+    if (!id || !name || !command) {
+      return res.status(400).json({ success: false, error: "Missing id, name, or command" });
+    }
+    const { McpManager } = await import("../mcpManager");
+    await McpManager.addServer({ id, name, command, args: args || [], env: env || {} });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete("/mcp/remove/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { McpManager } = await import("../mcpManager");
+    await McpManager.removeServer(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get("/mcp/tools", async (_req, res) => {
+  try {
+    const { McpManager } = await import("../mcpManager");
+    const tools = await McpManager.getAllTools();
+    res.json({ success: true, tools });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
+

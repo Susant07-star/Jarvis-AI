@@ -1,4 +1,6 @@
-export const jarvisTools = [
+import { McpManager } from "./mcpManager";
+
+export const baseJarvisTools = [
   {
     type: "function",
     function: {
@@ -164,3 +166,8 @@ export const jarvisTools = [
     }
   }
 ];
+
+export async function getJarvisTools() {
+  const mcpTools = await McpManager.getAllTools();
+  return [...baseJarvisTools, ...mcpTools];
+}
