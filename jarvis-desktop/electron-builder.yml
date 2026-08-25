@@ -15,6 +15,10 @@ asarUnpack:
 win:
   executableName: jarvis-desktop
   icon: build/icon.ico
+  forceCodeSigning: false
+  # Skips the winCodeSign ASAR-integrity step (requires symlink perms on Windows)
+  # Remove this line when building with an official code-signing certificate
+  signAndEditExecutable: false
   target:
     - target: nsis
 nsis:

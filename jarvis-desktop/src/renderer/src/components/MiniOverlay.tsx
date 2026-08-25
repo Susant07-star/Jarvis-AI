@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   RiMicLine,
   RiMicOffLine,
@@ -8,7 +8,7 @@ import {
   RiDragMove2Fill
 } from 'react-icons/ri'
 import { GiPowerButton } from 'react-icons/gi'
-import { irisService } from '@renderer/services/Iris-voice-ai'
+import { jarvisService } from '@renderer/services/jarvis-voice-ai'
 import { VisionMode } from '@renderer/IndexRoot'
 
 interface OverlayProps {
@@ -37,9 +37,9 @@ const MiniOverlay = ({
   const dataArrayRef = useRef<Uint8Array | any | null>(null)
 
   useEffect(() => {
-    if (isSystemActive && irisService.analyser) {
-      analyzerRef.current = irisService.analyser
-      dataArrayRef.current = new Uint8Array(irisService.analyser.frequencyBinCount)
+    if (isSystemActive && jarvisService.analyser) {
+      analyzerRef.current = jarvisService.analyser
+      dataArrayRef.current = new Uint8Array(jarvisService.analyser.frequencyBinCount)
       const checkAudio = () => {
         if (analyzerRef.current && dataArrayRef.current) {
           analyzerRef.current.getByteFrequencyData(dataArrayRef.current)

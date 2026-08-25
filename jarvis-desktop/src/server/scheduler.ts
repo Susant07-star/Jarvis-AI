@@ -90,6 +90,18 @@ class JarvisScheduler {
    * Eliminates the need for visual browser agent planning for scheduling actions.
    */
   /**
+   * Returns all active pending tasks across all chats (for the UI dashboard).
+   */
+  public getAllJobs(): Omit<ScheduledTask, 'timer'>[] {
+    const result: Omit<ScheduledTask, 'timer'>[] = [];
+    for (const task of this.tasks.values()) {
+      const { timer, ...serializableTask } = task;
+      result.push(serializableTask);
+    }
+    return result;
+  }
+
+  /**
    * Returns all active pending tasks for a given chatId as a readable summary.
    */
   public getActiveTasks(chatId: number): ScheduledTask[] {

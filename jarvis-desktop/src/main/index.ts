@@ -56,7 +56,7 @@ import registerSecurityVault from './security/Security'
 import registerLockSystem from './security/lock-system'
 import { registerLicenseHandlers } from './security/license-manager'
 import { registerKeyVaultHandlers } from './security/key-vault'
-import { startBrainDaemon } from './services/brain-daemon'
+import { startBrainDaemon, registerBrainDaemonHandlers } from './services/brain-daemon'
 import { autoUpdater } from 'electron-updater'
 
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
@@ -331,6 +331,7 @@ app.whenReady().then(() => {
   registerSecurityVault()
   registerLicenseHandlers()
   registerKeyVaultHandlers()
+  registerBrainDaemonHandlers(ipcMain)
   registerPhantomKeyboard()
   registerScreenPeeler()
   registerDropZoneControl(ipcMain)

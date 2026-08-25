@@ -1,4 +1,4 @@
-﻿import { handleNavigation, handleOpenMap } from '@renderer/tools/Earth-View'
+import { handleNavigation, handleOpenMap } from '@renderer/tools/Earth-View'
 import { base64ToFloat32, downsampleTo16000, float32ToBase64PCM } from '../utils/audioUtils'
 import { getRunningApps } from './get-apps'
 import { getHistory, retrieveCoreMemory, saveCoreMemory, saveMessage } from './jarvis-ai-brain'
@@ -1529,7 +1529,7 @@ ${JSON.stringify(history)}
             }
 
             if (this.aiResponseBuffer.trim()) {
-              await saveMessage('iris', this.aiResponseBuffer.trim())
+              await saveMessage('jarvis', this.aiResponseBuffer.trim())
               this.aiResponseBuffer = ''
             }
           }
@@ -1690,4 +1690,4 @@ ${JSON.stringify(history)}
   }
 }
 
-export const irisService = new GeminiLiveService()
+export const jarvisService = new GeminiLiveService()

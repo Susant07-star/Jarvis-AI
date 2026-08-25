@@ -121,7 +121,10 @@ const SetupWizard = ({ onComplete }: SetupWizardProps) => {
                           className="w-full bg-zinc-900 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-emerald-300 font-mono focus:outline-none focus:border-blue-500/50"
                         />
                       </div>
-                      <p className="text-[10px] text-zinc-600">Powers the core reasoning and voice engine of J.A.R.V.I.S.</p>
+                      <p className="text-[10px] text-zinc-600">
+                        Powers the core reasoning and voice engine of J.A.R.V.I.S. <br />
+                        <span className="text-zinc-500">Get this from: <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-blue-400 hover:underline">Google AI Studio</a></span>
+                      </p>
                     </div>
                   </div>
 
@@ -176,7 +179,10 @@ const SetupWizard = ({ onComplete }: SetupWizardProps) => {
                         className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-emerald-300 font-mono focus:outline-none focus:border-purple-500/50"
                       />
                     </div>
-                    <p className="text-[10px] text-zinc-600 -mt-1">Allows J.A.R.V.I.S. to form permanent memories across sessions.</p>
+                    <p className="text-[10px] text-zinc-600 -mt-1">
+                      Allows J.A.R.V.I.S. to form permanent memories across sessions. <br />
+                      <span className="text-zinc-500">Find these in your <strong className="text-purple-400">Supabase Project Settings &gt; API</strong></span>
+                    </p>
                   </div>
 
                   <div className="mt-auto pt-4 flex justify-between">

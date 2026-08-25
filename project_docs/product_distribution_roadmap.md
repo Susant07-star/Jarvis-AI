@@ -32,11 +32,11 @@ This document outlines the strategic phases to transform J.A.R.V.I.S. from a per
     3. Hardware Permissions (granting Jarvis access to mouse/keyboard/screen)
 *   Implement `electron-store` (with encryption) to securely save and load these configurations on app startup.
 
-## Phase 4: Dynamic Core Initialization
-**Goal:** Detach JARVIS from hardcoded `.env` files.
-*   Refactor the JARVIS backend/AI logic so it reads credentials directly from the user's `electron-store` configuration.
-*   Ensure the AI agents and vector database initialize gracefully with the injected keys.
-*   Implement a **Settings Dashboard** where users can rotate keys or tweak models at any time.
+## Phase 4: Dynamic Core Initialization (Server Integration) ✅ COMPLETE
+- Move `server/` entirely into the `jarvis-desktop/src/server/` directory.
+- Create `brain-daemon.ts` to boot the server internally on Electron startup.
+- Inject decrypted vault credentials dynamically into `process.env`.
+- Remove standalone Node execution requirements (`npm run dev`).
 
 ## Phase 5: UI Unification (Logs, Voice, Chat, MCP)
 **Goal:** Bring all J.A.R.V.I.S capabilities into one beautiful interface.

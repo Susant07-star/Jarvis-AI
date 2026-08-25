@@ -1,7 +1,7 @@
-﻿import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { useRef, useMemo } from 'react'
 import * as THREE from 'three'
-import { irisService } from '@renderer/services/Iris-voice-ai'
+import { jarvisService } from '@renderer/services/jarvis-voice-ai'
 
 const CustomParticleSphere = ({ count = 3000 }) => {
   const mesh = useRef<THREE.Points>(null)
@@ -45,8 +45,8 @@ const CustomParticleSphere = ({ count = 3000 }) => {
     mesh.current.rotation.z += delta * 0.05
 
     let volume = 0
-    if (irisService.analyser) {
-      irisService.analyser.getByteFrequencyData(dataArray)
+    if (jarvisService.analyser) {
+      jarvisService.analyser.getByteFrequencyData(dataArray)
 
       let sum = 0
       const len = dataArray.length

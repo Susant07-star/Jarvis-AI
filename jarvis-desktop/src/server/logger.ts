@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import util from 'util';
+import { EventEmitter } from 'events';
+
+export const logEmitter = new EventEmitter();
 
 const LOG_DIR = path.resolve(process.cwd(), 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'debug.log');
@@ -40,7 +43,9 @@ function serializeConsole(args: any[]): string {
 
 function writeToFile(level: string, tag: string, msg: string) {
     try {
-        fs.appendFileSync(LOG_FILE, `[${timestamp()}] [${level}] [${tag}] ${msg}\n`);
+        const logLine = `[${timestamp()}] [${level}] [${tag}] ${msg}`;
+        fs.appendFileSync(LOG_FILE, logLine + '\n');
+        logEmitter.emit('log', logLine);
     } catch { /* never swallow silently in prod - but can't log the log failure */ }
 }
 

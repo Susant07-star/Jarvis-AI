@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import MiniOverlay from './components/MiniOverlay'
-import { irisService as jarvisService } from './services/jarvis-voice-ai'
+import { jarvisService } from './services/jarvis-voice-ai'
 import { getScreenSourceId } from './hooks/CaptureDesktop'
 import JARVIS from './UI/jarvis'
 import TerminalOverlay from './components/TerminalOverlay'

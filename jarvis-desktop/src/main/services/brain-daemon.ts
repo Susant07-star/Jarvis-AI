@@ -1,4 +1,5 @@
 import { getDecryptedConfig } from '../security/key-vault'
+import { IpcMain, BrowserWindow } from 'electron'
 
 let isBrainRunning = false
 
@@ -42,6 +43,18 @@ export async function startBrainDaemon() {
     const { startTelegramBot } = require('../../server/telegramBot')
     const { runAutonomousLoop } = require('../../server/agenticLoop')
     const { jarvisScheduler } = require('../../server/scheduler')
+    const { logEmitter } = require('../../server/logger')
+    const { McpManager } = require('../../server/mcpManager')
+
+    // Initialize MCP Manager
+    McpManager.initialize().catch(e => console.error('[MCP] Init error:', e))
+
+    // Stream logs to UI
+    logEmitter.on('log', (logLine: string) => {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        win.webContents.send('brain:log', logLine)
+      })
+    })
     
     // Start Telegram Bot
     if (process.env.TELEGRAM_BOT_TOKEN) {
@@ -63,4 +76,50 @@ export async function startBrainDaemon() {
   } catch (error) {
     console.error('[J.A.R.V.I.S. Brain] Fatal Neural Error during boot:', error)
   }
+}
+
+export function registerBrainDaemonHandlers(ipcMain: IpcMain) {
+  ipcMain.handle('brain:get-status', () => {
+    return isBrainRunning
+  })
+
+  ipcMain.handle('brain:get-scheduler', () => {
+    try {
+      const { jarvisScheduler } = require('../../server/scheduler')
+      return jarvisScheduler.getAllJobs()
+    } catch (e) {
+      return []
+    }
+  })
+
+  ipcMain.handle('brain:get-mcp-servers', () => {
+    try {
+      const { McpManager } = require('../../server/mcpManager')
+      // Also attach status (if it's in the client map)
+      const config = McpManager.getConfig()
+      return config
+    } catch (e) {
+      return []
+    }
+  })
+
+  ipcMain.handle('brain:add-mcp-server', async (_event, config) => {
+    try {
+      const { McpManager } = require('../../server/mcpManager')
+      await McpManager.addServer(config)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
+
+  ipcMain.handle('brain:remove-mcp-server', async (_event, id) => {
+    try {
+      const { McpManager } = require('../../server/mcpManager')
+      await McpManager.removeServer(id)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message }
+    }
+  })
 }

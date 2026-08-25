@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import {
   RiWifiLine,
   RiShieldFlashLine,
@@ -11,10 +11,13 @@ import {
   RiCameraLine,
   RiComputerLine,
   RiCloseLine,
-  RiImageLine
+  RiImageLine,
+  RiTerminalBoxLine,
+  RiTimeLine,
+  RiPlugLine
 } from 'react-icons/ri'
 import { getSystemStatus } from '@renderer/services/system-info'
-import { getHistory } from '@renderer/services/iris-ai-brain'
+import { getHistory } from '@renderer/services/jarvis-ai-brain'
 import ViewSkeleton from '@renderer/components/ViewSkelrton'
 
 import DashboardView from '../views/Dashboard'
@@ -26,6 +29,9 @@ const WorkFlowEditorView = lazy(() => import('../views/WorkFlowEditor'))
 const NotesView = lazy(() => import('../views/Notes'))
 const SettingsView = lazy(() => import('../views/Settings'))
 const GalleryView = lazy(() => import('../views/Gallery'))
+const LogsView = lazy(() => import('../views/LogsView'))
+const SchedulerView = lazy(() => import('../views/SchedulerView'))
+const MCPHubView = lazy(() => import('../views/MCPHub'))
 
 interface JarvisProps {
   isSystemActive: boolean
@@ -95,6 +101,9 @@ const JARVIS = (props: JarvisProps) => {
             { id: 'NOTES', icon: <RiFolderOpenLine /> },
             { id: 'GALLERY', icon: <RiImageLine /> },
             { id: 'PHONE', icon: <RiPhoneLine /> },
+            { id: 'LOGS', icon: <RiTerminalBoxLine /> },
+            { id: 'SCHEDULE', icon: <RiTimeLine /> },
+            { id: 'MCP', icon: <RiPlugLine /> },
             { id: 'SETTINGS', icon: <RiSettings4Line /> }
           ].map((tab) => (
             <button
@@ -125,25 +134,24 @@ const JARVIS = (props: JarvisProps) => {
       </div>
 
       <div className="flex-1 overflow-hidden relative bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-zinc-900/50 via-black to-black">
-        <div className={`absolute inset-0 ${activeTab === 'DASHBOARD' ? 'block' : 'hidden'}`}>
-          <DashboardView
-            props={props}
-            stats={stats}
-            chatHistory={chatHistory}
-            onVisionClick={handleVisionClick}
-          />
-        </div>
-
-        <div className={`absolute inset-0 ${activeTab === 'PHONE' ? 'block' : 'hidden'}`}>
-          <PhoneView glassPanel={glassPanel} />
-        </div>
-
         <Suspense fallback={<ViewSkeleton />}>
+          {activeTab === 'DASHBOARD' && (
+            <DashboardView
+              props={props}
+              stats={stats}
+              chatHistory={chatHistory}
+              onVisionClick={handleVisionClick}
+            />
+          )}
           {activeTab === 'Macros' && <WorkFlowEditorView />}
           {activeTab === 'Apps' && <AppsView />}
           {activeTab === 'NOTES' && <NotesView glassPanel={glassPanel} />}
-          {activeTab === 'SETTINGS' && <SettingsView isSystemActive={props.isSystemActive} />}
           {activeTab === 'GALLERY' && <GalleryView />}
+          {activeTab === 'PHONE' && <PhoneView glassPanel={glassPanel} />}
+          {activeTab === 'LOGS' && <LogsView />}
+          {activeTab === 'SCHEDULE' && <SchedulerView />}
+          {activeTab === 'MCP' && <MCPHubView />}
+          {activeTab === 'SETTINGS' && <SettingsView isSystemActive={props.isSystemActive} />}
         </Suspense>
       </div>
 

@@ -1,11 +1,15 @@
 import { resolve } from 'path'
-import { defineConfig } from 'electron-vite'
+import { defineConfig, bytecodePlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  main: {},
-  preload: {},
+  main: {
+    plugins: [bytecodePlugin()]
+  },
+  preload: {
+    plugins: [bytecodePlugin()]
+  },
   renderer: {
     publicDir: resolve('src/renderer/src/public'),
     resolve: {
