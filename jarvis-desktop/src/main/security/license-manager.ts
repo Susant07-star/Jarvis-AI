@@ -41,9 +41,8 @@ async function verifyWithServer(
   key: string,
   hwid: string
 ): Promise<{ valid: boolean; message: string }> {
-  // ── DEV BYPASS ────────────────────────────────────────────────────────────
-  // In development (npm run dev) or when explicitly set, skip the server call.
-  if (process.env.NODE_ENV === 'development' || process.env.JARVIS_DEV_BYPASS === 'true') {
+  // ── DEV BYPASS: !app.isPackaged is true when running via npm run dev ──
+  if (!app.isPackaged || process.env.JARVIS_DEV_BYPASS === 'true') {
     console.warn('[J.A.R.V.I.S. License] DEV MODE: License check bypassed.')
     return { valid: true, message: 'Development bypass active.' }
   }
@@ -75,9 +74,9 @@ export function registerLicenseHandlers(): void {
   ipcMain.handle('license:check', async () => {
     const hwid = getHardwareId()
 
-    // ── DEV BYPASS: skip license gate entirely in development ──
-    if (process.env.NODE_ENV === 'development' || process.env.JARVIS_DEV_BYPASS === 'true') {
-      console.warn('[J.A.R.V.I.S. License] DEV MODE: License check bypassed.')
+    // ── DEV BYPASS: !app.isPackaged is true when running via npm run dev ──
+    if (!app.isPackaged) {
+      console.warn('[License] DEV MODE: License gate bypassed — app not packaged.')
       return { status: 'licensed', hwid, key: 'DEV-BYPASS' }
     }
 
