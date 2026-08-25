@@ -160,7 +160,7 @@ Let me score your system against every category in the image:
 
 | Tool | Status | Notes |
 |------|--------|-------|
-| Docker | ❌ Not used | No Dockerfile found |
+| Docker | ✅ **Implemented** | Lightweight `node:alpine` Dockerfile for clean Render deployment |
 | **FastAPI** | ❌ Not used | Your backend is Express.js, not FastAPI |
 | Vercel | ⚠️ Potential | Vite config present, could deploy frontend |
 | AWS | ❌ Not used | You use Render free tier |
@@ -206,15 +206,18 @@ User request → Plan → Execute tool → Observe result → Re-plan → Execut
 ```
 This is the **ReAct pattern** (Reason + Act) — the gold standard for autonomous agents.
 
-#### Priority 5: Containerize with Docker
+#### Priority 5: Containerize with Docker (✅ COMPLETED)
 ```dockerfile
-# One Dockerfile to rule them all
-FROM node:20
+# Super fast, hyper-optimized build script
+FROM node:20-alpine
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-RUN npm install
-CMD ["npm", "start"]
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "start"]
 ```
-This would make your Jarvis deployable anywhere without setup pain.
+This makes Jarvis deployable anywhere. Crucially, because I.R.I.S. acts as the physical hands locally, we didn't need to bloat the container with Playwright/Linux browser dependencies. Supabase handles memory, so persistent disks aren't needed.
 
 ---
 

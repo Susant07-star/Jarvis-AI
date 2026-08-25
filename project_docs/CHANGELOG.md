@@ -5,13 +5,19 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Docker Containerization (Phase 5)**: Added a highly optimized `Dockerfile` using `node:20-alpine` and `.dockerignore`. This ensures perfect, crash-proof deployments to Render and enables horizontal scaling.
+- **Auto-Save Research (Butler)**: The Butler asynchronous research queue now automatically pushes all Gemini Grounding research summaries to the Supabase Knowledge Base (long-term memory) upon completion.
+
+### Removed
+- **Playwright Dependencies**: Uninstalled `playwright` and removed legacy browser automation configuration. I.R.I.S. now natively acts as the local visual agent/hands, eliminating the need for heavy Linux browser dependencies on the cloud server.
+
+### Updated
+- **Jarvis Soul Sync**: Updated `voice_skills.json` and `personality.json` to accurately reflect exactly 7 unified tools. Jarvis now strictly understands the difference between synchronous tools (`search_knowledge`) and asynchronous background tasks (`intelligent_search`).
 - **Voice Profile Reconfiguration & Name Correction**: Added `update_guest_voice` tool in `zoyaLiveService.ts` and `/api/update-guest-name` backend route in `server/routes/api.ts`. Allows JARVIS/Zoya to dynamically reconfigure or edit a misidentified speaker's profile name in Supabase when corrected naturally (e.g., "I am [NewName] not [OldName]") with built-in security protections preventing unauthorized overrides of the Boss identity.
 - **System-Wide Total Awareness**: Fixed "amnesia gaps" by injecting intermediate tool execution results, background tasks (Scheduler, Butler), and I.R.I.S. failure states directly into the `ThreadManager` as `[SYSTEM - TOOL RESULT]` or `[SYSTEM NOTIFICATION]`. This ensures the LLM has perfect memory of its own actions and won't hallucinate successful execution when a tool fails.
 - Implemented State Guard in `server/orchestrator.ts` to handle confirmation inputs before intent classification, preventing confirmation bypass.
 - Refactored `server/browser/executor.ts` to ensure full sequential execution of all steps in a plan, fixing execution drop after the first step.
-
-### Updated
-- Updated documentation to reflect new voice profile editing tool, confirmation handling, and executor behavior.
+- Updated documentation to reflect the pivot from headless Playwright to local I.R.I.S. and the new Docker deployment strategy.
 
 ### [2026-06-07] Phase 7: Voice Biometrics & Autonomous Enrollment
 - **Feature — Real-Time Voice Biometrics**: Integrated Hugging Face microservice to verify incoming live audio and Telegram voice notes against a known profile embedding.
