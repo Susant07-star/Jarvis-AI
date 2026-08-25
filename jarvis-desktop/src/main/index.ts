@@ -63,11 +63,18 @@ app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
 
 // ── DEV IPC DEBUG LOGGER ────────────────────────────────────────────────────
 // Logs every renderer→main IPC call to the terminal for easier debugging.
-if (process.env.NODE_ENV === 'development') {
+// High-frequency polling channels are suppressed to avoid log spam.
+if (!app.isPackaged) {
+  const SUPPRESS = new Set([
+    'get-system-info', 'brain:get-status', 'get-screen-source',
+    'brain:get-scheduler', 'brain:get-mcp-servers', 'check-keys-exist'
+  ])
   const _handle = ipcMain.handle.bind(ipcMain)
   ipcMain.handle = (channel: string, handler: any) => {
     return _handle(channel, async (event: any, ...args: any[]) => {
-      console.log(`[IPC →] ${channel}`, args.length ? args : '')
+      if (!SUPPRESS.has(channel)) {
+        console.log(`[IPC →] ${channel}`, args.length ? args : '')
+      }
       try {
         const result = await handler(event, ...args)
         return result
