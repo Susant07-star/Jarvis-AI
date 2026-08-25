@@ -267,17 +267,30 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('secure-get-keys', async () => {
+    // Try the new vault first (used by the Setup Wizard)
+    try {
+      const { getDecryptedConfig } = require('./security/key-vault')
+      const vaultConfig = getDecryptedConfig()
+      if (vaultConfig?.JARVIS_API_KEY) {
+        return {
+          geminiKey: vaultConfig.JARVIS_API_KEY,
+          groqKey: vaultConfig.GROQ_API_KEY || ''
+        }
+      }
+    } catch { /* fall through to legacy store */ }
+
+    // Fall back to the legacy key store
     if (!fs.existsSync(secureConfigPath)) return null
     try {
       const data = JSON.parse(fs.readFileSync(secureConfigPath, 'utf8'))
       let groqKey, geminiKey
 
       if (safeStorage.isEncryptionAvailable()) {
-        groqKey = safeStorage.decryptString(Buffer.from(data.groq, 'base64'))
-        geminiKey = safeStorage.decryptString(Buffer.from(data.gemini, 'base64'))
+        groqKey = data.groq ? safeStorage.decryptString(Buffer.from(data.groq, 'base64')) : ''
+        geminiKey = data.gemini ? safeStorage.decryptString(Buffer.from(data.gemini, 'base64')) : ''
       } else {
-        groqKey = Buffer.from(data.groq, 'base64').toString('utf8')
-        geminiKey = Buffer.from(data.gemini, 'base64').toString('utf8')
+        groqKey = data.groq ? Buffer.from(data.groq, 'base64').toString('utf8') : ''
+        geminiKey = data.gemini ? Buffer.from(data.gemini, 'base64').toString('utf8') : ''
       }
 
       return { groqKey, geminiKey }

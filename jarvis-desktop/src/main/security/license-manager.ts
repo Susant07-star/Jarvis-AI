@@ -41,8 +41,14 @@ async function verifyWithServer(
   key: string,
   hwid: string
 ): Promise<{ valid: boolean; message: string }> {
+  // ── DEV BYPASS ────────────────────────────────────────────────────────────
+  // In development (npm run dev) or when explicitly set, skip the server call.
+  if (process.env.NODE_ENV === 'development' || process.env.JARVIS_DEV_BYPASS === 'true') {
+    console.warn('[J.A.R.V.I.S. License] DEV MODE: License check bypassed.')
+    return { valid: true, message: 'Development bypass active.' }
+  }
+
   try {
-    // TODO (Phase 6): Replace this URL with your deployed Vercel license API
     const VALIDATION_URL = process.env.JARVIS_LICENSE_URL || 'https://jarvis-license.vercel.app/api/validate'
 
     const response = await fetch(VALIDATION_URL, {
@@ -53,17 +59,12 @@ async function verifyWithServer(
     })
 
     if (!response.ok) {
-      return { valid: false, message: 'License server unreachable. Check your connection.' }
+      return { valid: false, message: 'License server error. Please try again.' }
     }
 
     const data = (await response.json()) as { valid: boolean; message: string }
     return data
   } catch (err: any) {
-    // Dev mode bypass — if no license server is configured, allow entry
-    if (process.env.NODE_ENV === 'development' || process.env.JARVIS_DEV_BYPASS === 'true') {
-      console.warn('[J.A.R.V.I.S. License] DEV MODE: Bypassing license check.')
-      return { valid: true, message: 'Development bypass active.' }
-    }
     return { valid: false, message: `Could not reach license server: ${err.message}` }
   }
 }
@@ -73,8 +74,14 @@ export function registerLicenseHandlers(): void {
   // Check if already licensed on this machine
   ipcMain.handle('license:check', async () => {
     const hwid = getHardwareId()
-    const saved = loadLicense()
 
+    // ── DEV BYPASS: skip license gate entirely in development ──
+    if (process.env.NODE_ENV === 'development' || process.env.JARVIS_DEV_BYPASS === 'true') {
+      console.warn('[J.A.R.V.I.S. License] DEV MODE: License check bypassed.')
+      return { status: 'licensed', hwid, key: 'DEV-BYPASS' }
+    }
+
+    const saved = loadLicense()
     if (!saved) return { status: 'unlicensed', hwid }
 
     // License file exists — re-verify HWID matches (anti-copy protection)
