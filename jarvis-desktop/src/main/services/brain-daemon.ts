@@ -10,44 +10,43 @@ let isBrainRunning = false
  */
 export async function startBrainDaemon() {
   if (isBrainRunning) {
-    console.log('[J.A.R.V.I.S. Brain] Brain is already running.')
+    console.log('[Brain] Already running — skipping boot.')
     return
   }
 
   try {
-    console.log('[J.A.R.V.I.S. Brain] Booting neural pathways...')
+    console.log('[Brain] ── Booting J.A.R.V.I.S. Neural OS ──')
 
     // 1. Fetch Secure Credentials
     const config = getDecryptedConfig()
     
     if (!config.JARVIS_API_KEY) {
-      console.warn('[J.A.R.V.I.S. Brain] No API key found. Neural boot aborted.')
+      console.warn('[Brain] ⚠️  No API key in vault. Complete Setup Wizard first.')
       return
     }
 
-    // 2. Inject credentials into process.env so legacy server code can read them
+    console.log('[Brain] ✅ Vault credentials loaded.')
+
+    // 2. Inject credentials into process.env
     process.env.JARVIS_API_KEY = config.JARVIS_API_KEY
-    process.env.GEMINI_API_KEY = config.JARVIS_API_KEY // Legacy fallback
+    process.env.GEMINI_API_KEY = config.JARVIS_API_KEY
     process.env.VITE_JARVIS_API_KEY = config.JARVIS_API_KEY
     process.env.SUPABASE_URL = config.SUPABASE_URL
     process.env.VITE_SUPABASE_URL = config.SUPABASE_URL
     process.env.SUPABASE_KEY = config.SUPABASE_ANON_KEY
     process.env.VITE_SUPABASE_KEY = config.SUPABASE_ANON_KEY
-
-    // Ensure some default configs for the backend
-    process.env.NODE_ENV = 'production'
     process.env.ORCHESTRATOR_MODE = 'agent'
 
+    console.log('[Brain] ✅ Environment variables injected.')
+
     // 3. Import backend modules dynamically
-    // Dynamic import ensures we only load backend modules AFTER env vars are set.
-    const { startTelegramBot } = require('../../server/telegramBot')
-    const { runAutonomousLoop } = require('../../server/agenticLoop')
-    const { jarvisScheduler } = require('../../server/scheduler')
     const { logEmitter } = require('../../server/logger')
     const { McpManager } = require('../../server/mcpManager')
+    const { jarvisScheduler } = require('../../server/scheduler')
+    const { startTelegramBot } = require('../../server/telegramBot')
+    const { runAutonomousLoop } = require('../../server/agenticLoop')
 
-    // Initialize MCP Manager
-    McpManager.initialize().catch(e => console.error('[MCP] Init error:', e))
+    console.log('[Brain] ✅ Backend modules loaded.')
 
     // Stream logs to UI
     logEmitter.on('log', (logLine: string) => {
@@ -55,26 +54,42 @@ export async function startBrainDaemon() {
         win.webContents.send('brain:log', logLine)
       })
     })
-    
-    // Start Telegram Bot
-    if (process.env.TELEGRAM_BOT_TOKEN) {
-      startTelegramBot()
-    }
+
+    // Initialize MCP Manager
+    McpManager.initialize().catch((e: any) => console.error('[Brain] MCP init error:', e))
+    console.log('[Brain] ✅ MCP Manager initializing...')
 
     // Start Task Scheduler
-    jarvisScheduler.start()
+    try {
+      await jarvisScheduler.init()
+      console.log('[Brain] ✅ Task Scheduler initialized.')
+    } catch (e: any) {
+      console.error('[Brain] ⚠️  Scheduler init error (non-fatal):', e.message)
+    }
+
+    // Start Telegram Bot
+    if (process.env.TELEGRAM_BOT_TOKEN) {
+      try {
+        startTelegramBot()
+        console.log('[Brain] ✅ Telegram Bot started.')
+      } catch (e: any) {
+        console.error('[Brain] ⚠️  Telegram Bot error (non-fatal):', e.message)
+      }
+    } else {
+      console.log('[Brain] ℹ️  No Telegram token — bot skipped.')
+    }
 
     // Start Agentic Background Loop
-    // (We wrap it in a setTimeout so it doesn't block the main thread boot)
     setTimeout(() => {
-       runAutonomousLoop().catch(e => console.error('[J.A.R.V.I.S. Brain] Loop Error:', e))
+      runAutonomousLoop().catch((e: any) => console.error('[Brain] Loop error:', e))
+      console.log('[Brain] ✅ Agentic loop started.')
     }, 5000)
 
     isBrainRunning = true
-    console.log('[J.A.R.V.I.S. Brain] Neural OS successfully booted.')
+    console.log('[Brain] ✅ J.A.R.V.I.S. Neural OS fully online!')
 
-  } catch (error) {
-    console.error('[J.A.R.V.I.S. Brain] Fatal Neural Error during boot:', error)
+  } catch (error: any) {
+    console.error('[Brain] ❌ Fatal boot error:', error.message)
   }
 }
 

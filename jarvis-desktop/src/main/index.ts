@@ -61,6 +61,24 @@ import { autoUpdater } from 'electron-updater'
 
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
 
+// ── DEV IPC DEBUG LOGGER ────────────────────────────────────────────────────
+// Logs every renderer→main IPC call to the terminal for easier debugging.
+if (process.env.NODE_ENV === 'development') {
+  const _handle = ipcMain.handle.bind(ipcMain)
+  ipcMain.handle = (channel: string, handler: any) => {
+    return _handle(channel, async (event: any, ...args: any[]) => {
+      console.log(`[IPC →] ${channel}`, args.length ? args : '')
+      try {
+        const result = await handler(event, ...args)
+        return result
+      } catch (err: any) {
+        console.error(`[IPC ✗] ${channel} threw:`, err.message)
+        throw err
+      }
+    })
+  }
+}
+
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
     app.setAsDefaultProtocolClient('iris', process.execPath, [path.resolve(process.argv[1])])
