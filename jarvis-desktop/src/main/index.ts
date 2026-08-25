@@ -56,6 +56,7 @@ import registerSecurityVault from './security/Security'
 import registerLockSystem from './security/lock-system'
 import { registerLicenseHandlers } from './security/license-manager'
 import { registerKeyVaultHandlers } from './security/key-vault'
+import { startBrainDaemon } from './services/brain-daemon'
 import { autoUpdater } from 'electron-updater'
 
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
@@ -379,6 +380,13 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  // Boot Neural OS if already configured
+  const StoreClass = (require('electron-store') as any).default || require('electron-store')
+  const store = new StoreClass({ name: 'jarvis_secure_vault' })
+  if (store.get('JARVIS_API_KEY')) {
+    startBrainDaemon()
+  }
 })
 
 app.on('will-quit', () => {

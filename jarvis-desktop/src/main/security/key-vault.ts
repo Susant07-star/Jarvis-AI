@@ -42,6 +42,8 @@ function decrypt(base64Text: string): string {
   }
 }
 
+import { startBrainDaemon } from './brain-daemon'
+
 export function registerKeyVaultHandlers() {
   // Save configuration (encrypts sensitive keys)
   ipcMain.handle('vault:save-config', (_event, config: JarvisConfig) => {
@@ -49,6 +51,10 @@ export function registerKeyVaultHandlers() {
       store.set('JARVIS_API_KEY', encrypt(config.JARVIS_API_KEY))
       store.set('SUPABASE_URL', encrypt(config.SUPABASE_URL)) // URL isn't strictly a secret, but we encrypt for consistency
       store.set('SUPABASE_ANON_KEY', encrypt(config.SUPABASE_ANON_KEY))
+      
+      // Boot the brain using the new keys
+      startBrainDaemon()
+
       return { success: true }
     } catch (err: any) {
       console.error('[J.A.R.V.I.S. Vault] Failed to save config:', err)
