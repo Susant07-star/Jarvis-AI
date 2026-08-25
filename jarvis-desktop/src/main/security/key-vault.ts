@@ -42,7 +42,7 @@ function decrypt(base64Text: string): string {
   }
 }
 
-import { startBrainDaemon } from './brain-daemon'
+import { startBrainDaemon } from '../services/brain-daemon'
 
 export function registerKeyVaultHandlers() {
   // Save configuration (encrypts sensitive keys)
