@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>J.A.R.V.I.S. — Neural OS</title>
+
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+    script-src * 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.jsdelivr.net https://js.puter.com;
+    worker-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+    connect-src * data: blob: 'unsafe-inline';
+    img-src * data: blob: file: 'unsafe-inline';
+    media-src * data: blob: file: 'unsafe-inline';
+    style-src * 'unsafe-inline';
+  "
+    />
+  </head>
+
+  <body class="bg-black text-white overflow-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
