@@ -20,7 +20,8 @@ export const runSmartSearch = async (query: string) => {
       new CustomEvent('semantic-start', { detail: { mode: 'Search', target: query } })
     )
 
-    const groqKey = localStorage.getItem('iris_groq_api_key') || ''
+    const groqKey =
+      localStorage.getItem('jarvis_groq_api_key') || localStorage.getItem('iris_groq_api_key') || ''
 
     if (!groqKey.trim()) {
       throw new Error(

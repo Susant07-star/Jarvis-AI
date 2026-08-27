@@ -34,19 +34,27 @@ interface SettingsProps {
 
 type TabType = 'updates' | 'general' | 'keys' | 'security' | 'monitoring'
 
+const getLocalSetting = (key: string, legacyKey: string, fallback = '') =>
+  localStorage.getItem(key) || localStorage.getItem(legacyKey) || fallback
+
+const setLocalSetting = (key: string, legacyKey: string, value: string) => {
+  localStorage.setItem(key, value)
+  localStorage.setItem(legacyKey, value)
+}
+
 const SettingsView = ({ isSystemActive }: SettingsProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('updates')
 
   const [voice, setVoice] = useState<'MALE' | 'FEMALE'>(
-    (localStorage.getItem('iris_voice_profile') as 'MALE' | 'FEMALE') || 'MALE'
+    (getLocalSetting('jarvis_voice_profile', 'iris_voice_profile', 'MALE') as 'MALE' | 'FEMALE')
   )
   const [personality, setPersonality] = useState('')
-  const [userName, setUserName] = useState(localStorage.getItem('iris_user_name') || '')
+  const [userName, setUserName] = useState(getLocalSetting('jarvis_user_name', 'iris_user_name'))
 
-  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('iris_custom_api_key') || '')
-  const [groqKey, setGroqKey] = useState(localStorage.getItem('iris_groq_api_key') || '')
-  const [hfKey, setHfKey] = useState(localStorage.getItem('iris_hf_api_key') || '')
-  const [tailvyKey, setTailvyKey] = useState(localStorage.getItem('iris_tailvy_api_key') || '')
+  const [geminiKey, setGeminiKey] = useState(getLocalSetting('jarvis_custom_api_key', 'iris_custom_api_key'))
+  const [groqKey, setGroqKey] = useState(getLocalSetting('jarvis_groq_api_key', 'iris_groq_api_key'))
+  const [hfKey, setHfKey] = useState(getLocalSetting('jarvis_hf_api_key', 'iris_hf_api_key'))
+  const [tailvyKey, setTailvyKey] = useState(getLocalSetting('jarvis_tailvy_api_key', 'iris_tailvy_api_key'))
 
   // System Monitoring Thresholds
   const [cpuThreshold, setCpuThreshold] = useState(85)
@@ -83,6 +91,10 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
         .then((res) => setFaceCount(res?.faceCount || 0))
 
       window.electron.ipcRenderer.invoke('get-app-version').then((v) => setAppVersion(v))
+      window.electron.ipcRenderer.invoke('secure-get-keys').then((keys) => {
+        if (keys?.geminiKey) setGeminiKey(keys.geminiKey)
+        if (keys?.groqKey) setGroqKey(keys.groqKey)
+      })
 
       window.electron.ipcRenderer.on('updater-event', (_e, { status, data, error }) => {
         if (status === 'checking') setUpdateStatus('checking')
@@ -119,7 +131,7 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
   const handleVoiceChange = (v: 'MALE' | 'FEMALE') => {
     if (isSystemActive) return
     setVoice(v)
-    localStorage.setItem('iris_voice_profile', v)
+    setLocalSetting('jarvis_voice_profile', 'iris_voice_profile', v)
   }
 
   const handlePersonalityChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -139,15 +151,15 @@ const SettingsView = ({ isSystemActive }: SettingsProps) => {
   }
 
   const saveUserName = () => {
-    localStorage.setItem('iris_user_name', userName)
+    setLocalSetting('jarvis_user_name', 'iris_user_name', userName)
     alert('User Designation Saved.')
   }
 
   const saveApiKeys = async () => {
-    localStorage.setItem('iris_custom_api_key', geminiKey)
-    localStorage.setItem('iris_groq_api_key', groqKey)
-    localStorage.setItem('iris_hf_api_key', hfKey)
-    localStorage.setItem('iris_tailvy_api_key', tailvyKey)
+    setLocalSetting('jarvis_custom_api_key', 'iris_custom_api_key', geminiKey)
+    setLocalSetting('jarvis_groq_api_key', 'iris_groq_api_key', groqKey)
+    setLocalSetting('jarvis_hf_api_key', 'iris_hf_api_key', hfKey)
+    setLocalSetting('jarvis_tailvy_api_key', 'iris_tailvy_api_key', tailvyKey)
 
     if (window.electron?.ipcRenderer) {
       try {

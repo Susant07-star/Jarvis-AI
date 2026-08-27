@@ -2,14 +2,14 @@
  * butlerQueue.ts — Asynchronous Butler Architecture
  * ===================================================
  * Dispatches long-running tasks (research, browser actions) to background workers.
- * Zoya replies instantly ("I'm on it, Boss") and keeps talking.
+ * J.A.R.V.I.S. replies instantly ("I'm on it, Boss") and keeps talking.
  * When the task completes, the result is:
  *   1. Stored in a "completed results" queue for the frontend to poll
  *   2. Sent as a Telegram message to the user
  *
- * The frontend (zoyaLiveService) polls GET /api/butler/results every few seconds.
+ * The frontend live voice service polls GET /api/butler/results every few seconds.
  * When it finds a completed result, it injects it into the active Gemini Live session
- * via sendRealtimeInput({ text }), so Zoya naturally says "Boss, the research is done!"
+ * via sendRealtimeInput({ text }), so J.A.R.V.I.S. naturally says "Boss, the research is done!"
  */
 
 import { logger } from "./logger";

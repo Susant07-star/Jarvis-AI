@@ -8,6 +8,7 @@ export interface JarvisConfig {
   JARVIS_API_KEY: string
   SUPABASE_URL: string
   SUPABASE_ANON_KEY: string
+  GROQ_API_KEY?: string
 }
 
 /**
@@ -44,13 +45,26 @@ function decrypt(base64Text: string): string {
 
 import { startBrainDaemon } from '../services/brain-daemon'
 
+export function saveDecryptedConfig(config: Partial<JarvisConfig>) {
+  if (config.JARVIS_API_KEY !== undefined) {
+    store.set('JARVIS_API_KEY', encrypt(config.JARVIS_API_KEY))
+  }
+  if (config.SUPABASE_URL !== undefined) {
+    store.set('SUPABASE_URL', encrypt(config.SUPABASE_URL))
+  }
+  if (config.SUPABASE_ANON_KEY !== undefined) {
+    store.set('SUPABASE_ANON_KEY', encrypt(config.SUPABASE_ANON_KEY))
+  }
+  if (config.GROQ_API_KEY !== undefined) {
+    store.set('GROQ_API_KEY', encrypt(config.GROQ_API_KEY))
+  }
+}
+
 export function registerKeyVaultHandlers() {
   // Save configuration (encrypts sensitive keys)
   ipcMain.handle('vault:save-config', (_event, config: JarvisConfig) => {
     try {
-      store.set('JARVIS_API_KEY', encrypt(config.JARVIS_API_KEY))
-      store.set('SUPABASE_URL', encrypt(config.SUPABASE_URL)) // URL isn't strictly a secret, but we encrypt for consistency
-      store.set('SUPABASE_ANON_KEY', encrypt(config.SUPABASE_ANON_KEY))
+      saveDecryptedConfig(config)
       
       // Boot the brain using the new keys
       startBrainDaemon()
@@ -68,7 +82,8 @@ export function registerKeyVaultHandlers() {
     return {
       JARVIS_API_KEY: decrypt(store.get('JARVIS_API_KEY') as string || ''),
       SUPABASE_URL: decrypt(store.get('SUPABASE_URL') as string || ''),
-      SUPABASE_ANON_KEY: decrypt(store.get('SUPABASE_ANON_KEY') as string || '')
+      SUPABASE_ANON_KEY: decrypt(store.get('SUPABASE_ANON_KEY') as string || ''),
+      GROQ_API_KEY: decrypt(store.get('GROQ_API_KEY') as string || '')
     }
   })
 
@@ -86,6 +101,7 @@ export function getDecryptedConfig(): JarvisConfig {
   return {
     JARVIS_API_KEY: decrypt(store.get('JARVIS_API_KEY') as string || ''),
     SUPABASE_URL: decrypt(store.get('SUPABASE_URL') as string || ''),
-    SUPABASE_ANON_KEY: decrypt(store.get('SUPABASE_ANON_KEY') as string || '')
+    SUPABASE_ANON_KEY: decrypt(store.get('SUPABASE_ANON_KEY') as string || ''),
+    GROQ_API_KEY: decrypt(store.get('GROQ_API_KEY') as string || '')
   }
 }

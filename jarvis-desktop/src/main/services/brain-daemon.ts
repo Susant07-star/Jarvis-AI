@@ -35,6 +35,9 @@ export async function startBrainDaemon() {
     process.env.VITE_SUPABASE_URL = config.SUPABASE_URL
     process.env.SUPABASE_KEY = config.SUPABASE_ANON_KEY
     process.env.VITE_SUPABASE_KEY = config.SUPABASE_ANON_KEY
+    if (config.GROQ_API_KEY) {
+      process.env.GROQ_API_KEY = config.GROQ_API_KEY
+    }
     process.env.ORCHESTRATOR_MODE = 'agent'
 
     console.log('[Brain] ✅ Environment variables injected.')
@@ -44,9 +47,28 @@ export async function startBrainDaemon() {
     const { McpManager } = require('../../server/mcpManager')
     const { jarvisScheduler } = require('../../server/scheduler')
     const { startTelegramBot } = require('../../server/telegramBot')
-    const { runAutonomousLoop } = require('../../server/agenticLoop')
+    const express = require('express')
+    const http = require('http')
+    const { setupWebSocketServer } = require('../../server/websocket')
+    // Attempt to load apiRoutes, handling potential ES module default exports
+    const apiRoutesModule = require('../../server/routes/api')
+    const apiRoutes = apiRoutesModule.default || apiRoutesModule
 
     console.log('[Brain] ✅ Backend modules loaded.')
+
+    // 4. Start Internal Express API & WebSocket Server
+    const app = express()
+    app.use(express.json())
+
+    app.use('/api', apiRoutes)
+
+    const server = http.createServer(app)
+    setupWebSocketServer(server)
+
+    const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Brain] 🌐 Internal Server running on http://localhost:${PORT}`)
+    })
 
     // Stream logs to UI
     logEmitter.on('log', (logLine: string) => {
@@ -79,11 +101,7 @@ export async function startBrainDaemon() {
       console.log('[Brain] ℹ️  No Telegram token — bot skipped.')
     }
 
-    // Start Agentic Background Loop
-    setTimeout(() => {
-      runAutonomousLoop().catch((e: any) => console.error('[Brain] Loop error:', e))
-      console.log('[Brain] ✅ Agentic loop started.')
-    }, 5000)
+    console.log('[Brain] ✅ Agentic loop ready for user tasks.')
 
     isBrainRunning = true
     console.log('[Brain] ✅ J.A.R.V.I.S. Neural OS fully online!')

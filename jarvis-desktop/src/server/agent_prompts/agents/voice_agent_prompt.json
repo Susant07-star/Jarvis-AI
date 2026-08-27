@@ -1,11 +1,10 @@
 {
-  "_doc": "VOICE AGENT PROMPT — Minimal prompt for voice-only interactions (greetings, questions, general chat).",
-  "_note": "The 'personality' module is the shared Soul. 'voice_skills' adds Voice-specific capabilities (emotion tags, tool routing).",
-  "_howToUpdate": "Add/remove module IDs in the 'modules' array. The prompt_builder will assemble the final prompt from these modules.",
-  "_integration": "Used when J.A.R.V.I.S. receives a voice command that doesn't require browser interaction (e.g., 'hi', 'what time is it?', 'tell me a joke').",
-
+  "_doc": "VOICE AGENT PROMPT - Minimal prompt for J.A.R.V.I.S. voice interactions.",
+  "_note": "The 'personality' module is the shared J.A.R.V.I.S. soul. 'voice_skills' adds voice-specific tool routing. 'jarvis_desktop_hands' adds local computer control rules.",
+  "_howToUpdate": "Add/remove module IDs in the 'modules' array. The prompt_builder assembles the final prompt from these modules.",
+  "_integration": "Used when J.A.R.V.I.S. receives a voice command that does not require browser-specialist interaction.",
   "agent": "voice",
-  "description": "Voice-only agent for conversational interactions. Combines shared Soul + Voice Skills + I.R.I.S. physical hands.",
-  "modules": ["personality", "voice_skills", "iris_integration"],
-  "max_tokens_hint": 300
+  "description": "Voice agent for J.A.R.V.I.S. conversational, memory, messaging, scheduling, and desktop-control interactions.",
+  "modules": ["personality", "voice_skills", "jarvis_desktop_hands"],
+  "max_tokens_hint": 1200
 }

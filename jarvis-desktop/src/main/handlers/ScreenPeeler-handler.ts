@@ -368,11 +368,17 @@ export default function registerScreenPeeler() {
 
       try {
         let apiKey = ''
-        const secureConfigPath = path.join(app.getPath('userData'), 'iris_secure_vault.json')
+        const secureConfigPath = path.join(app.getPath('userData'), 'jarvis_secure_vault.json')
+        const legacySecureConfigPath = path.join(app.getPath('userData'), 'iris_secure_vault.json')
+        const readableSecureConfigPath = fsSync.existsSync(secureConfigPath)
+          ? secureConfigPath
+          : fsSync.existsSync(legacySecureConfigPath)
+            ? legacySecureConfigPath
+            : null
 
-        if (fsSync.existsSync(secureConfigPath)) {
+        if (readableSecureConfigPath) {
           try {
-            const data = JSON.parse(fsSync.readFileSync(secureConfigPath, 'utf8'))
+            const data = JSON.parse(fsSync.readFileSync(readableSecureConfigPath, 'utf8'))
             if (safeStorage.isEncryptionAvailable()) {
               apiKey = safeStorage.decryptString(Buffer.from(data.gemini, 'base64'))
             } else {

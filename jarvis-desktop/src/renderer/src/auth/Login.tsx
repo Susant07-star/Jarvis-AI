@@ -26,7 +26,7 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'iris://callback'
+          redirectTo: 'jarvis://callback'
         }
       })
       if (data?.url) {

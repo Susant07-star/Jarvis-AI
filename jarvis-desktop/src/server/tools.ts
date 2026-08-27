@@ -102,7 +102,7 @@ export const baseJarvisTools = [
     type: "function",
     function: {
       name: "execute_local_os_command",
-      description: "Execute a physical OS command on the user's local computer via I.R.I.S. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen. DO NOT use this to send Telegram or WhatsApp messages — use send_telegram_message instead.",
+      description: "Execute a physical OS command on the user's local computer via J.A.R.V.I.S. Desktop Hands. Use this for opening desktop apps, phantom typing in an IDE, controlling Android phones via ADB, or clicking coordinates on the physical screen. DO NOT use this to send Telegram or WhatsApp messages - use send_telegram_message instead.",
       parameters: {
         type: "object",
         properties: {
@@ -118,7 +118,7 @@ export const baseJarvisTools = [
     type: "function",
     function: {
       name: "send_telegram_message",
-      description: "Send an immediate Telegram message to Boss via the backend. Use this whenever Boss asks you to 'send a message on Telegram', 'message me on Telegram', or says 'send me a Telegram'. This works even when I.R.I.S. is offline.",
+      description: "Send an immediate Telegram message to Boss via the backend. Use this whenever Boss asks you to 'send a message on Telegram', 'message me on Telegram', or says 'send me a Telegram'. This works even if desktop control is offline.",
       parameters: {
         type: "object",
         properties: {

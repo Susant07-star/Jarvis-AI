@@ -18,12 +18,15 @@ import SmartDropZonesWidget from './Widgets/SmartZoneWidget'
 import TitleBar from './components/Titlebar'
 
 export type VisionMode = 'camera' | 'screen' | 'none'
+export type ConnectionStatus = 'offline' | 'connecting' | 'online' | 'error'
 
 const IndexRoot = () => {
   const [isOverlay, setIsOverlay] = useState(false)
 
   const [isSystemActive, setIsSystemActive] = useState(false)
   const [isMicMuted, setIsMicMuted] = useState(true)
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('offline')
+  const [liveError, setLiveError] = useState<string | null>(null)
 
   const [isVideoOn, setIsVideoOn] = useState(false)
   const [visionMode, setVisionMode] = useState<VisionMode>('none')
@@ -44,6 +47,7 @@ const IndexRoot = () => {
       if (isSystemActive && !jarvisService.isConnected) {
         setIsSystemActive(false)
         setIsMicMuted(true)
+        setConnectionStatus('offline')
         stopVision()
       }
     }, 1000)
@@ -53,17 +57,23 @@ const IndexRoot = () => {
   const toggleSystem = async () => {
     if (!isSystemActive) {
       try {
+        setConnectionStatus('connecting')
+        setLiveError(null)
         await jarvisService.connect()
         setIsSystemActive(true)
         setIsMicMuted(false)
+        setConnectionStatus('online')
         jarvisService.setMute(false)
       } catch (err: any) {
+        const message = err?.message || 'Unknown connection error'
+        setLiveError(message)
+        setConnectionStatus('error')
         if (err.message === 'NO_API_KEY') {
           alert(
             '⚠️ J.A.R.V.I.S. CRITICAL ERROR: Gemini API Key is missing. Please enter it in the Settings → API Keys screen.'
           )
         } else {
-          alert(`J.A.R.V.I.S. connection failed: ${err.message}`)
+          alert(`J.A.R.V.I.S. connection failed: ${message}`)
         }
         setIsSystemActive(false)
       }
@@ -71,12 +81,21 @@ const IndexRoot = () => {
       jarvisService.disconnect()
       setIsSystemActive(false)
       setIsMicMuted(true)
+      setConnectionStatus('offline')
+      setLiveError(null)
       jarvisService.setMute(true)
       stopVision()
     }
   }
 
   const toggleMic = () => {
+    if (connectionStatus === 'connecting') return
+
+    if (!isSystemActive) {
+      void toggleSystem()
+      return
+    }
+
     const s = !isMicMuted
     setIsMicMuted(s)
     jarvisService.setMute(s)
@@ -198,6 +217,8 @@ const IndexRoot = () => {
           startVision={startVision}
           stopVision={stopVision}
           activeStream={activeStreamRef.current}
+          connectionStatus={connectionStatus}
+          liveError={liveError}
         />
       </div>
       <SmartDropZonesWidget />

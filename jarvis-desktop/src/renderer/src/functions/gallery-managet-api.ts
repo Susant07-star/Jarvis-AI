@@ -26,7 +26,12 @@ export const analyzeDirectPhoto = async (filePath: string, socket: WebSocket | n
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(
             JSON.stringify({
-              realtimeInput: { mediaChunks: [{ mimeType: 'image/png', data: base64data }] }
+              realtimeInput: {
+                video: {
+                  mimeType: 'image/png',
+                  data: base64data
+                }
+              }
             })
           )
           resolve(

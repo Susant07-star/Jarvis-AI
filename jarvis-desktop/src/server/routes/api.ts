@@ -204,7 +204,7 @@ router.post("/update-guest-name", async (req, res) => {
   }
 });
 
-// ── Knowledge Base Routes (for Zoya UI to access KnowledgeManager) ──
+// Knowledge Base Routes for the J.A.R.V.I.S. UI.
 router.post("/knowledge/save", async (req, res) => {
   try {
     const { title, content, tags } = req.body;
@@ -234,7 +234,7 @@ router.post("/knowledge/search", async (req, res) => {
 /**
  * Handle text-based chat interactions.
  */
-router.post("/zoya-execute", async (req, res) => {
+router.post(["/jarvis-execute", "/zoya-execute"], async (req, res) => {
   let metrics: MetricsTracker | null = null;
   try {
     const { intent } = req.body;
@@ -244,7 +244,7 @@ router.post("/zoya-execute", async (req, res) => {
     
     if (!intent) return res.status(400).json({ success: false, error: "Missing intent" });
 
-    logger.info("API", `[Zoya Execute] Received intent: ${intent}`);
+    logger.info("API", `[J.A.R.V.I.S. Execute] Received intent: ${intent}`);
     
     const { determineOrchestrationMode } = await import("../orchestrator");
     const decision = await determineOrchestrationMode(intent);
@@ -270,7 +270,7 @@ router.post("/zoya-execute", async (req, res) => {
           elementsMap = markData.elements || [];
         }
       } catch(e) {
-        logger.warn("API", "Could not fetch marked screenshot for Zoya execute");
+        logger.warn("API", "Could not fetch marked screenshot for J.A.R.V.I.S. execute");
       }
     }
 
@@ -313,30 +313,30 @@ router.post("/zoya-execute", async (req, res) => {
        }
     }
 
-    // I.R.I.S. Router - Convert open_url/open_tab actions to I.R.I.S. commands
+    // Desktop router - convert open_url/open_tab actions to J.A.R.V.I.S. desktop commands
     const { transformStepsToIRIS } = await import("../irisIntentRouter");
     const { transformed: routedSteps, originalCount, transformedCount } = transformStepsToIRIS(plannedSteps);
     
     if (transformedCount > 0) {
-      logger.info("API", `[I.R.I.S. Router] Converted ${transformedCount}/${originalCount} steps to I.R.I.S. commands for voice agent`);
+      logger.info("API", `[J.A.R.V.I.S. Desktop Router] Converted ${transformedCount}/${originalCount} steps to desktop commands for voice agent`);
     }
 
     // Execute via Python Layer (browser actions that weren't converted)
     const browserActions = routedSteps.filter((s:any) => s.action !== 'open_app' && s.action !== 'serp_api_search');
     const irisActions = routedSteps.filter((s:any) => s.action === 'open_app');
     
-    // Execute I.R.I.S. actions
+    // Execute J.A.R.V.I.S. desktop actions
     if (irisActions.length > 0) {
-      logger.info("API", `[Zoya Execute] Executing ${irisActions.length} actions via I.R.I.S.`);
+      logger.info("API", `[J.A.R.V.I.S. Execute] Executing ${irisActions.length} desktop actions.`);
       for (const ia of irisActions) {
         try {
           const { executeOnIris } = await import("../irisExecutor");
           const irisResult = await executeOnIris(ia.action, ia.payload);
-          logger.info("API", `[I.R.I.S.] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'} - ${irisResult.message}`);
-          searchResult += `[I.R.I.S.] ${irisResult.message}\n`;
+          logger.info("API", `[J.A.R.V.I.S. Desktop] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'} - ${irisResult.message}`);
+          searchResult += `[J.A.R.V.I.S. Desktop] ${irisResult.message}\n`;
         } catch (e: any) {
-          logger.error('API', `I.R.I.S. action failed: ${e.message}`);
-          searchResult += `[I.R.I.S. Error] ${e.message}\n`;
+          logger.error('API', `J.A.R.V.I.S. desktop action failed: ${e.message}`);
+          searchResult += `[J.A.R.V.I.S. Desktop Error] ${e.message}\n`;
         }
       }
     }
@@ -376,7 +376,7 @@ router.post("/zoya-execute", async (req, res) => {
     res.json({ success: true, result: finalResult, metadata: { model, provider } });
 
   } catch (error: any) {
-    logger.error("API", "Zoya Execute Error", error);
+    logger.error("API", "J.A.R.V.I.S. Execute Error", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -639,13 +639,13 @@ router.post("/chat", async (req, res) => {
         return res.end();
       }
 
-      // C2. I.R.I.S. Router - Convert website navigation to I.R.I.S. actions
+      // C2. Desktop router - convert website navigation to J.A.R.V.I.S. desktop actions
       const { transformStepsToIRIS } = await import("../irisIntentRouter");
       const { transformed: routedSteps, originalCount, transformedCount } = transformStepsToIRIS(plannedSteps);
       
       if (transformedCount > 0) {
-        logger.info("API", `[I.R.I.S. Router] Converted ${transformedCount}/${originalCount} steps to I.R.I.S. commands`);
-        res.write(`data: ${JSON.stringify({ content: `\n[Routed ${transformedCount} actions to I.R.I.S. for system control]\n\n` })}\n\n`);
+        logger.info("API", `[J.A.R.V.I.S. Desktop Router] Converted ${transformedCount}/${originalCount} steps to desktop commands`);
+        res.write(`data: ${JSON.stringify({ content: `\n[Routed ${transformedCount} actions to J.A.R.V.I.S. desktop control]\n\n` })}\n\n`);
       }
       
       // D. Node Action Execution (SerpAPI, Scheduler)
@@ -673,18 +673,18 @@ router.post("/chat", async (req, res) => {
          if (metrics) metrics.addTokens('planner', 50); 
       }
 
-      // E1. Execute I.R.I.S. Actions (converted from open_url/open_tab)
+      // E1. Execute J.A.R.V.I.S. desktop actions (converted from open_url/open_tab)
       if (irisActions.length > 0) {
-        logger.info("API", `[I.R.I.S. Executor] Executing ${irisActions.length} actions via I.R.I.S.`);
+        logger.info("API", `[J.A.R.V.I.S. Desktop Executor] Executing ${irisActions.length} desktop actions.`);
         for (const ia of irisActions) {
           try {
             const { executeOnIris } = await import("../irisExecutor");
             const irisResult = await executeOnIris(ia.action, ia.payload);
-            res.write(`data: ${JSON.stringify({ content: `\n[I.R.I.S.] ${irisResult.message}` })}\n\n`);
-            logger.info("API", `[I.R.I.S.] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'}`);
+            res.write(`data: ${JSON.stringify({ content: `\n[J.A.R.V.I.S. Desktop] ${irisResult.message}` })}\n\n`);
+            logger.info("API", `[J.A.R.V.I.S. Desktop] Action ${ia.action} result: ${irisResult.success ? 'SUCCESS' : 'FAILED'}`);
           } catch (e: any) {
-            logger.error('API', `I.R.I.S. action failed: ${e.message}`);
-            res.write(`data: ${JSON.stringify({ content: `\n[I.R.I.S. Error] ${e.message}` })}\n\n`);
+            logger.error('API', `J.A.R.V.I.S. desktop action failed: ${e.message}`);
+            res.write(`data: ${JSON.stringify({ content: `\n[J.A.R.V.I.S. Desktop Error] ${e.message}` })}\n\n`);
           }
         }
       }
@@ -852,7 +852,7 @@ router.get("/browser-status", async (_req, res) => {
 
 /**
  * POST /api/memory/sync
- * Allows frontend services (like Zoya Voice) to sync messages back to the server memory.
+ * Allows frontend services like J.A.R.V.I.S. Live Voice to sync messages back to server memory.
  */
 router.post("/memory/sync", (req, res) => {
   try {
@@ -901,11 +901,11 @@ router.post("/feedback", async (req, res) => {
 /**
  * GET /api/session-context
  * Returns a compact, token-efficient summary of recent conversation history.
- * Consumed by Zoya voice service at session start to inject shared memory.
+ * Consumed by J.A.R.V.I.S. voice service at session start to inject shared memory.
  */
 /**
  * POST /api/intelligent-search
- * Dedicated high-precision research endpoint for Zoya.
+ * Dedicated high-precision research endpoint for J.A.R.V.I.S.
  * Uses Gemini 2.5 with Google Search grounding.
  */
 router.post("/intelligent-search", async (req, res) => {
@@ -1080,16 +1080,16 @@ router.patch("/tasks/:id", async (req, res) => {
 
 
 /**
- * POST /api/iris/execute
- * Generic execution bridge used by the Live Voice UI (Zoya). The frontend
- * posts a single I.R.I.S. action here, and we forward it to the local daemon
+ * POST /api/jarvis/execute
+ * Generic execution bridge used by the J.A.R.V.I.S. Live Voice UI. The frontend
+ * posts a single desktop action here, and we forward it to the local bridge
  * via irisExecutor. Returns the daemon's structured {success, message, data}.
  *
  * NOTE: This is distinct from executeOnIrisWithVerification() used in the text
  * chat planner — the Live UI wants a plain, fast passthrough so it can stream
  * the result back to Gemini without an extra verification round-trip.
  */
-router.post("/iris/execute", async (req, res) => {
+router.post(["/jarvis/execute", "/iris/execute"], async (req, res) => {
   const { action, ...payload } = req.body || {};
   if (!action) {
     return res.status(400).json({ success: false, message: "Missing 'action' in body." });
@@ -1107,21 +1107,21 @@ router.post("/iris/execute", async (req, res) => {
       data: (result.data as any)?.data ?? result.data,
     });
   } catch (err: any) {
-    logger.error("API", `POST /api/iris/execute error: ${err.message}`, err);
+    logger.error("API", `POST /api/jarvis/execute error: ${err.message}`, err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
 /**
- * GET /api/iris/status
- * Real-time health check — J.A.R.V.I.S. pings I.R.I.S. to see if the Hands are alive.
- * The frontend UI can call this to show an "I.R.I.S. Connected 🟢" indicator.
+ * GET /api/jarvis/status
+ * Real-time health check - J.A.R.V.I.S. pings desktop control to see if the hands are alive.
+ * The frontend UI can call this to show a connected indicator.
  */
-router.get("/iris/status", async (_req, res) => {
+router.get(["/jarvis/status", "/iris/status"], async (_req, res) => {
   const { executeOnIris } = await import("../irisExecutor");
   const result = await executeOnIris("ping", {});
   if (result.success) {
-    res.json({ connected: true, message: "I.R.I.S. is online and ready." });
+    res.json({ connected: true, message: "J.A.R.V.I.S. desktop control is online and ready." });
   } else {
     res.json({ connected: false, message: result.message });
   }
@@ -1130,7 +1130,7 @@ router.get("/iris/status", async (_req, res) => {
 /**
  * GET /api/system/metrics
  * Fetches current system metrics (CPU, RAM, battery, processes)
- * Used by I.R.I.S. dashboard to display live telemetry
+ * Used by the J.A.R.V.I.S. dashboard to display live telemetry
  */
 router.get("/system/metrics", async (_req, res) => {
   try {
@@ -1459,4 +1459,3 @@ router.get("/mcp/tools", async (_req, res) => {
 });
 
 export default router;
-

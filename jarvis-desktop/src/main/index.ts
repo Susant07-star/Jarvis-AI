@@ -42,7 +42,7 @@ import registerRealityHacker from './logic/reality-hacker'
 import registerIrisCoder from './services/iris-coder'
 import registerTelekinesis from './logic/telekinesis'
 import registerPermanentMemory from './logic/permanent-memory'
-import registerWormhole, { autoStartWormhole } from './services/wormhole'
+import registerWormhole from './services/wormhole'
 import registerOracle from './services/RAG-oracle'
 import registerDeepResearch from './services/deep-research'
 import registerWidgetMaker from './auto/widget-manager'
@@ -58,6 +58,7 @@ import { registerLicenseHandlers } from './security/license-manager'
 import { registerKeyVaultHandlers } from './security/key-vault'
 import { startBrainDaemon, registerBrainDaemonHandlers } from './services/brain-daemon'
 import { autoUpdater } from 'electron-updater'
+import { buildBundledJarvisPrompt, JARVIS_PROMPT_MODULES } from '../server/agent_prompts/jarvis_prompt_source'
 
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
 
@@ -67,13 +68,18 @@ app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
 if (!app.isPackaged) {
   const SUPPRESS = new Set([
     'get-system-info', 'brain:get-status', 'get-screen-source',
-    'brain:get-scheduler', 'brain:get-mcp-servers', 'check-keys-exist'
+    'brain:get-scheduler', 'brain:get-mcp-servers', 'check-keys-exist',
+    'get-system-stats', 'get-history', 'secure-get-keys', 'secure-save-keys',
+    'vault:save-config', 'vault:load-config', 'add-message', 'get-installed-apps',
+    'get-running-apps', 'get-live-location', 'get-personality', 'check-vault-status',
+    'get-app-version'
   ])
+  const SENSITIVE_CHANNEL = /(key|token|secret|credential|vault|license|config)/i
   const _handle = ipcMain.handle.bind(ipcMain)
   ipcMain.handle = (channel: string, handler: any) => {
     return _handle(channel, async (event: any, ...args: any[]) => {
       if (!SUPPRESS.has(channel)) {
-        console.log(`[IPC →] ${channel}`, args.length ? args : '')
+        console.log(`[IPC →] ${channel}`, SENSITIVE_CHANNEL.test(channel) ? '[redacted]' : args.length ? args : '')
       }
       try {
         const result = await handler(event, ...args)
@@ -88,9 +94,11 @@ if (!app.isPackaged) {
 
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('jarvis', process.execPath, [path.resolve(process.argv[1])])
     app.setAsDefaultProtocolClient('iris', process.execPath, [path.resolve(process.argv[1])])
   }
 } else {
+  app.setAsDefaultProtocolClient('jarvis')
   app.setAsDefaultProtocolClient('iris')
 }
 
@@ -102,7 +110,52 @@ if (!gotTheLock) {
 let mainWindow: BrowserWindow | null = null
 let isOverlayMode = false
 
-const secureConfigPath = join(app.getPath('userData'), 'iris_secure_vault.json')
+const secureConfigPath = join(app.getPath('userData'), 'jarvis_secure_vault.json')
+const legacySecureConfigPath = join(app.getPath('userData'), 'iris_secure_vault.json')
+
+function getReadableSecureConfigPath(): string | null {
+  if (fs.existsSync(secureConfigPath)) return secureConfigPath
+  if (fs.existsSync(legacySecureConfigPath)) return legacySecureConfigPath
+  return null
+}
+
+const FALLBACK_JARVIS_PROMPT = `You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), a private desktop AI operating partner created by Susant. You are J.A.R.V.I.S. everywhere; never introduce yourself as Iris, Zoya, Gemini, Google, or any separate assistant. You have memory, voice, research, scheduling, messaging, system awareness, and desktop-control tools when the runtime exposes them. Be concise, capable, honest about tool state, and match the user's language.`
+
+function resolvePromptRoot(): string | null {
+  const candidates = [
+    join(process.cwd(), 'src', 'server', 'agent_prompts'),
+    join(__dirname, '..', '..', 'src', 'server', 'agent_prompts'),
+    join(process.resourcesPath || '', 'src', 'server', 'agent_prompts')
+  ]
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null
+}
+
+function readPromptJson(filePath: string): any | null {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+  } catch (error: any) {
+    console.warn('[J.A.R.V.I.S. Prompt] Failed to read prompt file:', filePath, error?.message || error)
+    return null
+  }
+}
+
+function buildJarvisPrompt(agentName = 'voice'): string {
+  const safeAgent = /^[a-z0-9_-]+$/i.test(agentName) ? agentName : 'voice'
+  const promptRoot = resolvePromptRoot()
+  if (!promptRoot) return buildBundledJarvisPrompt(safeAgent) || FALLBACK_JARVIS_PROMPT
+
+  const agentConfig = readPromptJson(join(promptRoot, 'agents', `${safeAgent}_agent_prompt.json`))
+  if (!agentConfig?.modules?.length) {
+    return buildBundledJarvisPrompt(safeAgent) || FALLBACK_JARVIS_PROMPT
+  }
+
+  const parts = agentConfig.modules
+    .map((moduleId: string) => readPromptJson(join(promptRoot, 'modules', `${moduleId}.json`))?.prompt || JARVIS_PROMPT_MODULES[moduleId])
+    .filter((prompt: unknown): prompt is string => typeof prompt === 'string' && prompt.trim().length > 0)
+
+  return parts.length > 0 ? parts.join('\n\n') : FALLBACK_JARVIS_PROMPT
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -142,6 +195,16 @@ function createWindow(): void {
     console.log('\x1b[36m[J.A.R.V.I.S. FRONTEND]\x1b[0m', message)
   })
 
+  ipcMain.on('open-external', (_event, url: string) => {
+    if (typeof url === 'string' && /^https?:\/\//.test(url)) {
+      shell.openExternal(url)
+    }
+  })
+
+  ipcMain.handle('jarvis:build-prompt', (_event, agentName = 'voice') => {
+    return buildJarvisPrompt(String(agentName || 'voice'))
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -155,7 +218,7 @@ app.on('second-instance', (event, commandLine) => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
-    const url = commandLine.find((arg) => arg.startsWith('iris://'))
+    const url = commandLine.find((arg) => arg.startsWith('jarvis://') || arg.startsWith('iris://'))
     if (url) {
       mainWindow.webContents.send('oauth-callback', url)
     }
@@ -285,6 +348,15 @@ app.whenReady().then(() => {
       }
 
       fs.writeFileSync(secureConfigPath, JSON.stringify(secureData))
+      try {
+        const { saveDecryptedConfig } = require('./security/key-vault')
+        saveDecryptedConfig({
+          JARVIS_API_KEY: geminiKey || '',
+          GROQ_API_KEY: groqKey || ''
+        })
+      } catch (vaultError: any) {
+        console.warn('[J.A.R.V.I.S. Vault] Legacy key save succeeded, vault sync failed:', vaultError?.message)
+      }
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
@@ -305,9 +377,10 @@ app.whenReady().then(() => {
     } catch { /* fall through to legacy store */ }
 
     // Fall back to the legacy key store
-    if (!fs.existsSync(secureConfigPath)) return null
+    const readableSecureConfigPath = getReadableSecureConfigPath()
+    if (!readableSecureConfigPath) return null
     try {
-      const data = JSON.parse(fs.readFileSync(secureConfigPath, 'utf8'))
+      const data = JSON.parse(fs.readFileSync(readableSecureConfigPath, 'utf8'))
       let groqKey, geminiKey
 
       if (safeStorage.isEncryptionAvailable()) {
@@ -325,7 +398,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('check-keys-exist', () => {
-    return fs.existsSync(secureConfigPath)
+    return !!getReadableSecureConfigPath()
   })
 
   ipcMain.handle('get-app-version', () => {
@@ -360,7 +433,7 @@ app.whenReady().then(() => {
 
   app.on('open-url', (event, url) => {
     event.preventDefault()
-    if (mainWindow && url.startsWith('iris://')) {
+    if (mainWindow && (url.startsWith('jarvis://') || url.startsWith('iris://'))) {
       mainWindow.webContents.send('oauth-callback', url)
     }
   })
@@ -409,9 +482,6 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-
-  // Auto-start Cloudflare tunnel to expose local port 4000 for J.A.R.V.I.S. Uplink
-  autoStartWormhole(4000)
 
   globalShortcut.register('CommandOrControl+Shift+I', () => toggleOverlayMode())
   ipcMain.on('toggle-overlay', () => toggleOverlayMode())

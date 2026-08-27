@@ -22,7 +22,7 @@ import ViewSkeleton from '@renderer/components/ViewSkelrton'
 
 import DashboardView from '../views/Dashboard'
 import PhoneView from '../views/Phone'
-import { VisionMode } from '@renderer/IndexRoot'
+import { ConnectionStatus, VisionMode } from '@renderer/IndexRoot'
 
 const AppsView = lazy(() => import('../views/APP'))
 const WorkFlowEditorView = lazy(() => import('../views/WorkFlowEditor'))
@@ -43,6 +43,8 @@ interface JarvisProps {
   startVision: (mode: 'camera' | 'screen') => void
   stopVision: () => void
   activeStream: MediaStream | null
+  connectionStatus: ConnectionStatus
+  liveError: string | null
 }
 
 const glassPanel = 'bg-zinc-950/40 backdrop-blur-xl border border-white/5 rounded-2xl shadow-xl'
@@ -57,8 +59,15 @@ const JARVIS = (props: JarvisProps) => {
   useEffect(() => {
     const timer = setInterval(() => {
       setTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    getSystemStatus().then(setStats)
+    const timer = setInterval(() => {
       getSystemStatus().then(setStats)
-    }, 500)
+    }, 2000)
     return () => clearInterval(timer)
   }, [])
 
@@ -68,7 +77,7 @@ const JARVIS = (props: JarvisProps) => {
       if (Array.isArray(history)) setChatHistory(history.slice(-15))
     }
     fetchHistory()
-    const interval = setInterval(fetchHistory, 500)
+    const interval = setInterval(fetchHistory, 1500)
     return () => clearInterval(interval)
   }, [])
 

@@ -21,8 +21,12 @@ import {
 } from 'react-icons/ri'
 
 const PhoneView = ({ glassPanel }: { glassPanel?: string }) => {
-  const [ip, setIp] = useState(() => localStorage.getItem('iris_adb_ip') || '')
-  const [port, setPort] = useState(() => localStorage.getItem('iris_adb_port') || '5555')
+  const [ip, setIp] = useState(
+    () => localStorage.getItem('jarvis_adb_ip') || localStorage.getItem('iris_adb_ip') || ''
+  )
+  const [port, setPort] = useState(
+    () => localStorage.getItem('jarvis_adb_port') || localStorage.getItem('iris_adb_port') || '5555'
+  )
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected'>('idle')
   const [uiMode, setUiMode] = useState<'history' | 'manual'>('history')
   const [errorMsg, setErrorMsg] = useState('')
@@ -110,6 +114,8 @@ const PhoneView = ({ glassPanel }: { glassPanel?: string }) => {
   }
 
   const handleManualConnect = () => {
+    localStorage.setItem('jarvis_adb_ip', ip)
+    localStorage.setItem('jarvis_adb_port', port)
     localStorage.setItem('iris_adb_ip', ip)
     localStorage.setItem('iris_adb_port', port)
     connectToDevice(ip, port)

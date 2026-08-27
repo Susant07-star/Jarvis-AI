@@ -39,7 +39,7 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     return "schedule";
   }
 
-   // Local Guard: Website/App opening detection (FORCE CHAT MODE for I.R.I.S. routing)
+   // Local Guard: Website/App opening detection (force chat mode for desktop routing)
    // This MUST be checked BEFORE creatorKeywords to catch all variations
    const websitePatterns = [
      /youtube\.com/i, /google\.com/i, /facebook\.com/i, /twitter\.com/i,
@@ -49,7 +49,7 @@ export async function classifyIntent(text: string): Promise<IntentType> {
      /go\s+to\s+(youtube|google|facebook|twitter|instagram|reddit|linkedin|github|amazon|netflix)/i
    ];
    if (websitePatterns.some(pattern => pattern.test(text))) {
-     logger.info("Classifier", `[LocalGuard] Detected website/app navigation via I.R.I.S.: "${text}"`);
+     logger.info("Classifier", `[LocalGuard] Detected website/app navigation via J.A.R.V.I.S. desktop routing: "${text}"`);
      return "chat";
    }
 

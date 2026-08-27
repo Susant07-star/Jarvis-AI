@@ -5,51 +5,80 @@ import bcrypt from 'bcryptjs'
 const StoreClass = (Store as any).default || Store
 const store = new StoreClass()
 
+const JARVIS_KEYS = {
+  face: 'jarvis_vault_face',
+  faces: 'jarvis_vault_faces',
+  hash: 'jarvis_vault_hash',
+  personality: 'jarvis_personality'
+}
+
+const LEGACY_KEYS = {
+  face: 'iris_vault_face',
+  faces: 'iris_vault_faces',
+  hash: 'iris_vault_hash',
+  personality: 'iris_personality'
+}
+
 export default function registerSecurityVault() {
-  const legacyFace = store.get('iris_vault_face') as number[] | undefined
-  if (legacyFace && !store.get('iris_vault_faces')) {
-    store.set('iris_vault_faces', [legacyFace])
-    store.delete('iris_vault_face')
+  const singleFace = (store.get(JARVIS_KEYS.face) || store.get(LEGACY_KEYS.face)) as number[] | undefined
+  const savedFaces = (store.get(JARVIS_KEYS.faces) || store.get(LEGACY_KEYS.faces)) as number[][] | undefined
+
+  if (savedFaces && !store.get(JARVIS_KEYS.faces)) {
+    store.set(JARVIS_KEYS.faces, savedFaces)
+  }
+
+  if (singleFace && !store.get(JARVIS_KEYS.faces)) {
+    store.set(JARVIS_KEYS.faces, [singleFace])
+    store.delete(JARVIS_KEYS.face)
+    store.delete(LEGACY_KEYS.face)
+  }
+
+  if (store.get(LEGACY_KEYS.hash) && !store.get(JARVIS_KEYS.hash)) {
+    store.set(JARVIS_KEYS.hash, store.get(LEGACY_KEYS.hash))
+  }
+
+  if (store.get(LEGACY_KEYS.personality) && !store.get(JARVIS_KEYS.personality)) {
+    store.set(JARVIS_KEYS.personality, store.get(LEGACY_KEYS.personality))
   }
 
   ipcMain.handle('check-vault-status', () => {
-    const hasPin = !!store.get('iris_vault_hash')
-    const faces = store.get('iris_vault_faces') as number[][] | undefined
+    const hasPin = !!store.get(JARVIS_KEYS.hash)
+    const faces = store.get(JARVIS_KEYS.faces) as number[][] | undefined
     const hasFace = faces && faces.length > 0
     return { hasPin, hasFace, faceCount: faces ? faces.length : 0 }
   })
 
   ipcMain.handle('get-personality', () => {
-    return store.get('iris_personality') as string | undefined
+    return store.get(JARVIS_KEYS.personality) as string | undefined
   })
 
   ipcMain.handle('set-personality', (_, text: string) => {
-    store.set('iris_personality', text)
+    store.set(JARVIS_KEYS.personality, text)
     return true
   })
 
   ipcMain.handle('setup-vault-pin', async (_, pin: string) => {
     const salt = await bcrypt.genSalt(10)
     const hash = await bcrypt.hash(pin, salt)
-    store.set('iris_vault_hash', hash)
+    store.set(JARVIS_KEYS.hash, hash)
     return true
   })
 
   ipcMain.handle('verify-vault-pin', async (_, pin: string) => {
-    const hash = store.get('iris_vault_hash') as string
+    const hash = store.get(JARVIS_KEYS.hash) as string
     if (!hash) return false
     return await bcrypt.compare(pin, hash)
   })
 
   ipcMain.handle('setup-vault-face', (_, descriptor: number[]) => {
-    const faces = (store.get('iris_vault_faces') as number[][]) || []
+    const faces = (store.get(JARVIS_KEYS.faces) as number[][]) || []
     faces.push(descriptor)
-    store.set('iris_vault_faces', faces)
+    store.set(JARVIS_KEYS.faces, faces)
     return true
   })
 
   ipcMain.handle('verify-vault-face', (_, descriptor: number[]) => {
-    const faces = store.get('iris_vault_faces') as number[][] | undefined
+    const faces = store.get(JARVIS_KEYS.faces) as number[][] | undefined
     if (!faces || faces.length === 0) return false
 
     for (const savedFace of faces) {

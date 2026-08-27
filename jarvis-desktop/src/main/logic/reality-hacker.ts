@@ -76,7 +76,7 @@ export default function registerRealityHacker(ipcMain: IpcMain) {
               white-space: nowrap;
             }
 
-            #iris-override-banner {
+            #jarvis-override-banner {
               position: fixed;
               top: 0; left: 0; width: 100vw;
               background: #10b981;
@@ -93,7 +93,7 @@ export default function registerRealityHacker(ipcMain: IpcMain) {
           document.head.appendChild(style);
 
           const banner = document.createElement('div');
-          banner.id = 'iris-override-banner';
+          banner.id = 'jarvis-override-banner';
           banner.innerText = '⚠️ NETWORK COMPROMISED // J.A.R.V.I.S. HAS ASSIMILATED THIS DOMAIN ⚠️';
           document.body.appendChild(banner);
         `
@@ -108,12 +108,12 @@ export default function registerRealityHacker(ipcMain: IpcMain) {
             selectors.forEach(selector => {
               const logos = document.querySelectorAll(selector);
               logos.forEach(logo => {
-                if (!logo.classList.contains('iris-hacked')) {
-                  logo.classList.add('iris-hacked');
+                if (!logo.classList.contains('jarvis-hacked')) {
+                  logo.classList.add('jarvis-hacked');
                   logo.style.visibility = 'hidden'; 
                   
                   const newLogo = document.createElement('div');
-                  newLogo.innerHTML = \`<strong style="color:#10b981; font-size:24px; visibility: visible; letter-spacing: 2px; text-shadow: 0 0 10px #10b981;">[ IRIS ]</strong>\`;
+                  newLogo.innerHTML = \`<strong style="color:#10b981; font-size:24px; visibility: visible; letter-spacing: 2px; text-shadow: 0 0 10px #10b981;">[ J.A.R.V.I.S. ]</strong>\`;
                   newLogo.style.position = 'absolute';
                   
                   if (logo.parentElement) {

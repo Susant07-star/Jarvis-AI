@@ -9,6 +9,11 @@ import LicenseGate from './auth/LicenseGate'
 import SetupWizard from './auth/SetupWizard'
 
 window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason?.type === 'cancelation' || event.reason?.msg === 'operation is manually canceled') {
+    event.preventDefault()
+    return
+  }
+
   console.warn('Suppressing unhandled promise rejection to prevent app crash:', event.reason)
   event.preventDefault()
 })

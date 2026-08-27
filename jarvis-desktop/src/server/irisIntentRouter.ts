@@ -1,8 +1,7 @@
 import { logger } from "./logger";
 
-// ── I.R.I.S. Intent Router ───────────────────────────────────────────────────────
-// Detects website/app requests and routes them through I.R.I.S. instead of browser
-// This ensures all physical computing actions happen via the I.R.I.S. daemon
+// Desktop Intent Router
+// Detects website/app requests and routes them through J.A.R.V.I.S. desktop control.
 
 /**
  * Website URL mapping to system commands
@@ -31,7 +30,7 @@ const WEBSITE_COMMANDS: Record<string, { app: string; url?: string }> = {
 };
 
 /**
- * Converts a navigation URL to an I.R.I.S. open_app command
+ * Converts a navigation URL to a J.A.R.V.I.S. desktop open_app command.
  * Returns null if not a website request
  */
 export function convertNavigationToIris(url: string): { action: string; payload: any } | null {
@@ -40,7 +39,7 @@ export function convertNavigationToIris(url: string): { action: string; payload:
   // Check for known websites
   for (const [site, config] of Object.entries(WEBSITE_COMMANDS)) {
     if (lowerUrl.includes(site) || lowerUrl.includes(site.replace('www.', ''))) {
-      logger.info("IrisRouter", `Converting ${url} to I.R.I.S. ${config.app} command`);
+      logger.info("IrisRouter", `Converting ${url} to J.A.R.V.I.S. desktop ${config.app} command`);
       return {
         action: "open_app",
         payload: { appName: config.app }
@@ -69,7 +68,7 @@ export function convertNavigationToIris(url: string): { action: string; payload:
 }
 
 /**
- * Intercepts and transforms browser planner steps to I.R.I.S. commands
+ * Intercepts and transforms browser planner steps to J.A.R.V.I.S. desktop commands.
  * Returns transformed steps or original if no transformation needed
  */
 export function transformStepsToIRIS(steps: any[]): { transformed: any[]; originalCount: number; transformedCount: number } {
@@ -78,25 +77,25 @@ export function transformStepsToIRIS(steps: any[]): { transformed: any[]; origin
   let transformedCount = 0;
   
   for (const step of steps) {
-    // Transform open_url to I.R.I.S. open_app
+    // Transform open_url to desktop open_app.
     if (step.action === 'open_url' && step.url) {
       const iris = convertNavigationToIris(step.url);
       if (iris) {
         transformed.push(iris);
         transformedCount++;
-        logger.info("IrisRouter", `Transformed open_url(${step.url}) → I.R.I.S. open_app`);
+        logger.info("IrisRouter", `Transformed open_url(${step.url}) -> J.A.R.V.I.S. desktop open_app`);
         continue;
       }
       // If no mapping found, keep the original step
       transformed.push(step);
       
-    // Transform open_tab to I.R.I.S. open_app
+    // Transform open_tab to desktop open_app.
     } else if (step.action === 'open_tab' && step.url) {
       const iris = convertNavigationToIris(step.url);
       if (iris) {
         transformed.push(iris);
         transformedCount++;
-        logger.info("IrisRouter", `Transformed open_tab(${step.url}) → I.R.I.S. open_app`);
+        logger.info("IrisRouter", `Transformed open_tab(${step.url}) -> J.A.R.V.I.S. desktop open_app`);
         continue;
       }
       // If no mapping found, keep the original step
@@ -108,6 +107,6 @@ export function transformStepsToIRIS(steps: any[]): { transformed: any[]; origin
     }
   }
   
-  logger.info("IrisRouter", `Step transformation complete: ${transformedCount}/${originalCount} converted to I.R.I.S.`);
+  logger.info("IrisRouter", `Step transformation complete: ${transformedCount}/${originalCount} converted to J.A.R.V.I.S. desktop control.`);
   return { transformed, originalCount, transformedCount };
 }

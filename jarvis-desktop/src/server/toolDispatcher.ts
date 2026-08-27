@@ -75,10 +75,10 @@ export async function executeTool(toolCall: any, context?: any): Promise<ToolExe
       if (visionFrames && visionFrames.length > 0) {
         result.visionFramesForNextCall = visionFrames;
         result.success = true;
-        result.message = `I.R.I.S Photographic Memory buffer successfully attached to your visual cortex. Describe what you see, or verify if the action was successful.`;
+        result.message = `J.A.R.V.I.S. Photographic Memory buffer attached to your visual cortex. Describe what you see, or verify if the action was successful.`;
       } else {
         result.success = false;
-        result.message = "Failed to fetch frames or I.R.I.S is offline. Cannot see the screen.";
+        result.message = "Failed to fetch frames or desktop vision is offline. Cannot see the screen.";
       }
       result.executed = true;
 

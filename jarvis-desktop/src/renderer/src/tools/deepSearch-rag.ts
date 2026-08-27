@@ -2,8 +2,10 @@
   try {
     window.dispatchEvent(new CustomEvent('deep-research-start', { detail: { query } }))
 
-    const tavilyKey = localStorage.getItem('iris_tailvy_api_key') || ''
-    const groqKey = localStorage.getItem('iris_groq_api_key') || ''
+    const tavilyKey =
+      localStorage.getItem('jarvis_tailvy_api_key') || localStorage.getItem('iris_tailvy_api_key') || ''
+    const groqKey =
+      localStorage.getItem('jarvis_groq_api_key') || localStorage.getItem('iris_groq_api_key') || ''
 
     const result = await window.electron.ipcRenderer.invoke('execute-deep-research', {
       query,
@@ -27,4 +29,3 @@
     return `❌ System failure: ${String(error)}`
   }
 }
-

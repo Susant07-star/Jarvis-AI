@@ -32,6 +32,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { getTimeContextBlock } from "../timezoneStore";
+import { JARVIS_AGENT_MODULES, JARVIS_PROMPT_MODULES } from "./jarvis_prompt_source";
 
 // ─── PATHS ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ function _loadModule(moduleId: string): string {
 
   if (!fs.existsSync(filePath)) {
     console.warn(`[PromptBuilder] Module not found: ${moduleId}`);
-    return "";
+    return JARVIS_PROMPT_MODULES[moduleId] || "";
   }
 
   try {
@@ -103,6 +104,14 @@ function _loadAgentConfig(agentName: string): AgentConfig | null {
 
   if (!fs.existsSync(filePath)) {
     console.warn(`[PromptBuilder] Agent config not found: ${agentName}`);
+    const modules = JARVIS_AGENT_MODULES[agentName];
+    if (modules) {
+      return {
+        agent: agentName,
+        description: `Bundled J.A.R.V.I.S. ${agentName} prompt`,
+        modules
+      };
+    }
     return null;
   }
 

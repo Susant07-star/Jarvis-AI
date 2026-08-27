@@ -19,9 +19,9 @@ import { FaMemory } from 'react-icons/fa6'
 import { GiTinker } from 'react-icons/gi'
 import { HiComputerDesktop } from 'react-icons/hi2'
 import * as faceapi from 'face-api.js'
-import { VisionMode } from '@renderer/IndexRoot'
+import { ConnectionStatus, VisionMode } from '@renderer/IndexRoot'
 
-interface IrisProps {
+interface JarvisProps {
   isSystemActive: boolean
   toggleSystem: () => void
   isMicMuted: boolean
@@ -31,10 +31,12 @@ interface IrisProps {
   startVision: (mode: 'camera' | 'screen') => void
   stopVision: () => void
   activeStream: MediaStream | null
+  connectionStatus: ConnectionStatus
+  liveError: string | null
 }
 
 interface DashboardViewProps {
-  props: IrisProps
+  props: JarvisProps
   stats: any
   chatHistory: any[]
   onVisionClick: () => void
@@ -56,7 +58,9 @@ export default function DashboardView({
     activeStream,
     toggleMic,
     toggleSystem,
-    isMicMuted
+    isMicMuted,
+    connectionStatus,
+    liveError
   } = props
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -228,8 +232,8 @@ export default function DashboardView({
       icon: <RiCpuLine />,
       bgIcon: <RiCpuLine size={140} />,
       label: 'CPU LOAD',
-      val: isSystemActive && stats ? `${stats.cpu}%` : '--',
-      raw: isSystemActive && stats ? stats.cpu : 0,
+      val: stats ? `${stats.cpu}%` : '--',
+      raw: stats ? stats.cpu : 0,
       colorClass: 'text-emerald-400',
       bgClass: 'bg-emerald-500',
       glowClass: 'via-emerald-500/50',
@@ -242,8 +246,8 @@ export default function DashboardView({
       icon: <FaMemory />,
       bgIcon: <FaMemory size={140} />,
       label: 'RAM USAGE',
-      val: isSystemActive && stats ? `${stats.memory.usedPercentage}%` : '--',
-      raw: isSystemActive && stats ? stats.memory.usedPercentage : 0,
+      val: stats ? `${stats.memory.usedPercentage}%` : '--',
+      raw: stats ? stats.memory.usedPercentage : 0,
       colorClass: 'text-cyan-400',
       bgClass: 'bg-cyan-500',
       glowClass: 'via-cyan-500/50',
@@ -255,8 +259,8 @@ export default function DashboardView({
       icon: <GiTinker />,
       bgIcon: <GiTinker size={140} />,
       label: 'TEMP',
-      val: isSystemActive && stats ? `${stats.temperature}°C` : '--',
-      raw: isSystemActive && stats ? Math.min((stats.temperature / 90) * 100, 100) : 0,
+      val: stats ? `${stats.temperature}°C` : '--',
+      raw: stats ? Math.min((stats.temperature / 90) * 100, 100) : 0,
       colorClass: 'text-orange-400',
       bgClass: 'bg-orange-500',
       glowClass: 'via-orange-500/50',
@@ -269,7 +273,7 @@ export default function DashboardView({
       icon: <HiComputerDesktop />,
       bgIcon: <HiComputerDesktop size={140} />,
       label: 'OS',
-      val: isSystemActive && stats ? `${stats.os.type}` : '--',
+      val: stats ? `${stats.os.type}` : '--',
       raw: 0,
       colorClass: 'text-purple-400',
       bgClass: 'bg-purple-500',
@@ -458,7 +462,7 @@ export default function DashboardView({
                     <div className="w-full h-1 bg-black/40 rounded-full overflow-hidden backdrop-blur-sm border border-white/5">
                       <div
                         className={`h-full ${m.bgClass} ${m.shadowClass} transition-all duration-700 ease-out`}
-                        style={{ width: isSystemActive ? `${m.raw}%` : '0%' }}
+                        style={{ width: `${m.raw}%` }}
                       />
                     </div>
                   )}
@@ -498,19 +502,56 @@ export default function DashboardView({
             >
               {isVideoOn ? <RiSwapBoxLine size={20} /> : <RiCameraLine size={20} />}
             </button>
-            <button onClick={toggleSystem} className="relative group mx-2">
+            <button
+              onClick={toggleSystem}
+              disabled={connectionStatus === 'connecting'}
+              className="relative group mx-2 disabled:cursor-wait"
+            >
               <div
-                className={`cursor-pointer p-4 rounded-full border-2 transition-all duration-500 ${isSystemActive ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_20px_#10b981]' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}
+                className={`cursor-pointer p-4 rounded-full border-2 transition-all duration-500 ${
+                  connectionStatus === 'connecting'
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 animate-pulse'
+                    : isSystemActive
+                      ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_20px_#10b981]'
+                      : 'bg-red-500/10 border-red-500/50 text-red-500'
+                }`}
               >
                 <RiPhoneFill size={24} className={isSystemActive ? 'animate-pulse' : ''} />
               </div>
             </button>
             <button
               onClick={toggleMic}
-              className={`cursor-pointer p-3 rounded-full transition-all ${isMicMuted ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}
+              disabled={connectionStatus === 'connecting'}
+              className={`cursor-pointer p-3 rounded-full transition-all disabled:cursor-wait disabled:opacity-50 ${isMicMuted ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}
             >
               {isMicMuted ? <RiMicOffLine size={20} /> : <RiMicLine size={20} />}
             </button>
+          </div>
+          <div className="mt-2 text-center">
+            <div
+              className={`text-[9px] font-mono tracking-widest uppercase ${
+                connectionStatus === 'online'
+                  ? 'text-emerald-400'
+                  : connectionStatus === 'connecting'
+                    ? 'text-cyan-300'
+                    : connectionStatus === 'error'
+                      ? 'text-red-400'
+                      : 'text-zinc-500'
+              }`}
+            >
+              {connectionStatus === 'online'
+                ? 'Gemini Live Online'
+                : connectionStatus === 'connecting'
+                  ? 'Connecting Live Brain'
+                  : connectionStatus === 'error'
+                    ? 'Live Connection Failed'
+                    : 'Live Brain Offline'}
+            </div>
+            {connectionStatus === 'error' && liveError && (
+              <div className="mt-1 max-w-80 truncate text-[8px] font-mono text-red-300/70">
+                {liveError}
+              </div>
+            )}
           </div>
         </div>
       </div>

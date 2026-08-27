@@ -2,7 +2,6 @@ import { IpcMain, app, clipboard, screen, desktopCapturer } from 'electron'
 import http from 'http'
 import { exec } from 'child_process'
 import { keyboard, Key, mouse, Button, Point } from '@nut-tree-fork/nut-js'
-import { getDecryptedConfig } from '../security/key-vault'
 
 // ── Security ────────────────────────────────────────────────────────────────
 // Dynamically fetched from the secure vault per request
@@ -251,8 +250,7 @@ export default function registerApiBridge({ ipcMain }: { ipcMain: IpcMain }) {
     }
 
     // ── Auth Check ──
-    const config = getDecryptedConfig()
-    const SECRET_TOKEN = config.JARVIS_API_KEY || 'ironman123'
+    const SECRET_TOKEN = process.env.JARVIS_BRIDGE_API_KEY || process.env.IRIS_API_KEY || 'ironman123'
 
     const authHeader = req.headers.authorization
     if (!authHeader || authHeader !== `Bearer ${SECRET_TOKEN}`) {

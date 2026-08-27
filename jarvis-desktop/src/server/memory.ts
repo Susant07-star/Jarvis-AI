@@ -68,7 +68,7 @@ export function loadMemory(): MemoryMessage[] {
 
 /**
  * Returns a compact context block from the last N messages.
- * Used to inject shared chat history into Zoya's systemInstruction at session start.
+ * Used to inject shared chat history into J.A.R.V.I.S.'s systemInstruction at session start.
  * Uses up to 50 turns × 500 chars ≈ ~6,000 tokens — well within Gemini's 32K window.
  */
 export function getSessionContextSummary(maxTurns: number = 50): string {

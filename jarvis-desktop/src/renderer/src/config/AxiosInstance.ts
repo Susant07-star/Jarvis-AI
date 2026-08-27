@@ -1,6 +1,9 @@
 ﻿import { useAuthStore } from '@renderer/store/auth-store'
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
 
+const CLOUD_TOKEN_KEY = 'jarvis_cloud_token'
+const LEGACY_CLOUD_TOKEN_KEY = 'iris_cloud_token'
+
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean
 }
@@ -66,7 +69,8 @@ AxiosInstance.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const currentRefreshToken = localStorage.getItem('iris_cloud_token')
+        const currentRefreshToken =
+          localStorage.getItem(CLOUD_TOKEN_KEY) || localStorage.getItem(LEGACY_CLOUD_TOKEN_KEY)
 
         if (!currentRefreshToken) {
           throw new Error('No refresh token found in local storage.')
@@ -80,7 +84,8 @@ AxiosInstance.interceptors.response.use(
         const newAccessToken = res.data.accessToken
 
         if (res.data.refreshToken) {
-          localStorage.setItem('iris_cloud_token', res.data.refreshToken)
+          localStorage.setItem(CLOUD_TOKEN_KEY, res.data.refreshToken)
+          localStorage.setItem(LEGACY_CLOUD_TOKEN_KEY, res.data.refreshToken)
         }
 
         useAuthStore.getState().setAccessToken(newAccessToken)
@@ -95,7 +100,8 @@ AxiosInstance.interceptors.response.use(
         processQueue(err, null)
 
         useAuthStore.getState().logout()
-        localStorage.removeItem('iris_cloud_token')
+        localStorage.removeItem(CLOUD_TOKEN_KEY)
+        localStorage.removeItem(LEGACY_CLOUD_TOKEN_KEY)
         window.location.hash = '#/login'
 
         return Promise.reject(err)
