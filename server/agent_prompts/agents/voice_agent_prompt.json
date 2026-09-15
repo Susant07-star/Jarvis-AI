@@ -1,0 +1,11 @@
+{
+  "_doc": "VOICE AGENT PROMPT — Minimal prompt for voice-only interactions (greetings, questions, general chat).",
+  "_note": "The 'personality' module is the shared Soul. 'voice_skills' adds Voice-specific capabilities (emotion tags, tool routing).",
+  "_howToUpdate": "Add/remove module IDs in the 'modules' array. The prompt_builder will assemble the final prompt from these modules.",
+  "_integration": "Used when J.A.R.V.I.S. receives a voice command that doesn't require browser interaction (e.g., 'hi', 'what time is it?', 'tell me a joke').",
+
+  "agent": "voice",
+  "description": "Voice-only agent for conversational interactions. Combines shared Soul + Voice Skills + I.R.I.S. physical hands.",
+  "modules": ["personality", "voice_skills", "iris_integration"],
+  "max_tokens_hint": 300
+}

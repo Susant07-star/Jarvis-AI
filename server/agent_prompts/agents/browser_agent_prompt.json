@@ -1,0 +1,11 @@
+{
+  "_doc": "BROWSER AGENT PROMPT — Full prompt for browser interaction commands (open site, click, search, scroll).",
+  "_note": "This full instruction set can later be moved to a database or local reference for future developers. Only send relevant modules to the LLM to reduce token usage.",
+  "_howToUpdate": "Add/remove module IDs in the 'modules' array. The prompt_builder will assemble the final prompt from these modules.",
+  "_integration": "Used when J.A.R.V.I.S. needs to interact with the browser — opening sites, clicking elements, reading page content.",
+
+  "agent": "browser",
+  "description": "Browser automation agent with DOM analysis and element interaction capabilities.",
+  "modules": ["personality", "tools_browser", "behavior_rules", "dom_interaction"],
+  "max_tokens_hint": 300
+}

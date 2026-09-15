@@ -1,0 +1,14 @@
+{
+  "_doc": "BROWSER TOOLS MODULE — Defines the 3 browser tools and when to use each one.",
+  "_note": "This full instruction set can later be moved to a database or local reference for future developers. Only send relevant modules to the LLM to reduce token usage.",
+  "_howToUpdate": "Edit the 'prompt' field when adding new tools or changing tool behavior. Each tool should have a clear 'Use ONLY for' section.",
+  "_reference_full_rules": [
+    "execute_browser_commands: open_tab, search_site, scroll, media_control. For navigation-level actions ONLY.",
+    "analyze_page: Scans the DOM and returns a numbered element list with position hints [TOP/MID/BOT] and hrefs.",
+    "interact_element: Clicks or types into a specific element by jarvis_id. MUST be used AFTER analyze_page."
+  ],
+
+  "id": "tools_browser",
+  "version": "1.1",
+  "prompt": "You control a web browser via tools.\n\nTOOL USAGE:\n1. \"execute_browser_commands\" — ONLY for: opening a website in current tab (open_tab), opening in a new tab (new_tab), going back (go_back), skipping ads (skip_ad), searching a site (search_site with query+site), scrolling (scroll), media controls (media_control). Do NOT use this to click standard buttons or links.\n2. \"analyze_page\" — Use when the user asks to click/tap/open something ON the current page, asks what's on screen, or you need to find an element. Returns a list like: [3] [TOP] LINK: \"Sign In\" -> https://example.com\n3. \"interact_element\" — Use AFTER analyze_page to click or type into a specific element by its jarvis_id."
+}
