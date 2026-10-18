@@ -99,11 +99,15 @@ ${priorContext}`;
 // ── Gemini Live model cascade ─────────────────────────────────────────────────
 //
 // Priority order:
-//   1. gemini-3.1-flash-live-preview   — smartest, native audio dialog (primary)
-//   2. gemini-2.5-flash-preview-native-audio-dialog — stable 2.5 Live model
-//   3. gemini-2.5-flash-native-audio-latest          — last-resort fallback
+//   1. Gemini 3.8 Live Extended Thinking — high-reasoning native audio (primary)
+//   2. Gemini 3.1 Flash Live Preview
+//   3. Gemini 2.5 Flash Preview Native Audio Dialog
+//   4. Gemini 2.5 Flash Native Audio Latest
+
+const GEMINI_LIVE_EXTENDED_THINKING = "gemini-3.8-live-extended-thinking";
 
 const LIVE_MODELS = [
+  GEMINI_LIVE_EXTENDED_THINKING,
   "gemini-3.1-flash-live-preview",
   "gemini-2.5-flash-preview-native-audio-dialog",
   "gemini-2.5-flash-native-audio-latest",
@@ -144,6 +148,7 @@ export class ZoyaLiveService {
   private isActive = false;
   private isSocketOpen = false;
   private isSetupComplete = false;
+  private isInteractionInProgress = false;
   private connectionStartTime = 0;
   private nextPlayTime = 0;
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -353,6 +358,9 @@ export class ZoyaLiveService {
         model: this.currentModel,
         config: {
           responseModalities: [Modality.AUDIO],
+          ...(this.currentModel === GEMINI_LIVE_EXTENDED_THINKING
+            ? { thinkingConfig: { thinkingLevel: "high" } }
+            : {}),
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
           },
@@ -362,7 +370,7 @@ export class ZoyaLiveService {
           tools: [
             { google_search: {} } as any,
             {
-              functionDeclarations: [
+              functionDeclarations: ([
                 {
                   name: "executeBrowserAction",
                   description: "PHYSICAL navigation and media control ONLY. Use this tool EXCLUSIVELY when the user gives an explicit navigation command like 'Open YouTube', 'Go to Google', 'Play music on Spotify', or 'Send WhatsApp message'. DO NOT use this for information gathering, research, facts about people, news, movies, or any question that can be answered with knowledge. For all information needs, use google_search instead.",
@@ -583,7 +591,11 @@ export class ZoyaLiveService {
                     required: ["query"],
                   },
                 },
-              ],
+              ] as any[]).map((declaration) =>
+                this.currentModel === GEMINI_LIVE_EXTENDED_THINKING
+                  ? { ...declaration, behavior: "NON_BLOCKING" }
+                  : declaration
+              ),
             },
           ],
           // @ts-ignore - Temporary bypass for incomplete types in @google/genai LiveConnectConfig
@@ -595,6 +607,7 @@ export class ZoyaLiveService {
           onopen: () => {
             console.log(`[ZoyaLive] ✅ Connected — ${this.currentModel}`);
             this.isSocketOpen = true;
+            this.isInteractionInProgress = false;
             this.connectionStartTime = Date.now();
             // Cancel the connect-timeout guard since we're open
             if (connectTimeoutId) { clearTimeout(connectTimeoutId); connectTimeoutId = null; }
@@ -684,8 +697,21 @@ export class ZoyaLiveService {
       return;
     }
 
+    const interactionStatus = (message as any).interactionStatus ??
+      (message as any).serverContent?.interactionStatus;
+    if (interactionStatus === "IN_PROGRESS") {
+      this.isInteractionInProgress = true;
+    } else if (interactionStatus === "IDLE") {
+      this.isInteractionInProgress = false;
+    }
+
     // Handle all parts in the model turn (Audio + Text)
     const parts = message.serverContent?.modelTurn?.parts || [];
+    const hasAudioOutput = parts.some((part) => Boolean(part.inlineData?.data));
+    if (interactionStatus === "IN_PROGRESS" && !hasAudioOutput) {
+      this.onStateChange("processing");
+    }
+
     for (const part of parts) {
       // 1. Handle Audio
       if (part.inlineData?.data) {
@@ -710,8 +736,10 @@ export class ZoyaLiveService {
       });
     }
 
-    // 3. Turn Complete — Save final text to server memory
-    if ((message as any).serverContent?.turnComplete) {
+    // Extended Thinking can finish a spoken filler while reasoning continues.
+    // Save/reset the transcript only when the whole interaction is idle.
+    const isInteractionComplete = interactionStatus !== "IN_PROGRESS";
+    if ((message as any).serverContent?.turnComplete && isInteractionComplete) {
       if (this.currentZoyaTranscript.trim()) {
         const clean = this._extractEmotionAndClean(this.currentZoyaTranscript);
         console.log(`[ZoyaLive] Turn complete. Final text: "${clean.slice(0, 50)}..."`);
@@ -722,6 +750,14 @@ export class ZoyaLiveService {
         this.currentZoyaTranscript = "";
         this._currentZoyaMsgTimestamp = null;
       }
+    }
+
+    if (
+      interactionStatus === "IDLE" &&
+      !hasAudioOutput &&
+      (!this.playbackContext || this.playbackContext.currentTime >= this.nextPlayTime - 0.1)
+    ) {
+      this.onStateChange("listening");
     }
 
     // Interruption — user spoke while Zoya was talking
@@ -1419,7 +1455,11 @@ export class ZoyaLiveService {
       this.nextPlayTime += audioBuf.duration;
 
       src.onended = () => {
-        if (this.playbackContext && this.playbackContext.currentTime >= this.nextPlayTime - 0.1) {
+        if (
+          this.playbackContext &&
+          this.playbackContext.currentTime >= this.nextPlayTime - 0.1 &&
+          !this.isInteractionInProgress
+        ) {
           this.onStateChange("listening");
         }
       };
@@ -1468,6 +1508,7 @@ export class ZoyaLiveService {
     this.isActive = false;
     this.isSocketOpen = false;
     this.isSetupComplete = false;
+    this.isInteractionInProgress = false;
     this.clearSessionTimer();
     this._stopButlerResultPolling();
     this.processor?.disconnect();
