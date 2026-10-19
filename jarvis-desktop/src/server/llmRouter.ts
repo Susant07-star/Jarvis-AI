@@ -188,7 +188,7 @@ const gemini15Flash = createGeminiProvider("Google", "gemini-1.5-flash", "GEMINI
 
 const PROVIDER_PRIORITY: Provider[] = [
   gemini31FlashLite,
-  gemini25Flash
+  gemini15Flash
 ];
 
 const CHAT_PROVIDER_PRIORITY: Provider[] = [
@@ -258,7 +258,7 @@ export async function callChatWithCascade(messages: ThreadMessage[], images?: st
 }
 
 export async function callResearchWithCascade(query: string): Promise<PlannerResponse> {
-  const modelsToTry = ["gemini-2.5-flash", "gemini-3.1-flash-lite-preview", "gemini-2.0-flash"];
+  const modelsToTry = ["gemini-3.1-flash-lite-preview", "gemini-1.5-flash"];
   let lastError: any = null;
 
   for (const model of modelsToTry) {

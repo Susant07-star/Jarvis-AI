@@ -1,122 +1,27 @@
-# J.A.R.V.I.S. Feature Comparison & Merge Strategy
+# J.A.R.V.I.S. Runtime and Capability Map
 
-This document compares the features in the two systems and defines a clear plan for what to keep, merge, and build.
+This is a source-level inventory of the main packages in the repository. It replaces the older two-system comparison, which treated planned integrations as completed. A capability listed here may still need credentials, schema, a running service, or end-to-end verification.
 
----
-
-## 🧠 The Two Systems Explained Simply
-
-| System | Location | Role | Status |
+| Component | Main code | Role | Runtime relationship |
 |---|---|---|---|
-| **JARVIS Web Server** | `e:\j.a.r.v.i.s.-web-interface\server\` | The "Brain" — LLM reasoning, Telegram, memory, scheduling, MCP | ✅ Production-ready |
-| **JARVIS Desktop App** (was IRIS) | `e:\j.a.r.v.i.s.-web-interface\jarvis-desktop\` | The "Hands & Eyes" — PC control, local voice, UI | ✅ Functional, being rebranded |
+| **Web application and Node service** | `src/`, `server.ts`, `server/` | Web chat and voice UI, intent routing, model cascades, tool loop, planner, scheduler, memory, MCP, Telegram integration, logs/metrics | Root application; `npm run dev` starts this runtime. |
+| **Python browser service** | `python_agent/youtube_agent.py`, `python_agent/trusted_sites_agent/` | Selenium browser execution, page marking, screenshots, DOM helpers, action endpoints | Separate FastAPI process on port `8000`; root calls it only when `USE_BROWSER_AGENT=true`. |
+| **I.R.I.S. desktop bridge** | `server/irisIntentRouter.ts`, `server/irisExecutor.ts`, desktop package code | Forwards selected local computer actions through a configured URL and shared token | Requires a separate local daemon and reachable endpoint. Not available when the local host/bridge is offline. |
+| **Voice matching service** | `voice_engine_microservice/` | SpeechBrain embeddings and speaker similarity lookup | Separate Python service; optional and not secure identity proof. |
+| **Electron desktop application** | `jarvis-desktop/` | Independent desktop renderer, main/preload processes, local tools, and duplicated server modules | Separate npm/Electron runtime with independent setup/build scripts; not bundled by the root package. |
 
-**The answer to your question: You don't need to add features from one to the other — they are two different layers that work together. But some features in the Desktop App ARE duplicated or need to be connected to the Brain properly.**
+## What makes this more than a voice-command UI
 
----
+The root application has multiple control paths: intent classification; confirmation-state handling; direct chat with a bounded tool loop; structured browser planning; asynchronous research and delivery; one-time and recurring scheduling; semantic memory and a knowledge base; MCP tool discovery/dispatch; and optional remote-to-local action bridges. The frontends are clients of these services, not the full system.
 
-## ✅ Features UNIQUE to the Desktop App (`jarvis-desktop`) — Keep & Polish
+The system is not currently a distributed swarm of specialized autonomous agents. It is a set of explicit TypeScript orchestration and execution paths, with modular prompt configurations and optional external services. Use “agentic workflows” or “tool-using assistant” when describing the checked-in behavior unless a specific multi-agent runtime is implemented and verified.
 
-These are features the Desktop App has that the Web Server *cannot* do (because they require native OS access):
+## Integration boundaries to preserve
 
-| Feature | File | Why it must be in Desktop |
-|---|---|---|
-| **Mouse & Keyboard Control** | `telekinesis.ts` | Requires `@nut-tree-fork/nut-js` native bindings |
-| **Screen Capture / Vision** | `ghost-control.ts`, `ScreenPeeler-handler.ts` | Requires Electron desktop capturer |
-| **Window Teleportation** | `telekinesis.ts` | Requires `node-window-manager` native |
-| **App Launcher / Closer** | `app-launcher.ts` | Requires `child_process` shell on local OS |
-| **Reality Hacker (DOM Injection)** | `reality-hacker.ts` | Requires Puppeteer running locally |
-| **ADB / Phone Control** | `adb-manager.ts` | Requires local ADB binary |
-| **Terminal Execution** | `terminal-control.ts` | Requires local shell |
-| **Smart Drop Zones** | `SmartDropZone-Handler.ts` | Requires local file system |
-| **Live Coding Widget** | `LiveCodingWidget.tsx` | Requires Monaco editor locally |
-| **Workflow / Macro Editor** | `WorkFlowEditor.tsx` | Requires local execution |
-| **Biometric Lock Screen** | `LockScreen.tsx` | Requires `face-api.js` + camera access |
-| **Gallery Manager** | `gallery-manager.ts` | Requires local disk |
-| **Notes Manager** | `notes-manager.ts` | Requires local disk |
+- **Voice and text chat have different cascades.** `gemini-3.8-live-extended-thinking` is first for the web Gemini Live session. Text chat, planning, and research use other cascades.
+- **Browser tasks and local OS actions are different executors.** Browser work can go to the Python service; some action plans are transformed and forwarded to I.R.I.S. They do not share a single permission system.
+- **Persistence is split.** Thread messages, embeddings, knowledge records, tasks, cron jobs, runtime JSON files, and logs have different storage and recovery semantics.
+- **Electron and web are separate products in the repo.** Similar filenames or feature names do not establish a shared state store or identical action path.
+- **Optional means conditional.** A source module does not prove that a deployment has credentials, schema, network access, or a running process.
 
----
-
-## ✅ Features UNIQUE to the Web Server (`server/`) — Keep & Enhance
-
-These are features the Web Server has that the Desktop App doesn't have yet:
-
-| Feature | File | Description |
-|---|---|---|
-| **Telegram Bot** | `telegramBot.ts` | 24/7 chat interface via Telegram |
-| **Agentic ReAct Loop** | `agenticLoop.ts` + `orchestrator.ts` | Multi-step autonomous reasoning |
-| **LLM Router** | `llmRouter.ts` | Dynamically routes between Gemini, Groq, etc. |
-| **MCP Manager** | `mcpManager.ts` | Manages Model Context Protocol servers |
-| **Cron Job Scheduler** | `cronJobs.ts` + `scheduler.ts` | Schedule recurring tasks |
-| **Log Portal (Real-time Logs)** | `logPortal.ts` | Streams live agent logs to the UI |
-| **Supabase Memory** | `memory.ts` + `supabaseClient.ts` | Persistent semantic memory |
-| **Butler Queue** | `butlerQueue.ts` | Proactive background task queue |
-| **Intent Classifier** | `intentClassifier.ts` | Classifies user requests intelligently |
-| **Knowledge Manager** | `knowledgeManager.ts` | RAG knowledge base management |
-| **System Monitor** | `systemMonitor.ts` | PC CPU/RAM/battery telemetry |
-| **Voice Enrollment** | `voiceEnrollmentCache.ts` | Speaker identification |
-| **Thread Manager** | `threadManager.ts` | Multi-conversation context management |
-| **Web Search** | `search.ts` | Tavily web search integration |
-
----
-
-## ⚠️ DUPLICATED Features — Need to Merge Properly
-
-These features exist in BOTH systems in different forms. We need to decide which version to use:
-
-| Feature | Desktop Version | Server Version | Recommendation |
-|---|---|---|---|
-| **Voice AI** | `jarvis-voice-ai.ts` (Gemini Live WebRTC, local) | `voice_bridge.ts` + `websocket.ts` (server-side) | **Keep BOTH** — Desktop for real-time local voice, Server for Telegram voice |
-| **Memory / Brain** | `jarvis-ai-brain.ts` (IPC → electron-store) | `memory.ts` (Supabase pgvector) | **Connect them** — Desktop should call Server's Supabase memory via API |
-| **Web Research** | `deepSearch-rag.ts` (local Puppeteer) | `search.ts` (Tavily API) | **Keep both** — Tavily for quick searches, Puppeteer for deep research |
-| **RAG / Knowledge** | `rag-oracle-tool.ts` (local vector DB) | `knowledgeManager.ts` (Supabase) | **Migrate** Desktop to use Server's Supabase-backed RAG |
-| **Settings/Config** | `Settings.tsx` (reads from `.env` / electron-store) | `systemConfig.ts` (server `.env`) | **Consolidate** into the BYOK Onboarding flow (Phase 3 of our roadmap) |
-
----
-
-## 🗺️ The Recommended Strategy
-
-> **Do NOT rewrite anything. The Desktop App and the Web Server are two layers of the same product.**
-
-### For Distribution (Phase 3 & 4 from our Roadmap):
-1. **Package the Web Server *inside* the Electron app** as a background Node.js child process that the Desktop starts automatically on launch.
-2. This means users only download ONE app (`Jarvis-Setup.exe`) but they get BOTH the beautiful UI and the full brain.
-3. The Desktop UI talks to the local Web Server via `localhost:PORT`.
-
-### What to Add to the Desktop App UI:
-- [ ] **Logs View** — Stream real-time agent logs from the server's `logPortal.ts` into a dedicated Logs tab in the Desktop UI
-- [ ] **MCP Hub** — A new Settings tab that maps to the server's `mcpManager.ts`
-- [ ] **Scheduler View** — Show scheduled Cron jobs from `scheduler.ts`
-- [ ] **Telegram Status** — Show if the Telegram bot is online/offline
-
-### What NOT to worry about:
-- Do not re-implement Telegram inside Electron — it lives in the Server layer
-- Do not re-implement Supabase memory inside Electron — it lives in the Server layer
-
----
-
-## 🚀 Commercialization & Product Strategy (How to beat Open Source)
-
-To transition J.A.R.V.I.S. from a developer project to a premium, paid consumer product that beats free open-source alternatives (like OpenClaw, Hermes, OpenDevin), the following improvements must be prioritized:
-
-### 1. Single-App Experience
-Users should **not** install two applications. Package the Web Server inside the Electron app as a background Node.js child process. Users download one `Jarvis-Setup.exe`. It runs entirely locally, with the server quietly handling background tasks.
-
-### 2. Kill "BYOK" (Bring Your Own Key) Friction
-Normal consumers hate API keys. 
-- **Option A (Subscription):** Route requests through a proxy server and bundle token costs into a monthly subscription (e.g., $15/mo) for a "just works" experience.
-- **Option B (Local LLM Fallback):** Integrate Ollama/LM Studio. Automatically download a small local model (Llama 3 / Phi-3) during setup so it works 100% offline out-of-the-box, with an option for power users to add an OpenAI key later.
-
-### 3. Trust & Safety ("The Kill Switch")
-Giving an app god-level access to the OS is scary. 
-- **Global Kill Switch:** Add a massive hardware shortcut (e.g., `Ctrl+Shift+Escape`) that instantly kills all Agent activity and freezes the mouse.
-- **Consent Mode:** Jarvis should highlight what it's about to click or type and ask, *"Proceed? [Y/N]"* before taking action, until the user trusts it enough for autonomous mode.
-
-### 4. 1-Click Routines (Not Just a Chatbox)
-A blank chat box is intimidating. Leverage the Workflow/Macro Editor to provide a dashboard of 20+ incredibly useful out-of-the-box templates (e.g., "Clean up my Desktop folder", "Extract receipts from emails", "Set up my React dev environment"). Show value immediately.
-
-### 5. Bulletproof Reality Hacker
-Open-source UI automation breaks constantly. If the agent tries to click a button and fails, it must be **self-healing**. Instead of crashing with a stack trace, it should gracefully say, *"The UI seems to have changed, I am scanning the screen visually to find the button again."*
-
-### 6. Localize Memory (Privacy as a Feature)
-Using Supabase for a local OS agent is a privacy concern. Swap Supabase for a completely local stack (SQLite + local vector embeddings like ChromaDB or LanceDB) packed into the Electron app. Market it as: *"A completely private Jarvis. Everything it learns about you stays on your hard drive."*
+See [Architecture](ARCHITECTURE.md), [System Status](SYSTEM_STATUS.md), and [Developer Guide](DEVELOPER_GUIDE.md) for code paths and setup requirements.

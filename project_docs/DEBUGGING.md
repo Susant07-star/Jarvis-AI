@@ -1,144 +1,74 @@
 # J.A.R.V.I.S. Debugging Guide
 
-> For new developers and AI agents: **read this first** when something breaks.
+Start by identifying the surface and route. Web chat, Live voice, Telegram, Python browser automation, I.R.I.S., voice matching, and the Electron app have separate processes and failure modes. See [Architecture](ARCHITECTURE.md) for the request paths.
 
----
+## 1. Identify the failing layer
 
-## 🚨 Step 1: What Symptom Do You See?
+| Symptom | First checks |
+|---|---|
+| Web app does not start | `npm ci`, `.env.local`, port `3000`, and `server.ts` output |
+| Chat returns a configuration error | Set both `GEMINI_API_KEY` and `GROQ_API_KEY`; `/api/chat` currently checks Groq before dispatching the chat provider cascade |
+| Voice cannot connect | Browser microphone permission, `GEMINI_API_KEY`, model access, browser console, and the Live model cascade in `src/services/zoyaLiveService.ts` |
+| Chat works but a browser task does not | Intent result, planner output, confirmation state, `USE_BROWSER_AGENT=true`, then Python service health on port `8000` |
+| Local desktop action fails | `IRIS_WORMHOLE_URL`, matching `IRIS_API_KEY`, I.R.I.S. process/tunnel, and `/api/iris/status` |
+| Reminder/job did not fire | Node process uptime, Supabase `tasks`/`research_jobs` records, timezone, and Telegram delivery configuration |
+| Knowledge recall is empty | Supabase credentials, embeddings, table/RPC schema, and `match_knowledge` or `match_memories` errors |
+| MCP tool is missing | Runtime `data/mcp_config.json`, child process command/args/env, and MCP connection logs |
+| Voice identity result is wrong | Voice service health, secret match, audio sample quality, enrolled embedding, and threshold behavior; do not use it as an auth control |
 
-| Symptom | First file to check | What to look for |
-|---|---|---|
-| Zoya 3.1 drops instantly (250ms) | `zoyaLiveService.ts` | Verify `@google/genai` is `1.47.0+`. Check for literal quotes in API keys. |
-| Zoya sounds slow/laggy (monster voice) | `zoyaLiveService.ts` | Ensure `playbackContext` sample rate is exactly `24000`. |
-| Zoya doesn't see tools (executeBrowserAction) | `zoyaLiveService.ts` | Verify tool schema matches `remix-zoya` spec exactly. |
-| JARVIS says "✅ executed" but nothing happened | `logs/debug.log` | `Python agent: 422` or `Python agent: 503` |
-| JARVIS gives wrong / no response | `logs/debug.log` | `Failed to parse tool args` or `LLM routed to TASK` without a follow-up plan |
-| Voice command not recognized | `logs/debug.log` | `STT` entries or missing `[IntentClassifier]` lines |
-| Everything works but tokens not logged | `logs/token_detailed.json` | Missing or malformed JSON entries |
-| Browser opens wrong site or does nothing | `logs/debug.log` | `Planner` output → verify `action` field; check `ACTION_MAP` in `youtube_agent.py` |
-| High latency | `logs/token_detailed.json` | `latency_ms` field per request |
+## 2. Trace one request
 
----
+1. Note the interface, approximate timestamp, and exact route/action. Do not include credentials or private content in a bug report.
+2. Check the Node console and `logs/debug.log` for the matching request, provider, planner, tool, or scheduler entries.
+3. Check `logs/token_detailed.json` when the issue concerns model selection, tokens, or latency.
+4. If `USE_BROWSER_AGENT=true`, check the Python process output and `/browser-status`; the Python service runs separately from Node.
+5. For remote integrations, check the service's own health/logs and credentials. A Node “request sent” entry is not proof that an external action completed.
+6. Compare the tool result with the final response. Treat a success message without a successful executor result as a bug.
 
-## 🗂️ File Priority — Check in This Order
+Logs may contain prompts, URLs, task content, and provider errors. Review and redact them before sharing. Do not paste API keys, voice embeddings, session data, or private account information into issues.
 
-### 1. `logs/debug.log` — *Always first*
-- Contains the full request lifecycle: intent classification → orchestrator → planner → Python result
-- **Key patterns to grep:**
-  ```
-  Python agent: 422    → Schema mismatch (action vs type field)
-  Python agent: 503    → Python agent not running
-  Failed to parse      → LLM output malformed JSON
-  ERROR                → Any critical failure
-  ```
-- Entries are timestamped. Scroll to the **latest date** for current issues.
+## 3. Common checks
 
-### 2. `logs/token_detailed.json` — *Token & latency issues*
-- One JSON object per line. Latest entry = most recent request.
-- If `total: 0` on an agent task, the Planner or Classifier tokens aren't being captured.
+### Environment and server
 
-### 3. `logs/feedback_reports.csv` — *User-reported failures*
-- Shows exactly what the user asked and what JARVIS replied.
-- Negative feedback entries reveal UX failures that logs alone don't surface.
+- The root process loads `.env` and then `.env.local`. Verify actual loaded values without printing secrets.
+- Confirm port `3000` is available and that the process started the integrations you expect.
+- Replace all demo values from `.env.example`. The example file is not safe to deploy unchanged.
+- `JARVIS_PIN` is required at startup. If the server refuses to start, configure a private value in `.env` or `.env.local`.
+- Protected routes, including `/api/config/auth` and `/api/config/keys`, require the PIN. The browser config endpoint uses `SUPABASE_ANON_KEY`; `SUPABASE_KEY` stays server-side. Gemini Live receives `GEMINI_API_KEY` in the authenticated browser because its audio session connects directly to Google.
 
-### 4. `project_docs/SYSTEM_STATUS.md` — *Known issues*
-- If the issue is already listed under "Broken / Unstable Parts", it's a known bug — don't chase it.
+### Browser agent
 
-### 5. `project_docs/CHANGELOG.md` — *Recent changes*
-- If something just broke after a deployment, check what was last changed here.
+- The Node app calls the Python service at `http://127.0.0.1:8000`.
+- Start it from the repository root with `python python_agent/youtube_agent.py` after installing `python_agent/requirements.txt` and confirming Chrome/Selenium support.
+- Ensure `USE_BROWSER_AGENT=true` for paths that require the service. Otherwise browser execution is disabled or falls back to a non-browser response.
+- The service currently has no action-endpoint authentication. Do not expose it beyond a trusted local boundary while debugging.
 
----
+### Database and scheduled work
 
-## 🔍 Developer Checklist — Run Through This When Debugging
+- Check Supabase schema, table names, RPC signatures, and permissions against the caller code.
+- One-time and recurring schedules execute through the Node process. If it is stopped, delivery depends on restore behavior and the next startup; this is not an external queue.
+- Confirm the configured timezone and downstream notification service separately.
 
-```
-□ Is the Python agent running?
-  → curl http://127.0.0.1:8000/health  (should return 200)
+### Model routing
 
-□ Is the Node server running?
-  → curl http://localhost:3000/api/ping
+- Live voice, text chat, planner, and research use different cascade definitions. Inspect the relevant route rather than assuming one “primary model” applies everywhere.
+- Chat responses can include provider/model metadata. Router warnings report failed attempts; redact provider error bodies before sharing.
+- A model being first in an array proves configuration order, not provider availability or successful inference.
 
-□ Check debug.log for 422 errors from Python agent
-  → Means Planner output schema doesn't match Python's expected format
-  → Fix: check ACTION_MAP in python_agent/youtube_agent.py
+## 4. Checks available in the repository
 
-□ Check debug.log for "Failed to parse tool args"
-  → Means the LLM returned malformed JSON
-  → Fix: check planner.ts prompt and response_format setting
+From the root package:
 
-□ Is the DOM extraction returning data?
-  → curl -X POST http://127.0.0.1:8000/analyze  (should return elements array)
-  → If elements: [] is empty, the browser tab may be blank or stuck
-
-□ Check token_detailed.json — is the latest entry fresh?
-  → Stale = Node server is not running or requests aren't reaching it
-
-□ Is GROQ_API_KEY set in environment?
-  → Node will respond with 500 "GROQ_API_KEY not configured" without it
-```
-
----
-
-## 📂 File Architecture at a Glance
-
-```
-server/
-├── routes/api.ts          ← Chat endpoint, confirmation gateway
-├── websocket.ts           ← Voice pipeline, confirmation gateway
-├── browser/planner.ts     ← LLM → JSON action plan (key file)
-├── intentClassifier.ts    ← Fast-path routing (chat vs task)
-├── orchestrator.ts        ← Central decision router
-├── utils/metrics.ts       ← Token + latency tracking
-└── utils/docUpdater.ts    ← CHANGELOG + SYSTEM_STATUS auto-update
-
-python_agent/
-└── youtube_agent.py       ← All browser execution (safe_click, DOM, YouTube)
-
-logs/
-├── debug.log              ← Full request traces (rotate monthly)
-├── token_detailed.json    ← One JSON line per request (rotate monthly)
-├── feedback_reports.csv   ← User feedback (keep, never rotate)
-└── token_usage_2026-03.csv← Legacy format (can archive)
-```
-
----
-
-## 🔄 Log Rotation Policy
-
-> Logs grow indefinitely. Follow this policy to keep them manageable.
-
-**`debug.log`** — Rotate monthly:
-- Rename to `debug-YYYY-MM.log` at month end
-- Keep last 3 months, archive or delete older ones
-- Node auto-creates a new `debug.log` on restart
-
-**`token_detailed.json`** — Rotate monthly:
-- Each line is a JSON object. Move to `token_detailed-YYYY-MM.json`
-- Good to keep 3 months for performance analysis
-
-**`feedback_reports.csv`** — **Never rotate, never delete**
-- This is user feedback data. Archive old months to `feedback_reports_YYYY.csv` but always keep it
-
-**Script to rotate** — Run manually or as a scheduled task:
 ```powershell
-# logs/rotate_logs.ps1
-$month = Get-Date -Format "yyyy-MM"
-if (Test-Path "logs\debug.log") { Move-Item "logs\debug.log" "logs\debug-$month.log" }
-if (Test-Path "logs\token_detailed.json") { Move-Item "logs\token_detailed.json" "logs\token_detailed-$month.json" }
-Write-Host "Logs rotated for $month"
+npm run lint   # TypeScript check
+npm run build  # Web frontend production build
 ```
 
----
+There is no root general-purpose test script. The desktop package has separate scripts. Choose checks that match the code changed; these commands do not validate live credentials, browser actions, Telegram delivery, voice matching, or remote desktop control.
 
-## 🤖 Note for AI Agents (Antigravity and Future Agents)
+## 5. Log maintenance
 
-When reading `debug.log`:
-- **Always look at timestamps**. The file is append-only. Most recent entries are at the **bottom**.
-- Focus on the last 50–100 lines for current issues.
-- `grep` for `ERROR` or `422` first before reading the whole file.
-- Old log entries from months ago are irrelevant — skip them.
+The repository includes `logs/rotate_logs.ps1` for local log rotation. Review its behavior and make a backup before using it on valuable user data. Runtime logs and data are ignored by Git; do not commit them as debugging evidence without redaction.
 
-When `debug.log` is rotated, the new empty file starts fresh. AI agents should:
-1. Read `SYSTEM_STATUS.md` first for known issues
-2. Check `CHANGELOG.md` for recent changes
-3. Then read the tail of `debug.log` for live diagnostics
+For the current known limitations and configuration requirements, see [System Status](SYSTEM_STATUS.md). For recent changes, see [Changelog](CHANGELOG.md).

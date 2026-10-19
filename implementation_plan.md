@@ -1,5 +1,7 @@
 # The Grand Architecture: Distributable J.A.R.V.I.S. Desktop App
 
+> Historical planning note. This proposal is not the current runtime contract or proof of a shipped desktop product. See [the current architecture](project_docs/ARCHITECTURE.md) and [product/distribution notes](project_docs/product_distribution_roadmap.md).
+
 To answer your question: **We absolutely should use the existing IRIS folder codes.** 
 
 Your current IRIS codebase is built on **Electron-Vite, React, and TailwindCSS**. This is currently the absolute best, industry-standard stack for building cross-platform desktop applications (it is the same stack used by Discord, VS Code, and Cursor). Building a new one from scratch would just reinvent the wheel. Instead, we will **evolve the IRIS app into the official J.A.R.V.I.S. Desktop App**.

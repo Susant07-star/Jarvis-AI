@@ -64,18 +64,33 @@ export const logger = {
         writeToFile('WARN', tag, `${msg}${extra}`);
     },
 
-    /** Info: ALWAYS terminal + file (no VERBOSE gate) */
+    /** Info: ALWAYS terminal + file */
     info(tag: string, msg: string, ...args: any[]) {
         const extra = serialize(args);
-        originalConsole.log(`[${tag}] ${msg}${extra}`);
+        
+        // Filter out spammy background telemetry from the terminal to keep it clean
+        const isSpam = tag === 'SystemMonitor' || 
+                       tag === 'VoiceEngine' && msg.includes('Heartbeat') ||
+                       msg.includes('System resources normal');
+                       
         writeToFile('INFO', tag, `${msg}${extra}`);
+        if (!isSpam) {
+            originalConsole.log(`[${tag}] ${msg}${extra}`);
+        }
     },
 
-    /** Debug: always file, terminal only if JARVIS_VERBOSE=true */
+    /** Debug: always file, terminal by default (spam filtered) */
     debug(tag: string, msg: string, ...args: any[]) {
         const extra = serialize(args);
         writeToFile('DEBUG', tag, `${msg}${extra}`);
-        if (process.env.JARVIS_VERBOSE === 'true') {
+        
+        // Filter out spammy background telemetry from the terminal to keep it clean
+        const isSpam = tag === 'SystemMonitor' || 
+                       tag === 'VoiceEngine' && msg.includes('Heartbeat') ||
+                       tag === 'MetricsTracker' ||
+                       msg.includes('Heartbeat');
+                       
+        if (!isSpam) {
             originalConsole.debug(`[${tag}] [DEBUG] ${msg}${extra}`);
         }
     },

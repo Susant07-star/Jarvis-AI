@@ -1,5 +1,52 @@
 import './assets/main.css'
 
+// ── Terminal Console Bridge ────────────────────────────────────────────
+// Overrides window.console in the RENDERER world and forwards every call
+// to the main process via IPC so all logs appear in your terminal.
+;(function installConsoleBridge() {
+  const ipc = (window as any)?.electron?.ipcRenderer
+  if (!ipc) return // not in Electron — skip silently
+
+  const SPAM = [
+    'Heartbeat', 'System resources normal', 'brain:get-status',
+    'get-system-info', 'get-screen-source', '[TICK]', 'SystemMonitor',
+    'get-running-apps', 'get-live-location'
+  ]
+  const DEDUP_MS = 2000
+  const cache = new Map<string, number>()
+
+  function suppress(msg: string): boolean {
+    if (SPAM.some(p => msg.includes(p))) return true
+    const now = Date.now()
+    const last = cache.get(msg)
+    if (last && now - last < DEDUP_MS) return true
+    cache.set(msg, now)
+    if (cache.size > 300) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1] - b[1]).slice(0, 100)
+      oldest.forEach(([k]) => cache.delete(k))
+    }
+    return false
+  }
+
+  function bridge(level: 'log' | 'info' | 'warn' | 'error' | 'debug') {
+    const orig = console[level].bind(console)
+    console[level] = (...args: any[]) => {
+      orig(...args)
+      try {
+        const msg = args.map(a => {
+          if (a === null || a === undefined) return String(a)
+          if (a instanceof Error) return `${a.message}\n${a.stack}`
+          if (typeof a === 'object') { try { return JSON.stringify(a) } catch { return String(a) } }
+          return String(a)
+        }).join(' ')
+        if (!suppress(msg)) ipc.send('renderer:console', { level, msg })
+      } catch { /* never block UI for a logging failure */ }
+    }
+  }
+
+  bridge('log'); bridge('info'); bridge('warn'); bridge('error'); bridge('debug')
+})()
+
 import React, { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'

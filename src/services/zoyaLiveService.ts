@@ -57,7 +57,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
   6. **Recurring Routines**: Use 'create_recurring_routine' for daily/weekly/every-morning reminders, messages, and research reports.
   7. **List Scheduled Items**: Use 'get_scheduled_tasks' for one-time tasks and 'get_recurring_routines' for recurring jobs/routines.
   8. **Edit/Delete Scheduled Items**: Use 'update_scheduled_task' or 'cancel_scheduled_task' for one-time tasks; use 'update_recurring_routine' or 'cancel_recurring_routine' for recurring routines.
-  9. **Control Boss's Local PC via I.R.I.S.**: Use 'execute_local_os_command' to physically open apps (VS Code, Notepad, Spotify, Chrome, ANY app), close apps, type text, press keyboard shortcuts, run commands, and more on Boss's local machine. I.R.I.S. is ONLINE and connected to Boss's PC right now.
+  9. **Control Boss's Local PC via I.R.I.S.**: When the I.R.I.S. daemon is configured and reachable, use 'execute_local_os_command' for supported local actions such as opening apps, typing text, pressing keys, and running commands. Availability can change at runtime.
   10. **Bilingual Dialogue**: Converse fluently in high-quality Nepali and English with live emotional expressions (SASSY, HAPPY, THOUGHTFUL, etc.).
 - **What I CANNOT Do**:
   1. Cannot execute physical browser tasks without delegating through tools.
@@ -80,7 +80,7 @@ Personality: Respectful, professional, helpful. Sophisticated but witty. Adaptat
 - **CRITICAL SEARCH EXCLUSION**: NEVER call 'intelligent_search' or use native 'google_search' when asked about the creator, the developer, the maker, who created you, or your capabilities. Answer immediately from internal knowledge.
 - **intelligent_search**: Use for ANY OTHER question about people, news, facts, movies, prices, or research.
 - **executeBrowserAction**: Use ONLY for physical navigation (Open YouTube, Play music, Send WhatsApp).
-- **execute_local_os_command**: Use THIS IMMEDIATELY when Boss says 'open [any app]', 'close [app]', 'type this', 'press [key]', or any local PC control request. I.R.I.S. is ONLINE - NEVER say you cannot do this. action='open_app', appName='vscode' to open VS Code. ALWAYS call this tool - do NOT just say you will do it.
+- **execute_local_os_command**: Use this for local PC requests when the tool is available. Treat its result as authoritative: report success only when it returns success, and explain an unavailable daemon or failed action plainly. A successful Live voice action triggers a best-effort screenshot uplink; inspect the returned screen context before claiming visual verification.
 - **schedule_action**: Use ONLY for one-time tasks like 'remind me in 10 minutes' or 'message me tomorrow at 8'.
 - **create_recurring_routine**: Use for repeat wording like every day, daily, every morning, weekly, recurring, routine, job, हरेक, दैनिक, or प्रत्येक. Type='research' when live/latest/news/research is needed; type='message' for greetings/general Telegram text; type='reminder' for medicine/water/task nudges.
 - **Editing/deleting**: Before editing or deleting, call the matching list tool when you do not already know the ID. Use recurring routine tools for daily/jobs/routines; use scheduled task tools for one-time pending tasks.
@@ -217,12 +217,6 @@ export class ZoyaLiveService {
         }
       } catch (err) {
         console.warn("[ZoyaLive] Could not fetch keys from backend", err);
-      }
-
-      // Fallback to build-time env if backend fetch fails
-      if (!rawKey) {
-        rawKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY as string) ||
-          (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '') || "";
       }
 
       // Remove any literal quotes that might be wrapping the string or individual keys
@@ -975,13 +969,15 @@ export class ZoyaLiveService {
         if (data.success) {
           this.onThought(`✅ I.R.I.S. success: ${data.message}`);
 
-          // ── VISION UPLINK: after a successful OS action, capture a screenshot and
-          // push it into the Live session so Zoya can SEE the result and verify it.
-          // Best-effort: never let a vision failure block the tool response.
-          await this._injectScreenVision(session, action);
+          // ── VISION UPLINK: after a successful OS action, attempt to send a
+          // screenshot to the Live session. Capture is best-effort and does not
+          // independently verify the action's intended outcome.
+          const screenshotAvailable = await this._injectScreenVision(session, action);
 
           session.sendToolResponse({
-            functionResponses: [{ name: call.name, id: call.id, response: { result: `SUCCESS: ${data.message}. I have captured a screenshot and can now see your screen to verify the result.` } }],
+            functionResponses: [{ name: call.name, id: call.id, response: { result: screenshotAvailable
+              ? `SUCCESS: ${data.message}. A screenshot was sent to your visual context; inspect it before claiming the result is visually verified.`
+              : `SUCCESS: ${data.message}. Screenshot capture failed, so the result was not visually checked.` } }],
           });
         } else {
           this.onThought(`❌ I.R.I.S. failed: ${data.message}`);

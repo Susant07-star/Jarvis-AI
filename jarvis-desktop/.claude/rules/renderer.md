@@ -19,7 +19,7 @@ You are modifying the visual layer of **J.A.R.V.I.S.** — a premium, commercial
 - **Typography:** Use `font-sans` for main UI, and `font-mono tracking-widest uppercase text-[10px]` for system telemetry, labels, and logs.
 - **Glows & Lasers:** Use absolute positioned `div` elements with gradients to create ambient blooms behind active components.
 - **Micro-Animations:** Nothing should snap. Every state change uses `framer-motion` spring or fade transitions.
-- **Naming:** All on-screen labels and system text should say **J.A.R.V.I.S.**, not IRIS. e.g., "J.A.R.V.I.S. ONLINE", "NEURAL UPLINK SECURE", "JARVIS INITIALIZING".
+- **Naming:** All on-screen labels and system text should say **J.A.R.V.I.S.**. e.g., "J.A.R.V.I.S. ONLINE", "NEURAL UPLINK SECURE", "JARVIS INITIALIZING".
 
 ## 3D Engine (Three.js / R3F) Rules
 

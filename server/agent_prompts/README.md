@@ -1,62 +1,21 @@
-# J.A.R.V.I.S. Agent Prompts — Modular Architecture
+# Root Server Prompt Modules
 
-## Overview
-This folder contains **modular, token-optimized system prompts** for J.A.R.V.I.S.'s multi-agent architecture.
+This directory holds JSON prompt modules and agent profiles used by the root Node service. `prompt_builder.ts` loads an `agents/<name>_agent_prompt.json` file, concatenates its referenced modules, and caches the result in memory. The `personality` module can be replaced with `CUSTOM_SYSTEM_PROMPT`.
 
-Instead of sending one giant monolithic prompt on every request, we split instructions into **small, focused modules** and assemble only the relevant ones per agent/request type.
+The profiles currently include voice, browser, and vision variants. They are prompt configurations used by explicit TypeScript routes; they are not separate model processes or a multi-agent orchestration framework. The exact route may also add runtime context such as time, memory, or a task plan.
 
-## Architecture
+## Files
 
-```
-agent_prompts/
-├── modules/                    ← Reusable prompt building blocks
-│   ├── personality.json        ← Tone, warmth, style (shared by all agents)
-│   ├── tools_browser.json      ← Browser tool definitions & usage rules
-│   ├── behavior_rules.json     ← When to use tools vs. respond naturally
-│   └── dom_interaction.json    ← DOM analysis, clicking, typing rules
-│
-├── agents/                     ← Agent-specific assembled prompts
-│   ├── voice_agent_prompt.json ← Voice agent: personality + behavior
-│   ├── browser_agent_prompt.json ← Browser agent: tools + DOM + behavior
-│   └── vision_agent_prompt.json  ← Vision agent: coordinate + click (future)
-│
-├── prompt_builder.ts           ← TypeScript loader that assembles prompts
-└── README.md                   ← This file
-```
+- `agents/` maps a profile name to module IDs and optional prompt settings.
+- `modules/` contains reusable identity, behavior, browser, voice, and integration instructions.
+- `prompt_builder.ts` implements prompt loading, caching, and time-context assembly.
 
-## How It Works
+## Change prompts safely
 
-1. **Modules** are atomic JSON files containing one focused instruction set.
-2. **Agent prompts** reference which modules to include.
-3. **prompt_builder.ts** reads the agent config, loads only the needed modules, and concatenates them into a single system prompt string.
-4. **websocket.ts / api.ts** import the builder and call `buildPrompt("browser")` instead of hardcoding a massive template literal.
+1. Find the route that calls `buildPrompt()` and confirm the selected profile and surrounding runtime context.
+2. Keep descriptions consistent with tools actually registered by that route. Prompt text does not create a tool or enforce authorization.
+3. Treat all model-proposed actions as untrusted. Validate and authorize them in the backend dispatcher/executor.
+4. Do not claim a device or service is online in a static prompt. Use runtime health state or phrase the capability conditionally.
+5. Keep sensitive credentials and personal data out of prompt files.
 
-## Token Savings
-
-| Approach | Tokens/Request | Notes |
-|---|---|---|
-| Old monolithic prompt | ~400 | All rules sent every time |
-| Modular (voice only) | ~80 | Personality + behavior only |
-| Modular (browser) | ~250 | Personality + tools + DOM |
-| Modular (vision) | ~150 | Personality + coordinates |
-
-## How to Add a New Agent
-
-1. Create a new module in `modules/` if the agent needs unique instructions.
-2. Create `agents/new_agent_prompt.json` referencing the needed modules.
-3. Update `prompt_builder.ts` to support the new agent name.
-4. Call `buildPrompt("new_agent")` from the appropriate route.
-
-## How to Update Rules
-
-- Edit the relevant **module** JSON file. The change propagates everywhere that module is used.
-- Never duplicate instructions across modules — keep it DRY.
-
-## Database Migration (Future)
-
-All JSON files in this folder can be migrated to a database for:
-- Dynamic prompt editing via admin UI
-- A/B testing different prompts
-- Per-user prompt customization
-
-The `prompt_builder.ts` loader is the **only file that needs to change** for database migration.
+Prompt caching is process-local. Restart the Node service after changes unless the caller explicitly clears the cache.

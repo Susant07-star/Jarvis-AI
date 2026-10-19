@@ -1,5 +1,7 @@
 # Advanced Voice Recognition & Speaker Verification System
 
+> Historical implementation plan. Requirements and security claims below are not a statement of current capability. See [the voice service documentation](voice_engine_microservice/README.md) and [system status](project_docs/SYSTEM_STATUS.md).
+
 This document outlines the technical implementation plan to add advanced voice biometrics to J.A.R.V.I.S., satisfying the requirements of Real-Time Speaker Identification, Dynamic Enrollment, Target Speaker Extraction, and Hardcoded Security.
 
 ## User Review Required

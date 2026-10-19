@@ -107,11 +107,18 @@ export default function App() {
       };
 
       try {
-        const authRes = await fetch('/api/config/auth');
+        const pin = localStorage.getItem('jarvis_pin') || '';
+        const authRes = await fetch('/api/config/auth', {
+          headers: { 'X-Jarvis-Pin': pin }
+        });
+        if (authRes.status === 401) {
+          setShowPinPrompt(true);
+          return;
+        }
         const authConfig = await authRes.json();
         
-        if (authConfig.supabaseUrl && authConfig.supabaseKey) {
-          const supabase = createClient(authConfig.supabaseUrl, authConfig.supabaseKey);
+        if (authConfig.supabaseUrl && authConfig.supabaseAnonKey) {
+          const supabase = createClient(authConfig.supabaseUrl, authConfig.supabaseAnonKey);
           setSupabaseClient(supabase);
           
           const { data: { session } } = await supabase.auth.getSession();
@@ -136,9 +143,8 @@ export default function App() {
       }
 
       try {
-        const pin = localStorage.getItem('jarvis_pin') || '';
         const res = await fetch('/api/browser-status', {
-          headers: { 'X-Jarvis-Pin': pin }
+          headers: { 'X-Jarvis-Pin': localStorage.getItem('jarvis_pin') || '' }
         });
         
         if (res.status === 401) {

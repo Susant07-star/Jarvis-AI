@@ -52,10 +52,6 @@ J.A.R.V.I.S. uses a premium, dark-mode, glassmorphic "Agentic AI" aesthetic. Do 
 - The Main Process reads keys at startup and provides them to services. The Renderer NEVER accesses keys directly.
 - On first launch (no keys found), the app must redirect to the Onboarding Setup Wizard before loading the main UI.
 
-### 3. Audio & WebSocket Latency (The 250ms Rule)
-- J.A.R.V.I.S. operates on a real-time WebRTC audio pipeline. Do NOT flood the WebSocket.
-- Audio from `AudioWorklet` must be buffered (e.g., `4096` frames / ~250ms) before being base64-encoded and sent to Gemini.
-- Always implement Voice Activity Detection (VAD) checks: if `serverContent.interrupted` is true, you must INSTANTLY flush local audio queues and stop playback nodes.
 
 ### 4. WebGL / 3D Performance (Strict Limitations)
 If modifying `Sphere.tsx` or any R3F components:

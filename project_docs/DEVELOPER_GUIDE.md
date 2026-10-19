@@ -1,356 +1,115 @@
-# J.A.R.V.I.S. Browser Agent — Developer Guide
+# J.A.R.V.I.S. Developer Guide
 
-> Last updated: 2026-05-19
+This guide covers the root web application and its optional services. It is based on the checked-in source and is not a deployment health report. Read [Architecture](ARCHITECTURE.md) for component relationships and [System Status](SYSTEM_STATUS.md) for current limits.
 
----
+## Requirements
 
-## Architecture Overview
+- Node.js and npm compatible with the root package dependencies.
+- A Gemini API key for Gemini-backed text, embedding, and Live voice paths.
+- A Groq API key for the current web chat route and the Groq-backed classification/transcription paths.
+- Optional credentials and services for Supabase, Telegram, search providers, MCP, the Python browser service, I.R.I.S., and voice matching.
 
-```
-User Goal (natural language)
-       │
-       ▼
-  ┌──────────┐     ┌────────────────┐
-  │ planner  │────▶│ domExtractor   │  (optional: feeds live DOM into planner)
-  └──────────┘     └────────────────┘
-       │
-       ▼
-  BrowserAction[] (JSON plan)
-       │
-       ▼
-  ┌──────────┐     ┌────────────────┐     ┌──────────────┐
-  │ executor │────▶│ taskTracker    │────▶│ errorLogger  │
-  └──────────┘     └────────────────┘     └──────────────┘
-       │                    │
-       ▼                    ▼
-  ┌──────────┐     ┌────────────────┐
-  │ actions  │     │ memoryManager  │
-  └──────────┘     └────────────────┘
-       │                    │
-       ▼                    ▼
- Playwright /         data/memory/
- Python Selenium      data/tasks/
- (browser layers)
+## Start the root web app
+
+```powershell
+npm ci
+Copy-Item .env.example .env.local
+# Edit .env.local and replace every placeholder/sample value.
+npm run dev
 ```
 
----
+The root `dev` script runs `tsx server.ts`. The server starts Express and Vite on port `3000` by default. The API listens on `0.0.0.0`, so configure access controls and network exposure before running it on a shared or public network.
 
-## File Reference
+Common root scripts:
 
-| File / Component | Purpose |
-|------------------|---------|
-| `browserManager.ts` | Launches persistent Node-based Chromium context (`./browser-data`) via Playwright. |
-| `actions.ts` | Node-side Playwright browser actions (legacy, YouTube, universal). |
-| `executor.ts` | Node-side orchestrator that runs plans with retry, memory, and task tracking. |
-| `planner.ts` | LLM-based goal→action conversion (memory-aware). |
-| `domExtractor.ts` | Node-side scraper of visible interactive elements. |
-| `memoryManager.ts` | Dual-layer storage (operational + LLM summaries). |
-| `taskTracker.ts` | Task lifecycle: create → track → retry → resume. |
-| `errorLogger.ts` | Per-task error logs with sensitive data redaction. |
-| `encryption.ts` | AES-256-CBC encrypt/decrypt for sensitive memory. |
-| `dashboard.ts` | CLI tool for inspecting tasks, memory, and errors. |
-| `supabaseAdapter.ts` | Storage adapter stub for future cloud migration. |
-| `python_agent/youtube_agent.py` | Python-based FastAPI agent utilizing undetected-chromedriver (Selenium) for stealth/YouTube tasks. |
-
----
-
-## Memory System
-
-### Two Memory Layers
-
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| **Operational** | `data/memory/operational/` | Full action logs, DOM snapshots, step results |
-| **LLM** | `data/memory/llm/` | Token-efficient summaries (<500 chars) fed to planner |
-
-### Encryption
-
-Sensitive data (credentials, tokens, cookies) uses AES-256-CBC:
-
-```ts
-import { MemoryManager } from './memoryManager';
-
-// Standard (unencrypted)
-memory.saveMemory('task_log', { site: 'google.com', steps: [...] });
-
-// Encrypted (for sensitive data)
-memory.saveEncrypted('browser_session', { token: 'bearer-xyz', cookies: [...] });
-
-// loadMemory() auto-decrypts if the entry was encrypted (backward compatible)
-const data = memory.loadMemory('browser_session'); // works for both
+```powershell
+npm run lint   # TypeScript type check (tsc --noEmit)
+npm run build  # Vite production build
 ```
 
-**Encryption key**: Set `JARVIS_ENCRYPTION_KEY` (min 32 chars) in `.env.local`. Falls back to a deterministic dev key if unset — **do NOT use the fallback in production**.
+The root package does not provide a general `test` script. Do not treat `lint` as an integration test of external services or action execution.
 
-### TTL Archival
+## Environment variables
 
-```ts
-memory.archiveOldMemory(); // Deletes entries older than 180 days (configurable)
+Use `.env.local` for local-only values. `.env.example` is a variable-name reference, not a secure production configuration; it currently includes demo/default values that must be replaced. The root process loads `.env` and then `.env.local`; `dotenv` does not overwrite existing values by default, so `.env` takes precedence when both files define the same variable.
+
+| Variable(s) | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | Gemini text, embedding, research, and Live voice access. Comma-separated pools are supported in some server paths. |
+| `GROQ_API_KEY` | Required by the current `/api/chat` route and used by Groq-backed classification/transcription paths. A comma-separated pool is supported. |
+| `CEREBRAS_API_KEY`, `SAMBANOVA_API_KEY` | Optional text-provider fallback credentials. |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_KEY` | Supabase URL and browser-safe anon key support Google auth; `SUPABASE_KEY` is server-side persistence only and must not be a service-role value exposed to the browser. Database tables and vector RPC functions must also be provisioned. |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID` | Optional Telegram bot and notification routing. |
+| `TAVILY_API_KEY`, `SERPAPI_API_KEY` | Optional search integrations used by selected research/planning paths. |
+| `JARVIS_PIN`, `JARVIS_LOG_TOKEN`, `OWNER_EMAIL` | Required Web API and WebSocket PIN, optional separate log access token, and owner configuration. The server refuses to start if `JARVIS_PIN` is missing; log routes enforce their own access rules. |
+| `USE_BROWSER_AGENT` | Set to `true` to enable the Python browser service path. The service must be running on `127.0.0.1:8000`. |
+| `IRIS_WORMHOLE_URL`, `IRIS_API_KEY` | Optional connection to the local I.R.I.S. desktop daemon. Use a unique shared secret. |
+| `HUGGINGFACE_VOICE_API_URL`, `HUGGINGFACE_VOICE_API_KEY` | Optional external voice matching endpoint and secret. |
+| `APP_URL`, `MACRODROID_WEBHOOK_URL` | Optional public app URL and MacroDroid notification integration. |
+
+The exact variables read by the runtime can change; search the relevant source before adding a new deployment variable. Never copy a real key into tracked documentation or logs.
+
+## Optional Python browser service
+
+This service is separate from the root Node process. The web server calls it at `http://127.0.0.1:8000` when `USE_BROWSER_AGENT=true`.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r python_agent/requirements.txt
+python python_agent/youtube_agent.py
 ```
 
-Old entries are summarized into `data/memory/llm/` before deletion.
+It starts a FastAPI/Selenium service on port `8000` and expects a working Chrome installation. The current service binds to `0.0.0.0` and does not authenticate its action endpoints. Use only on a trusted host/network; do not expose it directly to the internet.
 
----
+## Optional Supabase setup
 
-## Task Tracker
+The code expects:
 
-### Task Schema
+- `memory_store` for thread messages and optional embeddings, plus `match_memories` for semantic recall.
+- `knowledge_base` for saved notes/documents, plus `match_knowledge` for semantic search.
+- `tasks` for persisted one-time task state.
+- `research_jobs` for recurring routines.
 
-```ts
-{
-  task_id: string;       // UUID
-  site: string;          // e.g. "youtube", "wikipedia"
-  goal: string;          // Natural language goal
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  steps: [{
-    action: string;
-    status: 'pending' | 'completed' | 'failed' | 'skipped';
-    retries: number;     // Max 2
-    error?: string;
-  }];
-  last_step: string;
-  timestamp: string;     // ISO creation time
-  updated_at: string;
-  memory_snapshot: any;  // State at last update
-  errors: string[];      // Accumulated error messages
-}
+Schema and RPC definitions must match the arguments used in `server/threadManager.ts`, `server/knowledgeManager.ts`, `server/scheduler.ts`, and `server/cronJobs.ts`. The repository's presence of Supabase client code does not create these objects automatically.
+
+## Optional Electron desktop app
+
+`jarvis-desktop/` is its own npm package. From that directory:
+
+```powershell
+npm ci
+npm run dev
 ```
 
-### Task Lifecycle
+Build commands are defined in `jarvis-desktop/package.json` (`build`, `build:win`, `build:mac`, and `build:linux`). The desktop app is not launched by the root `npm run dev` or root build. Review its own README and current code before assuming its integrations match the web service.
 
-```
-pending → in_progress → completed
-                     ↘ failed (after 2 retries per step)
-```
+## Code map
 
-### Resume After Crash
+| Area | Important files |
+|---|---|
+| Server startup and middleware | `server.ts` |
+| API routes | `server/routes/api.ts` |
+| Intent classification and confirmation | `server/intentClassifier.ts`, `server/orchestrator.ts`, `server/confirmationState.ts` |
+| Provider cascades | `server/llmRouter.ts` |
+| Iterative tool execution | `server/agenticLoop.ts`, `server/toolDispatcher.ts`, `server/tools.ts` |
+| Browser planning and optional visual Python bridge | `server/browser/planner.ts`, `python_agent/youtube_agent.py` |
+| Gemini Live voice client | `src/services/zoyaLiveService.ts` |
+| Thread and semantic memory | `server/threadManager.ts`, `server/knowledgeManager.ts` |
+| One-time and recurring work | `server/scheduler.ts`, `server/cronJobs.ts` |
+| MCP process management | `server/mcpManager.ts` |
+| I.R.I.S. bridge | `server/irisIntentRouter.ts`, `server/irisExecutor.ts` |
+| Logs and metrics | `server/logger.ts`, `server/utils/metrics.ts`, `server/logPortal.ts` |
 
-The executor checks `isStepCompleted()` before each step. If JARVIS crashes mid-task:
-1. Re-run the same `executePlan()` call
-2. Completed steps are automatically skipped
-3. Execution resumes from the first incomplete step
+## Extending the system safely
 
-### Repeat Past Tasks
+1. Trace the feature from the specific client/API entry point through orchestration to the executor. Similar names in another package do not imply shared behavior.
+2. Keep model output as untrusted input. Parse it, validate it against a typed schema, enforce authorization and confirmation policy in code, then execute it in a bounded backend function.
+3. Return the actual executor result to the user and conversation state. Never report success solely because a model proposed an action.
+4. Keep prompts in the relevant `server/agent_prompts/` modules and update their README when the prompt assembly contract changes.
+5. Add or update tests for the route and executor when practical. Keep tests isolated from real API keys, Telegram accounts, browser profiles, and physical devices.
+6. Update the canonical architecture/status docs when execution paths or integration requirements change. Keep roadmap and historical analysis notes clearly labeled.
 
-```ts
-const lastTask = tracker.getLastTaskForGoal("like AI video");
-// Returns the most recent matching task with its full step history
-```
+## Verification
 
-The planner automatically injects past task context to avoid repeating failures.
-
----
-
-## Error Handling
-
-### Retry Logic
-- Each step retries **up to 2 times** with a 2-second cooldown
-- After 2 failed retries, the step is marked `failed` and an alert fires
-- The plan halts on persistent failure (no cascading crashes)
-
-### Sensitive Data Redaction
-Error logs automatically redact these patterns:
-- `password`, `token`, `cookie`, `secret`, `apiKey`
-
-Example log entry in `logs/tasks/<task_id>.log`:
-```
-[2026-03-23T12:00:00.000Z]
-URL: https://youtube.com/watch?v=xyz
-Action: youtube_like
-Error: Timeout 30000ms exceeded
-Memory: {"action":"youtube_like","apiKey":"[REDACTED]"}
----
-```
-
----
-
-## Dashboard CLI
-
-```bash
-# List all tasks
-npx tsx server/browser/dashboard.ts tasks
-
-# Filter by status
-npx tsx server/browser/dashboard.ts tasks:active
-npx tsx server/browser/dashboard.ts tasks:failed
-
-# Inspect a specific task
-npx tsx server/browser/dashboard.ts task <task_id>
-
-# View error log for a task
-npx tsx server/browser/dashboard.ts errors <task_id>
-
-# Memory inspection
-npx tsx server/browser/dashboard.ts memory:list
-npx tsx server/browser/dashboard.ts memory:get <key>
-npx tsx server/browser/dashboard.ts memory:summary <key>
-npx tsx server/browser/dashboard.ts memory:size
-
-# Archive old memory (TTL-based)
-npx tsx server/browser/dashboard.ts memory:archive
-```
-
----
-
-## Adding a New Action
-
-1. **Implement** the function in `actions.ts`:
-   ```ts
-   export async function myNewAction(page: Page, ...) {
-       await humanPreAction(page);  // ALWAYS call this first
-       // ... your logic
-       await randomDelay();         // ALWAYS add human delay
-   }
-   ```
-
-2. **Register** in `executor.ts` → `runAction()` switch statement
-
-3. **Add** the action name to the `BrowserAction.action` union type
-
-4. **Update** `planner.ts` prompt to teach the LLM about the new action
-
----
-
-## Universal DOM Layer
-
-For sites without hardcoded selectors, the system uses:
-
-1. `domExtractor.ts` → scrapes visible interactive elements
-2. `planWithDOM()` → feeds DOM map + goal to LLM
-3. LLM returns `universal_click` or `universal_type` with dynamic selectors
-
-### Selector Strategy Priority
-| Strategy | Method | When to use |
-|----------|--------|-------------|
-| `role` | `getByRole()` | Buttons, links with ARIA roles |
-| `text` | `getByText()` | Elements with visible text |
-| `placeholder` | `getByPlaceholder()` | Input fields |
-| `selector` | `locator()` | CSS fallback (last resort) |
-
----
-
-## Supabase Migration Guide
-
-When ready to move to cloud storage:
-
-1. **Install** `@supabase/supabase-js`
-
-2. **Create tables** using the schema in `supabaseAdapter.ts`:
-   ```sql
-   CREATE TABLE memory_store (
-     key         TEXT PRIMARY KEY,
-     value       JSONB NOT NULL,
-     encrypted   BOOLEAN DEFAULT FALSE,
-     created_at  TIMESTAMPTZ DEFAULT NOW(),
-     updated_at  TIMESTAMPTZ DEFAULT NOW()
-   );
-
-   CREATE TABLE tasks (
-     task_id     UUID PRIMARY KEY,
-     site        TEXT,
-     goal        TEXT,
-     status      TEXT CHECK (status IN ('pending','in_progress','completed','failed')),
-     steps       JSONB,
-     last_step   TEXT,
-     errors      JSONB DEFAULT '[]',
-     memory_snapshot JSONB,
-     created_at  TIMESTAMPTZ DEFAULT NOW(),
-     updated_at  TIMESTAMPTZ DEFAULT NOW()
-   );
-   ```
-
-3. **Implement** the TODO methods in `supabaseAdapter.ts`
-
-4. **Swap adapters** in `executor.ts`:
-   ```ts
-   // Before (local)
-   const adapter = new LocalJsonAdapter(path.join(DATA_DIR, 'memory', 'operational'));
-   
-   // After (cloud)
-   const adapter = new SupabaseAdapter(SUPABASE_URL, SUPABASE_KEY, 'memory_store');
-   ```
-
-5. **No changes needed** in planner, actions, task tracker, or dashboard
-
----
-
-## I.R.I.S. Host OS Daemon (Setup & Execution)
-
-I.R.I.S. is the physical execution layer (Electron/Node daemon) that allows J.A.R.V.I.S. to control the host Windows machine.
-
-### Running I.R.I.S.
-1. Navigate to `IRIS-AI-main/IRIS-AI-main/`
-2. Run `npm run dev`
-3. The daemon will boot on `localhost:4000` and automatically establish a **Cloudflare Tunnel**.
-
-### Connecting J.A.R.V.I.S. to I.R.I.S.
-1. When I.R.I.S. boots, it prints a WORMHOLE URL to the console (e.g., `https://random-words.trycloudflare.com`).
-2. Copy this URL.
-3. Open `.env.local` in the root J.A.R.V.I.S. directory.
-4. Set `IRIS_WORMHOLE_URL=https://random-words.trycloudflare.com`
-5. Restart the J.A.R.V.I.S. web server.
-
-### Adding New I.R.I.S. Commands
-1. Edit `IRIS-AI-main/src/main/services/api-bridge.ts`.
-2. Add a new `case` in the switch statement for `req.body.action`.
-3. Implement the hardware binding (using `child_process`, `@nut-tree-fork/nut-js`, or `desktopCapturer`).
-4. Update the J.A.R.V.I.S. prompt in `server/agent_prompts/modules/iris_integration.json` to teach Gemini about the new action.
-
----
-
-## ⚠️ Watch-Out List for Future Developers
-
-### 1. Browser Session Persistence
-- Login sessions (Gmail, YouTube) are stored in `./browser-data/`
-- If you delete this folder, all saved logins are lost
-- **Never commit `browser-data/` to git** (already in `.gitignore`)
-
-### 2. YouTube Selector Fragility
-- YouTube frequently changes its DOM structure
-- If `likeVideo()` or `commentOnVideo()` breaks, inspect the page and update selectors in `actions.ts`
-- The `universal_click`/`universal_type` approach is more resilient for non-YouTube sites
-
-### 3. Groq API Key Rotation
-- Keys are comma-separated in `GROQ_API_KEY` env var
-- `getGroqClient()` in `server/llm.ts` randomly picks one per call
-- If you hit rate limits, add more keys
-
-### 4. Memory File Corruption
-- `LocalJsonAdapter` creates `.bak` files before every write
-- If a JSON file corrupts, restore from the `.bak` copy
-- Run `memory:archive` periodically to keep files small
-
-### 5. Token Explosion
-- The planner injects past task context into LLM prompts
-- If memory grows large, the context window fills up fast
-- `summarizeMemory()` compresses entries to <500 chars — call it regularly
-- The `archiveOldMemory()` method purges entries older than TTL (default: 180 days)
-
-### 6. Concurrent Execution
-- The current system is **single-threaded** — one task at a time
-- Running multiple `executePlan()` calls in parallel will cause race conditions on memory/task files
-- If you need concurrency, implement file-level locking or move to Supabase
-
-### 7. CAPTCHA & Bot Detection
-- Some sites block Playwright via bot detection.
-- The `humanPreAction()` wrapper in Playwright adds random delays and mouse movements to reduce detection.
-- **Stealth Fallback**: For bot-sensitive sites (e.g., YouTube, Google Search), J.A.R.V.I.S. routes actions to the FastAPI Python agent (`youtube_agent.py`), which boots `undetected-chromedriver` (Selenium) to successfully bypass advanced anti-bot challenges.
-
-### 8. Production Encryption Key
-- **CRITICAL**: Set `JARVIS_ENCRYPTION_KEY` in production (min 32 chars)
-- The fallback dev key is deterministic and NOT secure
-- If the key changes, existing encrypted memory becomes unreadable — **back up data first**
-
-### 9. Log Rotation
-- Error logs accumulate in `logs/tasks/` indefinitely
-- Implement periodic cleanup or rotate logs by date
-- Token usage logs in `logs/` are already monthly (`token_usage_YYYY-MM.csv`)
-
-### 10. Environment Variables Required
-
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `GROQ_API_KEY` | LLM API access (comma-separated for rotation) | ✅ Yes |
-| `JARVIS_ENCRYPTION_KEY` | AES-256 key for sensitive memory (min 32 chars) | ⚠️ Production only |
-| `SUPABASE_URL` | Supabase project URL | 🔮 Future |
-| `SUPABASE_KEY` | Supabase anon/service key | 🔮 Future |
+For root TypeScript changes, run `npm run lint`. For frontend bundle compatibility, run `npm run build`. There is no root test script at present; run only relevant subproject checks that exist for the code changed. End-to-end browser, Telegram, voice, Supabase, and desktop behavior requires configured services and explicit integration verification.

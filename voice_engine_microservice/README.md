@@ -1,48 +1,44 @@
----
-title: Jarvis Voice Engine
-emoji: 🎙️
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
----
-# J.A.R.V.I.S. Voice Biometrics Engine
+# J.A.R.V.I.S. Voice Matching Service
 
-This microservice runs on a Free Hugging Face Space (Docker CPU). It handles all audio processing, extracting voice embeddings via SpeechBrain, and verifying if the speaker is the Boss.
+This optional FastAPI service uses SpeechBrain's ECAPA speaker-recognition model to compare an uploaded audio sample with a configured owner embedding and any supplied known profiles. The root Node service can call it when the voice integration is configured.
 
-## 1. Deploying to Hugging Face
-1. Create a new Hugging Face Space.
-2. Select **Docker** as the SDK.
-3. Select **Blank** template.
-4. Clone your Space repo locally and copy the contents of this folder into it:
-   - `app.py`
-   - `Dockerfile`
-   - `requirements.txt`
-5. Push the code to the Hugging Face Space.
-6. In your Space **Settings -> Variables and Secrets**, add a Secret:
-   - Name: `VOICE_API_KEY`
-   - Value: `jarvis_secure_key_123!` (Make sure this matches your Render `.env`!)
+This is a prototype speaker-similarity feature. It is **not** a reliable identity check, strong anti-spoofing control, or security boundary.
 
-## 2. Enrolling the Boss Voice (Military Grade Security)
-To ensure no one can spoof your voice, you must generate a highly secure voice print (embedding) and hardcode it into the Hugging Face Space.
+## Run with Docker
 
-Run this script locally on your PC (you need a microphone):
+The included `Dockerfile` runs Uvicorn on port `7860`:
 
 ```bash
-# Install PyAudio (used for recording)
-pip install pyaudio
-
-# Run the enrollment script
-python enroll_boss.py --url https://YOUR-SPACE-URL.hf.space --key jarvis_secure_key_123!
+docker build -t jarvis-voice-engine .
+docker run --rm -p 7860:7860 \
+  -e VOICE_API_KEY="replace-with-a-unique-secret" \
+  -e BOSS_VOICE_EMBEDDING="base64-embedding" \
+  jarvis-voice-engine
 ```
 
-1. The script will record 5 seconds of your voice.
-2. It will send it securely to your Hugging Face Space.
-3. The Space will return a long Base64 string (your Voice Print Embedding).
-4. Go to your Hugging Face Space **Settings -> Variables and Secrets**.
-5. Add a new Secret:
-   - Name: `BOSS_VOICE_EMBEDDING`
-   - Value: (Paste the long string here)
-6. Restart the Space.
+The service loads the SpeechBrain model at startup. A healthy `/` response reports whether the model loaded and whether an owner embedding is configured.
 
-J.A.R.V.I.S. will now reject anyone whose voice doesn't match that exact print!
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `VOICE_API_KEY` | Bearer token required by `/verify` and `/enroll`. Set a unique secret; the source contains an unsafe development fallback if it is omitted. |
+| `BOSS_VOICE_EMBEDDING` | Base64-encoded float32 speaker embedding used for the owner comparison. Treat as sensitive biometric data. |
+
+The root Node app uses `HUGGINGFACE_VOICE_API_URL` and `HUGGINGFACE_VOICE_API_KEY` to reach the deployed service; the remote secret must match `VOICE_API_KEY`.
+
+## HTTP endpoints
+
+- `GET /` reports service/model/profile configuration status.
+- `POST /verify` accepts `audio_file` and optional `known_profiles` multipart fields and returns a speaker category, similarity score, and `liveness` flag.
+- `POST /enroll` accepts `audio_file` and returns a base64 embedding. It requires the bearer token.
+
+## Limitations and data handling
+
+- The current liveness test uses a basic audio DC-offset/peak heuristic. It can be bypassed or produce false results; a `liveness: true` value is not proof that audio came from a live person.
+- Speaker matching is based on cosine similarity thresholds in `app.py`; accuracy depends on audio quality, device, environment, and enrollment data.
+- The current service accepts embeddings for known profiles in the request. Protect requests and responses, and do not persist, commit, or share embeddings without explicit consent.
+- The `enroll_boss.py` helper disables TLS certificate verification for its HTTPS request. Review and fix that behavior before using the helper with sensitive voice data over an untrusted network.
+- The root `.env.example` has demonstration secret values. Never reuse them.
+
+Use an independent authentication factor for any sensitive action. Voice results should not authorize shell, desktop, financial, account, or data access by themselves.

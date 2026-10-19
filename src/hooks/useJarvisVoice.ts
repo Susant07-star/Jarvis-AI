@@ -122,7 +122,8 @@ export function useJarvisVoice() {
   const connectWs = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+    const pin = localStorage.getItem('jarvis_pin') || '';
+    const ws = new WebSocket(`${proto}//${window.location.host}/ws?pin=${encodeURIComponent(pin)}`);
 
     ws.onopen = () => console.log('[Voice] WS connected');
 

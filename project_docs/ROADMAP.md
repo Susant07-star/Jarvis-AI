@@ -1,191 +1,58 @@
-# J.A.R.V.I.S. Development Roadmap
+# J.A.R.V.I.S. Roadmap
 
-> **Architecture Contract**: This roadmap strictly adheres to the rules in `project_docs/BOOTSTRAP_PROMPT.md`.
-> - The LLM **never** executes tools directly. All execution flows through Node.js → Python Agent.
-> - The Planner outputs **strict JSON only** (`{"requires_confirmation": bool, "steps": []}`).
-> - The Orchestrator in `server/` is the central control system.
+> This is a proposed engineering sequence based on the repository state reviewed on 2026-10-19. It is not a release schedule. “Present in code” does not mean production-ready or verified in a deployed environment; see [System Status](SYSTEM_STATUS.md).
 
----
+## 1. Close security and execution-boundary gaps
 
-## Phase 1: Core Local Automation ✅ (Stable)
+- [ ] Remove example secrets and insecure fallback keys from runtime defaults; fail closed when required secrets are missing.
+- [ ] Add authentication and request validation to the Python browser service, and bind it to a private interface by default.
+- [ ] Define one policy for tool permissions, user confirmation, and destructive/external actions across chat, voice, Telegram, and desktop routes.
+- [ ] Review the log portal, voice enrollment, MCP configuration, and I.R.I.S. bridge as one security boundary.
+- [ ] Document and verify the data each provider and service receives.
 
-**Goal**: Establish a reliable, observable local browser agent that can execute structured tasks on a real browser session.
+**Completion evidence:** security review of each exposed route, negative tests for unauthorized requests, and documented safe deployment defaults.
 
-### 1.1 Browser Automation (Visual Agent & Coordinate Engine)
-- [x] **Set-of-Mark Visual Engine** — `python_agent/youtube_agent.py`
-  - Injects JS to draw numbered bounding boxes over all interactive elements.
-  - Takes Base64 screenshots of the UI.
-  - Maps `jarvis_id` (box numbers) directly to precise `center_x`, `center_y` coordinates.
-- [x] **Secure Form Filling** — `type_secure` action
-  - Credential keys resolved from environment variables; plaintext never logged
-- [x] **Ad Skipping**
-  - Poll for `ytp-ad-skip-button` visibility; click when available.
+## 2. Make action routing and outcomes reliable
 
-### 1.2 API Integration
-- [x] **Deep Research / Intelligent Search** — routed inline in `server/routes/api.ts` & `server/llmRouter.ts`
-  - Uses `gemini-3.1-flash-lite-preview` with Google Search Grounding for live research.
-  - Features dynamic API Key rotation (up to total keys configured) to prevent quota exhaustion.
-  - Falls back to `gemini-2.5-flash` and `gemini-2.0-flash`.
+- [ ] Write down the active request path for each interface and capability; identify unused or legacy paths in `server/browser/` and `python_agent/`.
+- [ ] Use typed tool/action schemas and validate model-produced payloads before execution.
+- [ ] Give every action a consistent lifecycle: proposed, awaiting confirmation when required, running, succeeded/failed, and user-visible result.
+- [ ] Persist execution IDs and results so a model cannot report success when a downstream tool failed or timed out.
+- [ ] Add timeouts, cancellation, bounded retries, and idempotency rules to external actions.
 
-### 1.3 Observability & Metrics
-- [x] **MetricsTracker** — `server/utils/metrics.ts`
-  - Tracks token usage, latency, and model selection.
-- [x] **Debug Logging**
-  - Screenshots dynamically saved to `logs/debug_screenshots/` without blocking the Node event loop.
-  - Detailed token usage and agent plans saved to `logs/debug.log`.
+**Completion evidence:** route-level integration tests cover normal completion, refusal/confirmation, unavailable services, malformed payloads, timeout, and retry behavior.
 
----
+## 3. Consolidate state and scheduling
 
-## Phase 2: Telegram & Remote Voice ✅ (Completed)
+- [ ] Define which records belong in Supabase and which can remain local files; specify retention and recovery behavior.
+- [ ] Ensure thread history falls back consistently when the database is empty or unavailable.
+- [ ] Make one-time and recurring schedules durable across restarts and multiple service instances, preferably with an external queue/worker contract.
+- [ ] Store and apply timezone per user/job instead of relying on a hard-coded timezone in recurring execution.
+- [ ] Add clear migrations and setup instructions for memory, knowledge, tasks, and recurring-job tables and RPC functions.
 
-**Goal**: Allow J.A.R.V.I.S. to be controlled remotely via Telegram (text + voice) and integrate audio calling directly to Gemini.
+**Completion evidence:** restart and outage tests prove the documented recovery and delivery guarantees.
 
-### 2.1 Telegram Integration ✅
-- [x] **Text & Voice Command Bridge** — `server/telegramBot.ts`
-  - [x] Custom Manual Polling Loop with DNS-bypass.
-  - [x] Groq Whisper STT for transcribing voice notes.
-  - [x] Text messages routed through unified Intent Classifier.
-- [x] **Telegram Audio Calling to Gemini** — `src/components/jarvis/TelegramCallUI.tsx`
-  - [x] Implemented Telegram Web App (Mini App) for mobile voice calling.
-  - [x] Full 3D Zoya Avatar integration on phone screen.
-  - [x] Direct WebRTC/Microphone stream to Gemini Live WebSocket.
-- [x] **Proactive Notifications & Voice Reminders**
-  - [x] Implemented `triggerProactiveCall` backend endpoint.
-  - [x] JARVIS can autonomously send a "Join Call" button to the user when tasks finish.
+## 4. Add repeatable evaluation and observability
 
-### 2.2 Robust Persistence & Scheduling
-- [x] **Supabase/Postgres Persistence Layer**
-  - [x] Implemented `jarvisScheduler.init()` on startup to query pending database tasks and resume active timers.
-  - [x] Automatically saves scheduled tasks to Supabase and updates their status to `completed`/`failed`/`cancelled` on lifecycle events.
-- [x] **Dynamic Task Cancellation & Modification**
-  - [x] Enabled users to modify and cancel existing scheduled tasks via natural language, using active-task metadata injection in the LLM parser.
-- [ ] **External Webhook Trigger (QStash/Cron)**
-  - Implement a serverless queuing system (e.g., Upstash QStash) to hit the backend webhook at the exact scheduled time, guaranteeing delivery without active RAM consumption.
-- [ ] **Recurring & Daily Schedules (Cron Work)**
-  - Support syntax for repeating tasks (e.g., *"every day at 8:00 AM"*, *"every Sunday at 9:00 PM"*).
-  - Automatically calculate the next execution time and reschedule the task after it runs successfully.
-- [ ] **Universal Watchdog Tooling**
-  - Generalize the alarm watchdog into a flexible agent tool (`schedule_watchdog`).
-  - Enable J.A.R.V.I.S. to monitor any background task, specifying custom check intervals (gaps), conditions, and retry limits.
+- [ ] Add automated tests for intent classification, confirmation state, tool parsing/validation, model cascade selection, scheduling, and memory fallback.
+- [ ] Add safe integration tests for mock providers and mock browser/desktop executors; keep real devices and credentials out of CI.
+- [ ] Emit a correlation ID through API/SSE/WebSocket, LLM, tool, scheduler, Telegram, and integration logs.
+- [ ] Measure success/failure and latency by route and tool, not only token usage.
+- [ ] Redact secrets, sensitive prompt fields, and personal data from logs by default.
 
----
+**Completion evidence:** CI covers the core control flow, and a user can trace one request from ingress through tool result without exposing credentials.
 
-## Phase 3: Advanced Intelligence & Document Synthesis (CURRENT PRIORITY 🔴)
+## 5. Clarify product boundaries
 
-**Goal**: Power J.A.R.V.I.S. with complex document creation, deep reasoning traces, and multimodal media support.
+- [ ] Decide whether `jarvis-desktop/` is an independent application or a client for the root Node service; document and implement that contract.
+- [ ] Avoid describing independent modules as a single connected system unless an integration path and deployment proof exist.
+- [ ] Choose the supported deployment target for the root web service, Python browser service, voice service, and I.R.I.S. daemon.
+- [ ] Align environment-variable names, onboarding, versioning, and release steps across packages.
 
-### 3.1 Advanced Intelligence & Reasoning UI
-- **Dropdown Thinking (Reasoning UI)**
-  - Implement collapsible "Thinking..." dropdown in React Chat and Telegram.
-  - Show internal planning and research progress live before final answer.
-- **Deep Research Engine**
-  - Expand Intelligent Search to perform multi-step, deep-dive research tasks autonomously.
-- **Video Message Support**
-  - Extract audio from Telegram video messages (`.mp4`) and process them like voice notes.
-  - Explore Gemini Vision for direct visual analysis of video clips.
+**Completion evidence:** a clean-machine setup guide can install each supported mode and clearly state which actions require a powered-on local machine.
 
-### 3.2 File Generation & Document Synthesis
-- **File Making & PDF Generation**
-  - Node `fs` module to generate well-formatted PDFs, Markdown reports, or CSVs based on LLM outputs.
-  - Automatically send generated PDFs/CSVs back to the user via Telegram.
+## 6. Evaluate workflow frameworks only when needed
 
-### 3.3 Autonomous Log Analyzer & Fail-Safe Injection
-- **Real-Time Log Monitor**
-  - Run a lightweight background process/LLM to monitor error logs and verify whether scheduled tasks/actions executed successfully.
-- **Fail-Safe Live/Chat Injection**
-  - If a background task fails, J.A.R.V.I.S. automatically injects the error context into the live voice mode (Gemini Live) or active chat thread so the user is immediately notified.
-- **Offline Issue Registry**
-  - Write details about failed runs to a persistent `logs/debug_issues.json` file to make debugging offline simple.
+The current orchestration is hand-written TypeScript with separate paths and a bounded tool loop. There is no LangGraph dependency in the root package. A graph runtime could help if workflows need durable checkpoints, resumable long-running tasks, or explicit branching/state inspection; evaluate it against those requirements before migrating existing routes.
 
----
-
-## Phase 4: Security Hardening & Owner Authentication ✅ (Completed)
-
-**Goal**: Harden J.A.R.V.I.S. access control to prevent unauthorized use, locking replies and system control solely to the primary administrator.
-
-### 4.1 Owner Access Locking
-- [x] **Telegram Admin Whitelist**
-  - Restrict the Telegram bot listener to strictly reply only to verified user IDs (stored in env/database).
-- [x] **3-Layer Security Lock**
-  - **Layer 1:** Google OAuth integration natively via Supabase JS.
-  - **Layer 2:** Cloud Identity Whitelist checking against `OWNER_EMAIL`.
-  - **Layer 3:** 4-Digit Local Enclave Master PIN (required for both Web UI and I.R.I.S Vault).
-
-### 4.2 Credentials & Encryption Isolation
-- **Encrypted Local Enclaves**
-  - Ensure all database tables and local thread logs containing personal data are fully AES-256 encrypted using runtime keys.
-  - Mask dynamic credentials in system processes to ensure external inspection shows only sanitized data.
-
----
-
-## Phase 5: Full Computer & OS Environment Control ✅ (Completed but final testing left)
-
-**Goal**: Expand J.A.R.V.I.S. beyond the browser to orchestrate the entire host operating system.
-
-### 5.1 Host OS Automation (I.R.I.S.) ✅
-- [x] **I.R.I.S. Electron Daemon**
-  - Integrated the I.R.I.S. daemon over a Cloudflare tunnel to execute physical actions on the host Windows machine.
-- [x] **System Keyboard & Mouse Control**
-  - Native control to click, type via clipboard injection, and press hotkeys using `@nut-tree-fork/nut-js`.
-- [x] **Desktop App Control & Shell Execution**
-  - Ability to open/close apps, capture base64 screenshots via `desktopCapturer`, and run PowerShell commands.
-
-### 5.2 Next Steps for Local Environment
-- [x] **I.R.I.S Daemon (Electron)**
-  - [x] Implement `desktopCapturer` in `wormhole.ts` (or main process) to take screenshots every 1000ms.
-  - [x] Implement a circular array holding the last 10 base64 frames.
-  - [x] Add an endpoint (e.g., action `get_vision_buffer`) to the wormhole Express server so J.A.R.V.I.S can retrieve the frames.
-- [x] **J.A.R.V.I.S Server (Backend)**
-  - [x] Add `getVisionBuffer()` to `irisExecutor.ts` to request frames from I.R.I.S.
-  - [x] Update `threadManager.ts` to fetch these frames when handling user messages and pass them into Gemini as inline image data.
-- [x] **Cloudflare Tunnel Auto-Sync**
-  - Use Supabase to automatically broadcast the changing Cloudflare tunnel URL from I.R.I.S. to J.A.R.V.I.S. on boot.
-
----
-
-## Phase 6: Advanced Browser Automation (Fifth Priority 🟡)
-
-**Goal**: Polish and scale the autonomous Multi-Modal Set-of-Mark browser agent.
-
-### 6.1 Multi-Agent Architecture
-- **Task Priority Queue**
-  - Node maintains an ordered queue of pending browser tasks.
-- **Parallel Execution** *(optional)*
-  - Spawn multiple Python agent processes for concurrent tab automation.
-
-### 6.2 Complex Visual Navigation
-- **Scrolling & Context Memory**
-  - Teach the visual agent to scroll to find elements off-screen and remember their state.
-- **CAPTCHA & Anti-Bot Evasion**
-  - Implement strategies for navigating complex, bot-protected environments.
-
----
-
-## Phase 7: Voice Interaction & Advanced UX ✅ (Completed)
-
-**Goal**: Make J.A.R.V.I.S. feel like a real conversational assistant with natural voice UX across all devices.
-
-### 7.1 Real-Time Task Handling
-- Live progress updates streamed during multi-step execution.
-- Interruption support: user can say "stop" mid-execution → `AbortController` signal fires.
-
-### 7.2 Advanced Voice Biometrics & Security
-- [x] **Real-Time Speaker Identification**: Offload heavy speaker verification to a free **Hugging Face Space** running an open-source Python engine (e.g., SpeechBrain). This bypasses Render's RAM limits, paid API restrictions, and the need for the local PC to be on.
-- [x] **Dynamic Enrollment (Supabase)**: Automatically detect unknown speakers, ask their name, and save their voice print dynamically into the Supabase `voice_profiles` table.
-- [x] **Hardcoded Boss Profile**: Generate an encrypted, offline voice print for the primary administrator to prevent unauthorized access.
-- [x] **Military-Grade Anti-Spoofing**: Implement liveness detection to reject playback attacks (recordings of the boss's voice).
-
----
-
-## Cross-Phase Enhancements (Ongoing)
-
-These apply across **all phases** and should be maintained continuously.
-
-### Observability
-| What | Where | Status |
-|---|---|---|
-| Token usage per request | `metrics.ts` → `logs/token_detailed.json` | ✅ Active |
-| Dynamic Key Rotation | `llmRouter.ts` | ✅ Active |
-| Visual Agent Screenshots | `planner.ts` → `logs/debug_screenshots/` | ✅ Active |
-
-*Last Updated: 2026-05-24 | Phase 5 Complete. I.R.I.S. Host OS Automation is operational for now.*
+**Completion evidence:** a small proof of concept demonstrates a concrete capability that the current implementation cannot provide cleanly, with a migration cost and failure-mode comparison.

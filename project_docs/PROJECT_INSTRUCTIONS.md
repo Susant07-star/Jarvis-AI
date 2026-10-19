@@ -1,77 +1,39 @@
-# J.A.R.V.I.S. Project Instructions & Developer Guidelines
+# J.A.R.V.I.S. Project Instructions
 
-> **🚨 CRITICAL NOTICE FOR ALL FUTURE AI AGENTS OR HUMAN DEVELOPERS 🚨**
-> **TOKEN OPTIMIZATION IS MISSION CRITICAL.**
-> J.A.R.V.I.S. is designed to be blazing fast and highly token-efficient. Read and follow the Token Optimization Rules below BEFORE making any changes to prompt architecture or agent behavior.
+These rules apply to changes in this repository. The authoritative current overview is [Architecture](ARCHITECTURE.md), with implementation/configuration caveats in [System Status](SYSTEM_STATUS.md). Roadmaps and analysis notes are not proof that a feature is implemented.
 
-## Core Architecture & Architecture
+## Preserve the system boundaries
 
-This file acts as the **Single Source of Truth** for all developers and AI agents working on J.A.R.V.I.S.
+- Trace the actual client, route, orchestrator, and executor before changing behavior. The root web service, Telegram bot, Python browser service, I.R.I.S. daemon, voice microservice, and `jarvis-desktop/` package are separate runtimes.
+- Do not assume that a feature works everywhere because it exists in one surface or prompt. Document the exact routes and required services.
+- Keep model routing task-specific. Live voice, chat, planning, and research have different model/provider cascades.
+- The root implementation uses hand-written TypeScript orchestration. Do not describe it as LangGraph-based or migrate frameworks without a concrete requirement and comparison.
 
-## The Phased Roadmap
-J.A.R.V.I.S is being built in three distinct phases. 
+## Treat model output as untrusted input
 
-### ✅ Phase 1: Stabilize Locally
-**Goal:** Make everything work perfectly on a single local machine (laptop/PC).
-**Instructions for Developers/AI:**
-* SIMPLIFY SETUP: Do not introduce complex cloud, Docker, or ngrok tunneling logic yet.
-* All components (Node.js backend, React frontend, Python agent) run locally via localhost.
-* **Core Flow Test:** 
-  1. Start Python Agent (`cd python_agent && python youtube_agent.py`)
-  2. Start Node Backend/Frontend (`npm run dev`)
-  3.* Wait for TTS -> Stream TTS via WebSocket -> Play audio -> Repeat seamlessly.
-* **Success Criteria:** The flow is sub-second latency and feels indistinguishable from a native desktop application. Code is completely free of Google Cloud or paid dependencies (except Groq).
+- Models can propose actions; backend code owns authorization and execution.
+- Validate every tool/action payload against a schema before it reaches a browser, shell, filesystem, database, Telegram account, or local desktop.
+- Apply confirmation gates in code for consequential operations. A prompt instruction alone is not an authorization boundary.
+- Enforce timeouts, cancellation, bounded retries, and useful failure results. Do not report success unless the executor confirms it.
+- Do not make global claims like “I.R.I.S. is online” or “voice verified” unless the runtime health check actually confirms that state.
 
-## Security
-Ensure all secrets are stored in `.env.local` and never tracked in git. Handle sensitive voice input securely.
+## Protect secrets and user data
 
----
+- Keep API keys, Telegram tokens, PINs, voice embeddings, browser profiles, and user data out of Git, prompts, screenshots, and logs.
+- `.env.example` contains demonstration values. Do not copy them into a live deployment; replace all secrets with unique values.
+- Do not expose the Python browser service or MCP process endpoints to untrusted networks. Review external-process permissions before adding an MCP server.
+- Do not describe the current voice matching heuristic as reliable authentication or anti-spoofing.
 
-## 🛑 STRICT TOKEN OPTIMIZATION RULES FOR FUTURE DEVELOPERS 🛑
+## Keep prompts and integrations maintainable
 
-To keep J.A.R.V.I.S. affordable and fast (using Groq API), you MUST adhere to the following rules when expanding the system:
+- Put root web prompt modules under `server/agent_prompts/`; the `jarvis-desktop/` package has a separate prompt tree.
+- Add capabilities through a typed dispatcher or route with validation, logging, and consistent result handling. Avoid hiding side effects in prompt text.
+- Keep one-time tasks, recurring jobs, chat memory, and knowledge-base records distinct in both code and documentation.
+- Update canonical docs (`README.md`, `project_docs/ARCHITECTURE.md`, `SYSTEM_STATUS.md`, and relevant setup docs) when the actual runtime contract changes.
 
-### 1. Maintain the Modular Prompt Architecture
-- **DO NOT** paste massive blocks of instructions directly into `websocket.ts` or `api.ts`.
-- All agent instructions MUST be stored in `server/agent_prompts/modules/`.
-- Use `buildPrompt(agentName)` to assemble ONLY the modules needed for that specific request.
-- *Voice agents should not receive browser DOM rules. Vision agents should not receive mouse clicking tutorials.*
+## Verification and reporting
 
-### 2. Move Examples & Metadata Offline
-- **DO NOT** send dozens of examples to the LLM. 
-- Put extended examples, reasoning processes, and tool documentation in the `_doc` or `_reference_full_rules` JSON comments inside the `agent_prompts/modules/` files.
-- The LLM only needs the exact rule (e.g., `- "search X" -> use search_site`). The developer needs the docs.
-
-### 3. Dynamic Prompt Assembly & Summarization
-- For multi-step actions (e.g., searching, listing results, clicking), **summarize** intermediate steps.
-- Do not dump 100-line DOM responses back into the context blindly. Use `analyze_page` carefully, and limit extraction to visible, interactive elements only (current limit: 80 elements).
-- `server/llm.ts` handles memory summarization. Maintain this — don't let the context window stretch to 8,000 tokens for a simple "Click Next" command.
-
-### 4. Monitor Token Budgets
-- Token usage is actively logged via `[Token Metrics]` in the Node console.
-- If you add a feature and the base Request Prompt size exceeds **500 tokens**, you are doing it wrong. Refactor it into a sub-agent or a smaller module.
-
-### ✅ Phase 2: Cloud JARVIS (Without Laptop)
-**Goal:** Deploy the "Brain" to the cloud (Render) so J.A.R.V.I.S is always available.
-* Node/React frontend will be moved to Render Free Version.
-* Chat, reminders, Gmail interaction, and standard LLM features will function 24/7.
-* **Limitation:** YouTube/Desktop automation will be disabled when the local laptop is off.
-
-### ✅ Phase 3: Make JARVIS Usable Anywhere (Telegram)
-**Goal:** Connect to J.A.R.V.I.S on the go.
-* Build a Telegram bot integration to message JARVIS from your phone to check emails, set reminders, and query knowledge instantly.
-* When at home (PC ON): Full power mode (YouTube, apps, automation).
-
----
-
-## Technical Architecture & Developer Rules
-
-### 1. System Structure
-* **Frontend (React/Vite):** Visual HUD.
-* **Backend Origin (Node.js/TypeScript):** Connects to Groq tools/websockets. Routes automation to Python via HTTP POST (`http://localhost:8000/execute`).
-* **Microservices (Python):** Contains `youtube_agent.py` using `undetected-chromedriver` for native action.
-
-### 2. Development Rules
-* **No Mixed State:** Python holds browser state. Node.js holds conversation UI state. Keep them isolated.
-* **Async by Default:** Any command POSTed to the Python agent (`/execute`) must run in a `BackgroundTask` (FastAPI) and return immediately so Node.js socket streams don't hang.
-* **API Key Rotation:** We use multiple Groq keys in `process.env.GROQ_API_KEY` (comma-separated) to maintain stability in Phase 1.
+- Run the smallest relevant checks available for the changed package. Root `npm run lint` is a TypeScript check; it is not an integration test. Root `package.json` has no general `test` script.
+- Never claim an external integration, model, deployment, or local device was tested unless it was actually exercised.
+- Update `project_docs/CHANGELOG.md` for notable runtime changes. Documentation-only edits may be recorded under an unreleased documentation entry.
+- Preserve unrelated working-tree changes. Do not stage or publish work unless requested.

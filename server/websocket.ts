@@ -31,16 +31,14 @@ export function setupWebSocketServer(server: Server) {
 
   wss.on('connection', (ws: WebSocket, req: any) => {
     // ── Global Security Enforcement ──
-    const requiredPin = process.env.JARVIS_PIN;
-    if (requiredPin) {
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      const providedPin = url.searchParams.get('pin');
-      if (providedPin !== requiredPin) {
-        logger.warn('WS', 'Unauthorized WebSocket connection attempt (Invalid PIN)');
-        ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized: Invalid Master PIN.' }));
-        ws.close();
-        return;
-      }
+    const requiredPin = process.env.JARVIS_PIN?.trim();
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const providedPin = url.searchParams.get('pin');
+    if (!requiredPin || providedPin !== requiredPin) {
+      logger.warn('WS', 'Unauthorized WebSocket connection attempt (Invalid PIN)');
+      ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized: Invalid Master PIN.' }));
+      ws.close();
+      return;
     }
 
     logger.info('WS', 'New connection established');

@@ -354,8 +354,9 @@ ${JSON.stringify(history)}
       const systemPrompt = customEvent.detail
       if (systemPrompt && activeSocket.readyState === WebSocket.OPEN) {
         const overrideMsg = {
-          realtimeInput: {
-            text: systemPrompt
+          clientContent: {
+            turns: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+            turnComplete: true
           }
         }
         activeSocket.send(JSON.stringify(overrideMsg))
@@ -1345,8 +1346,12 @@ ${JSON.stringify(history)}
               ]
             }
           ],
-          inputAudioTranscription: {},
-          outputAudioTranscription: {}
+          // outputAudioTranscription is only supported on 2.5-native-audio models.
+          // Including it on gemini-3.1-flash-live-preview causes "Internal error encountered".
+          ...(this.model.includes('native-audio') ? {
+            inputAudioTranscription: {},
+            outputAudioTranscription: {}
+          } : {})
         }
       }
 
@@ -1369,6 +1374,8 @@ ${JSON.stringify(history)}
         if (data.setupComplete && !this.isSessionConfigured) {
           this.isSessionConfigured = true
           this.isConnected = true
+          const voiceName = getLocalSetting('jarvis_voice_profile', 'iris_voice_profile') === 'FEMALE' ? 'Aoede (Female)' : 'Puck (Male)'
+          console.info(`[🧠 JARVIS LIVE] ✅ Session ONLINE — Model: ${this.model} | Voice: ${voiceName}`)
           await this.startMicrophone()
           this.startAppWatcher()
           settleConnect()
@@ -1387,6 +1394,8 @@ ${JSON.stringify(history)}
         if (data.toolCall) {
           const functionCalls = data.toolCall.functionCalls
           const functionResponses: any[] = []
+          const toolNames = functionCalls.map((c: any) => c.name).join(', ')
+          console.info(`[🔧 TOOL CALL] Jarvis executing: [${toolNames}]`)
 
           await Promise.all(
             functionCalls.map(async (call: any) => {
@@ -1657,29 +1666,58 @@ ${JSON.stringify(history)}
             })
           }
 
+          // ── Transcription: only accumulate if we have NOT received native audio yet.
+          // When Gemini Live streams native audio, transcription adds latency and is redundant.
+          // We still track the text so we can save it to memory at turn end.
           if (serverContent.outputTranscription?.text) {
             this.aiResponseBuffer += serverContent.outputTranscription.text
           }
 
           if (serverContent.inputTranscription?.text) {
-            this.userInputBuffer += serverContent.inputTranscription.text
+            const chunk = serverContent.inputTranscription.text
+            if (!this.userInputBuffer && chunk.trim()) {
+              console.info(`[🎤 USER SPEAKING] Transcription starting...`)
+            }
+            this.userInputBuffer += chunk
           }
 
           if (serverContent.turnComplete || serverContent.interrupted) {
-            if (this.userInputBuffer.trim()) {
-              await saveMessage('user', this.userInputBuffer.trim())
-              this.userInputBuffer = ''
+            if (serverContent.interrupted) {
+              console.info('[⚡ INTERRUPTED] User barged in — stopping Jarvis response.')
             }
 
-            if (this.aiResponseBuffer.trim()) {
-              const responseText = this.aiResponseBuffer.trim()
-              if (!this.receivedAudioThisTurn) {
-                this.speakFallback(responseText)
+            if (this.receivedAudioThisTurn) {
+              // ── LIVE AUDIO PATH: native audio streamed successfully.
+              // Log the transcripts for debugging but DON'T re-speak or add latency.
+              // Save to memory in the background (non-blocking).
+              if (this.userInputBuffer.trim()) {
+                console.info(`[🎤 USER] "${this.userInputBuffer.trim()}"`)
+                saveMessage('user', this.userInputBuffer.trim()).catch(() => {})
               }
-              await saveMessage('jarvis', responseText)
-              this.aiResponseBuffer = ''
-              this.receivedAudioThisTurn = false
+              if (this.aiResponseBuffer.trim()) {
+                const responseText = this.aiResponseBuffer.trim()
+                console.info(`[🔊 JARVIS AUDIO] Native stream done. Response: "${responseText.substring(0, 120)}${responseText.length > 120 ? '...' : ''}"`)
+                saveMessage('jarvis', responseText).catch(() => {})
+              }
+            } else {
+              // ── FALLBACK PATH: no native audio — use browser TTS.
+              if (this.userInputBuffer.trim()) {
+                console.info(`[🎤 USER] "${this.userInputBuffer.trim()}"`)
+                await saveMessage('user', this.userInputBuffer.trim())
+              }
+              if (this.aiResponseBuffer.trim()) {
+                const responseText = this.aiResponseBuffer.trim()
+                console.warn(`[⚠️  FALLBACK TTS] No native audio — using browser speechSynthesis (check model/key).`)
+                this.speakFallback(responseText)
+                console.info(`[🤖 JARVIS] "${responseText.substring(0, 150)}${responseText.length > 150 ? '...' : ''}"`)
+                await saveMessage('jarvis', responseText)
+              }
             }
+
+            // Reset turn state
+            this.userInputBuffer = ''
+            this.aiResponseBuffer = ''
+            this.receivedAudioThisTurn = false
           }
         }
       } catch (err) {
@@ -1780,10 +1818,10 @@ ${JSON.stringify(history)}
           this.socket.send(
             JSON.stringify({
               realtimeInput: {
-                audio: {
+                mediaChunks: [{
                   mimeType: 'audio/pcm;rate=16000',
                   data: base64Audio
-                }
+                }]
               }
             })
           )
@@ -1827,10 +1865,10 @@ ${JSON.stringify(history)}
     this.socket.send(
       JSON.stringify({
         realtimeInput: {
-          video: {
+          mediaChunks: [{
             mimeType: 'image/jpeg',
             data: base64Image
-          }
+          }]
         }
       })
     )

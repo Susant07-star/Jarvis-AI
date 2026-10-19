@@ -191,6 +191,26 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  // ── Renderer → Terminal Log Bridge ─────────────────────────────────────
+  // Receives console.* calls forwarded from the renderer process and prints
+  // them to the dev terminal with color-coded level tags.
+  const LEVEL_COLORS: Record<string, string> = {
+    log:   '\x1b[36m',  // cyan
+    info:  '\x1b[32m',  // green
+    warn:  '\x1b[33m',  // yellow
+    error: '\x1b[31m',  // red
+    debug: '\x1b[35m',  // magenta
+  }
+  ipcMain.on('renderer:console', (_event, { level, msg }: { level: string; msg: string }) => {
+    const color = LEVEL_COLORS[level] || '\x1b[36m'
+    const reset = '\x1b[0m'
+    const label = level.toUpperCase().padEnd(5)
+    const line = `${color}[UI ${label}]${reset} ${msg}`
+    if (level === 'error') process.stderr.write(line + '\n')
+    else process.stdout.write(line + '\n')
+  })
+
+  // Legacy single-line console bridge (kept for compatibility)
   ipcMain.on('console-log', (_event, message) => {
     console.log('\x1b[36m[J.A.R.V.I.S. FRONTEND]\x1b[0m', message)
   })

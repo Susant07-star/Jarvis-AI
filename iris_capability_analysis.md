@@ -1,5 +1,7 @@
 # J.A.R.V.I.S. + I.R.I.S. Engineering Audit & Roadmap
 
+> Historical analysis note. The “working now” table reflects an earlier checkout/runtime snapshot and is not a current health report. See [system status](project_docs/SYSTEM_STATUS.md) and [architecture](project_docs/ARCHITECTURE.md).
+
 ## 1. What's Actually Working RIGHT NOW (from logs)
 | Action | Status | Evidence |
 |---|---|---|

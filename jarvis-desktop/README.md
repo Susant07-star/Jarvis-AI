@@ -1,30 +1,38 @@
 # J.A.R.V.I.S. Desktop
 
-**J.A.R.V.I.S.** (Just A Rather Very Intelligent System) is a premium, distributable AI desktop application. It is a Voice-First, PC-native AI operating layer that gives you complete, hands-free authority over your digital environment — powered entirely by your own API keys.
+`jarvis-desktop/` is a separate Electron application in the J.A.R.V.I.S. repository. It has its own renderer, main/preload processes, server modules, dependencies, environment/configuration, and build scripts. It is not launched by the root web app and is not currently a bundled wrapper around the root server.
 
-## Architecture
-- **J.A.R.V.I.S. Brain:** All LLM reasoning, multi-agent orchestration, voice processing, and memory live inside the Electron Main process, running locally on the user's machine.
-- **J.A.R.V.I.S. Hands:** Deep PC control capabilities (keyboard, mouse, screen capture, app execution, shell commands) via native OS bindings.
-- **BYOK (Bring Your Own Key):** Users configure their own Gemini, Groq, and Supabase credentials via a secure First-Run onboarding wizard. Keys are stored locally using `electron-store` and never transmitted to any third-party server.
+## What is in this package
 
-## Capabilities
-- `Voice Mode` — Real-time conversational AI using Gemini Live API
-- `Chat Mode` — Persistent, memory-backed chat sessions
-- `Desktop Control` — Mouse, keyboard, screen reading (`@nut-tree-fork/nut-js`)
-- `Terminal Execution` — Safe shell command runner
-- `MCP Hub` — Connect and manage Model Context Protocol servers
-- `File System` — Deep local file reading, indexing, and management
-- `Logs Viewer` — Real-time agent activity and thought-process logs
+The codebase includes a React/Electron interface with voice and chat experiences, a main-process IPC boundary, local browser/desktop-oriented tools, MCP and workflow views, scheduling and log views, and integrations for system information, files, research, and other widgets. These are implementation areas in an actively developed application; the presence of a screen or tool module does not by itself establish that every integration is complete, safe, or release-ready.
 
-## Setup (Development)
-1. `cd jarvis-desktop`
-2. `npm install`
-3. `npm run dev` (launches the app in dev mode)
+The desktop package also contains its own `src/server/` modules. They overlap with root `server/` in concepts such as routing, tools, scheduling, memory, Telegram, and MCP, but they are not automatically kept in sync. Check which package is being changed and follow its actual call path.
 
-## Build (Distribution)
-- `npm run build:win` — Generates `Jarvis-Desktop-Setup.exe` for Windows
-- `npm run build:mac` — Generates `.dmg` for macOS
-- `npm run build:linux` — Generates `.AppImage` / `.deb` for Linux
+## Development
 
----
-*Part of the J.A.R.V.I.S. ecosystem.*
+```powershell
+cd jarvis-desktop
+npm install
+npm run dev
+```
+
+Useful scripts from `package.json`:
+
+```powershell
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Packaging scripts are also defined: `build:win`, `build:mac`, and `build:linux`. Build and test the artifact on a clean target machine before claiming a platform is supported.
+
+## Security and local actions
+
+This app contains native desktop capabilities and handles provider credentials. Review the current main/preload bridge, IPC handlers, permission checks, shell execution, filesystem access, and provider requests before using it with sensitive data. Do not assume credentials remain local merely because they are stored by the app: model and integration requests necessarily send relevant inputs to their configured services.
+
+## Related documentation
+
+- [Desktop agent rules](docs/Agents.md)
+- [System textbook](docs/JARVIS_system_textbook.md)
+- [Repository architecture](../project_docs/ARCHITECTURE.md)
+- [Runtime comparison](../project_docs/feature_comparison.md)

@@ -17,6 +17,10 @@ import { installConsoleLogCapture, logger } from "./server/logger";
 
 async function startServer() {
   installConsoleLogCapture();
+  if (!process.env.JARVIS_PIN?.trim()) {
+    throw new Error("JARVIS_PIN is required. Set a private PIN in .env or .env.local before starting J.A.R.V.I.S.");
+  }
+
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -36,28 +40,26 @@ async function startServer() {
   // by the /api/logs/raw credential check.
   registerLogPortalRoutes(app);
 
-  app.get("/api/config/auth", (req, res) => {
-    res.json({
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
-      ownerEmail: process.env.OWNER_EMAIL
-    });
-  });
-
   app.use("/api", (req, res, next) => {
-    // Skip PIN check for auth config and log endpoints. Log routes enforce
-    // their own token/PIN check so they can support the standalone /log portal.
-    if (req.path === '/config/auth') return next();
+    // Log routes enforce their own token/PIN check so they can support the standalone /log portal.
     if (isLogApiPath(req.path)) return next();
 
-    const requiredPin = process.env.JARVIS_PIN;
-    if (requiredPin) {
-      const providedPin = req.headers['x-jarvis-pin'] || req.query.pin;
-      if (providedPin !== requiredPin) {
-        return res.status(401).json({ error: "Unauthorized: Invalid Master PIN." });
-      }
+    const requiredPin = process.env.JARVIS_PIN?.trim();
+    const providedPin = req.headers['x-jarvis-pin'];
+    if (!requiredPin || providedPin !== requiredPin) {
+      return res.status(401).json({ error: "Unauthorized: Invalid Master PIN." });
     }
     next();
+  });
+
+  app.get("/api/config/auth", (_req, res) => {
+    res.json({
+      supabaseUrl: process.env.SUPABASE_URL,
+      // This key is specifically intended for browser clients. Never return SUPABASE_KEY,
+      // which is reserved for server-side database access and may be privileged.
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      ownerEmail: process.env.OWNER_EMAIL
+    });
   });
 
   // Mount modular API routes

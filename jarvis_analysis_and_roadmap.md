@@ -1,5 +1,7 @@
 # 🤖 J.A.R.V.I.S. — Expert System Analysis & AI Agent Reframe Roadmap
 
+> Historical analysis and planning note. Verify current behavior against source and the canonical [architecture](project_docs/ARCHITECTURE.md), [status](project_docs/SYSTEM_STATUS.md), and [roadmap](project_docs/ROADMAP.md).
+>
 > **Audience**: CS Student (You, Susant) | **Perspective**: Senior AI Agent Engineer  
 > **Goal**: Understand your system deeply, compare it to the AI Agent Development map, and decide what to upgrade.
 

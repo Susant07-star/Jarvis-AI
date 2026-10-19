@@ -1,53 +1,47 @@
-# J.A.R.V.I.S. Productization & Distribution Roadmap
+# J.A.R.V.I.S. Product and Distribution Notes
 
-This document outlines the strategic phases to transform J.A.R.V.I.S. from a personal, hardcoded developer tool into a distributable, commercial desktop application (Tier 1: Desktop Edition).
+> Planning document only. The repo currently contains a root web application, optional sidecar services, and a separate Electron package. It does not currently provide one verified installer that bundles and configures the whole ecosystem.
 
-## The Business & Architecture Strategy
-- **Core Product:** A standalone Electron desktop application based on the existing IRIS codebase (React, Tailwind, Electron-Vite).
-- **Business Model:** Bring Your Own Key (BYOK) + One-Time Software License Fee. 
-- **Privacy & Security:** All API keys (LLM, Supabase, MCP) are stored securely and locally on the user's hard drive using `electron-store`. The backend AI processes run *within* the user's Electron app. Your server costs are $0.
-- **Anti-Piracy:** Implemented via a central License Key verification server on first boot.
+## Product shape to decide
 
----
+J.A.R.V.I.S. has a service-oriented architecture even though it is a personal project. A supported product mode needs to specify which machine runs each component, which data leaves that machine, which actions are allowed, and what remains available when a local machine is offline.
 
-## Phase 1: Codebase Consolidation & Rebranding
-**Goal:** Prepare the existing IRIS codebase to serve as the unified J.A.R.V.I.S. Desktop app.
-*   Rename `IRIS-AI-main` UI elements to reflect the unified J.A.R.V.I.S. brand.
-*   Clean up `package.json` and prune unused dependencies.
-*   Ensure all scripts build correctly for a single distributable artifact (`npm run build`).
+Two practical deployment modes are possible:
 
-## Phase 2: The License & Anti-Piracy Gateway
-**Goal:** Prevent unauthorized sharing of the `.exe` file.
-*   Create a simple, free Vercel/Render server to validate generated license keys (e.g., via LemonSqueezy or Stripe API).
-*   Build a **License Verification Screen** in the React app.
-*   When a user opens the app for the first time, they must enter their purchased License Key.
-*   Lock the license to the user's Hardware ID to prevent sharing.
+1. **Local-first desktop:** Electron app and local action/browser services run on the user's computer; provider requests and optional Supabase/Telegram services still use external networks.
+2. **Web service plus paired local agent:** Node web service hosts the remote UI/chat/scheduling, while a separately authenticated local agent handles browser and OS actions on the user's machine.
 
-## Phase 3: The "First-Run" API Onboarding Experience
-**Goal:** Allow users to securely configure their own AI providers without touching code.
-*   Build a sleek Setup Wizard UI.
-*   **Screens:** 
-    1. LLM API Key Setup (Gemini, Groq, etc.)
-    2. Supabase Setup (URL & Anon Key for memory)
-    3. Hardware Permissions (granting Jarvis access to mouse/keyboard/screen)
-*   Implement `electron-store` (with encryption) to securely save and load these configurations on app startup.
+The current repository has pieces of both modes, but the connection and release contract between them is not yet a single documented install flow. Do not present either mode as turnkey until clean-machine setup and end-to-end behavior are verified.
 
-## Phase 4: Dynamic Core Initialization (Server Integration) ✅ COMPLETE
-- Move `server/` entirely into the `jarvis-desktop/src/server/` directory.
-- Create `brain-daemon.ts` to boot the server internally on Electron startup.
-- Inject decrypted vault credentials dynamically into `process.env`.
-- Remove standalone Node execution requirements (`npm run dev`).
+## Recommended order
 
-## Phase 5: UI Unification (Logs, Voice, Chat, MCP)
-**Goal:** Bring all J.A.R.V.I.S capabilities into one beautiful interface.
-*   Integrate the JARVIS chat interface, voice interface, and system logs directly into the Electron App's main window.
-*   Create an **MCP Hub** screen where users can view active servers, install new ones, and configure MCP settings.
+### 1. Define trust and deployment boundaries
 
-## Phase 6: Packaging and Distribution
-**Goal:** Create a smooth, professional installation experience.
-*   Configure `electron-builder` to generate production-ready Installers (`Jarvis-Setup.exe` for Windows, `.dmg` for Mac).
-*   Add custom icons and installer branding.
-*   Test the fresh install experience on a clean Virtual Machine to ensure no developer dependencies leak into production.
+- Decide which services can bind to public interfaces and which must remain loopback/private.
+- Replace sample secrets and insecure defaults; require authentication for Python browser and local action endpoints.
+- Define permissions and user confirmation for shell, filesystem, browser, account, and messaging actions.
+- State clearly when audio, prompts, embeddings, browser state, and logs are sent to external providers.
 
----
-*Future Expansion (Tier 2): Once the desktop application is highly successful, a Cloud-Hosted Subscription tier can be developed to provide 24/7 access via Telegram when the host PC is turned off.*
+### 2. Make local service pairing explicit
+
+- Specify a pairing flow for the web service and local browser/desktop agent.
+- Use revocable, scoped credentials instead of a permanent shared token.
+- Add health checks, offline behavior, cancellation, and an action audit trail.
+- Keep local actions unavailable until the user pairs the device and grants the required permission.
+
+### 3. Choose the supported application boundary
+
+- Either keep Electron as an independent desktop app with separately documented features, or define a maintained contract for it to use the root Node service.
+- Avoid copying server modules between packages without a shared package boundary and versioning plan.
+- Add a clean install/uninstall flow only after required runtime dependencies and data locations are clear.
+
+### 4. Prepare release and support
+
+- Add package-specific CI for type checking, linting, and focused automated tests.
+- Build and smoke-test artifacts on clean Windows, macOS, and Linux machines before listing a platform as supported.
+- Document environment setup, data backup/deletion, upgrade behavior, provider outages, and support diagnostics.
+- Keep cloud deployment claims separate from local OS/browser capabilities; a cloud process cannot control a user's computer unless a paired local agent is online.
+
+## Release gate
+
+Do not label the system production-ready or publish an all-in-one installer until the security review, pairing model, data-flow documentation, clean installation, update path, failure recovery, and relevant integration tests have concrete evidence. See the [engineering roadmap](ROADMAP.md) for implementation priorities.
