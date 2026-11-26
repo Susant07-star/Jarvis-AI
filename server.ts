@@ -12,7 +12,7 @@ import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
 import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
 import { isLogApiPath, registerLogPortalRoutes } from "./server/logPortal";
-import { isAuthorizedTelegramWebApp } from "./server/telegramWebAppAuth";
+import { getTelegramWebAppAuthFailureReason } from "./server/telegramWebAppAuth";
 
 import { installConsoleLogCapture, logger } from "./server/logger";
 
@@ -49,15 +49,25 @@ async function startServer() {
     const providedPin = req.headers['x-jarvis-pin'];
     const telegramKeyRequest =
       req.method === "GET" &&
-      req.path === "/config/keys" &&
-      isAuthorizedTelegramWebApp(
+      req.originalUrl.split("?")[0] === "/api/config/keys";
+    const telegramAuthFailure = telegramKeyRequest
+      ? getTelegramWebAppAuthFailureReason(
         typeof req.headers["x-telegram-init-data"] === "string"
           ? req.headers["x-telegram-init-data"]
           : undefined,
         process.env.TELEGRAM_BOT_TOKEN,
         process.env.TELEGRAM_CHAT_ID,
-      );
-    if ((!requiredPin || providedPin !== requiredPin) && !telegramKeyRequest) {
+      )
+      : null;
+    const telegramRequestAuthorized = telegramKeyRequest && telegramAuthFailure === null;
+    if ((!requiredPin || providedPin !== requiredPin) && !telegramRequestAuthorized) {
+      if (telegramKeyRequest) {
+        logger.warn("API", `Telegram key request rejected (${telegramAuthFailure}).`);
+        return res.status(401).json({
+          error: "Telegram authorization failed.",
+          telegramAuthFailure,
+        });
+      }
       return res.status(401).json({ error: "Unauthorized: Invalid Master PIN." });
     }
     next();
