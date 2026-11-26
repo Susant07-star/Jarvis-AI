@@ -38,7 +38,7 @@ export function isAuthorizedTelegramWebApp(
     .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
-  const secretKey = createHmac("sha256", botToken).update("WebAppData").digest();
+  const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest();
   const expectedHash = createHmac("sha256", secretKey).update(dataCheckString).digest();
   const providedHash = Buffer.from(hash, "hex");
   return providedHash.length === expectedHash.length && timingSafeEqual(providedHash, expectedHash);
