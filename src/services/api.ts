@@ -1,5 +1,9 @@
 import { Message } from '../components/jarvis/ChatWindow';
 
+export function getJarvisAuthHeaders(): Record<string, string> {
+  return { 'X-Jarvis-Pin': localStorage.getItem('jarvis_pin') || '' };
+}
+
 export async function sendChatMessage(
   message: string, 
   history: Message[] = [], // kept for API compatibility, no longer sent to server

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Bell, Clock, MessageSquare, Search, Trash2, Plus, Play, Pause, Loader2, Check, X } from 'lucide-react';
 import { playSound } from '../../utils/soundEffects';
+import { getJarvisAuthHeaders } from '../../services/api';
 
 interface ResearchJob {
   id: string;
@@ -111,6 +112,7 @@ interface JobsPageProps {
 export function JobsPage({ onBack }: JobsPageProps) {
   const [jobs, setJobs] = useState<ResearchJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [routineType, setRoutineType] = useState<RoutineType>('reminder');
   const [topic, setTopic] = useState('');
@@ -122,12 +124,17 @@ export function JobsPage({ onBack }: JobsPageProps) {
 
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch('/api/jobs');
-      if (!res.ok) return;
+      setError(null);
+      const res = await fetch('/api/jobs', { headers: getJarvisAuthHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to load routines (HTTP ${res.status}).`);
+      }
       const data = await res.json();
       setJobs(data.jobs || []);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Failed to load recurring routines', err);
+      setError(err instanceof Error ? err.message : 'Failed to load recurring routines.');
     } finally {
       setLoading(false);
     }
@@ -156,17 +163,20 @@ export function JobsPage({ onBack }: JobsPageProps) {
     try {
       const res = await fetch('/api/jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getJarvisAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: encodeRoutineTopic(routineType, topic.trim()), time_of_day: cronExpr })
       });
-      if (res.ok) {
-        setTopic('');
-        setRoutineType('reminder');
-        setShowForm(false);
-        fetchJobs();
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to create routine (HTTP ${res.status}).`);
       }
-    } catch (e) {
-      console.error(e);
+      setTopic('');
+      setRoutineType('reminder');
+      setShowForm(false);
+      await fetchJobs();
+    } catch (err) {
+      console.error('Failed to create recurring routine', err);
+      setError(err instanceof Error ? err.message : 'Failed to create recurring routine.');
     } finally {
       setSaving(false);
     }
@@ -175,24 +185,37 @@ export function JobsPage({ onBack }: JobsPageProps) {
   const handleDelete = async (id: string) => {
     playSound.click();
     try {
-      await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: 'DELETE',
+        headers: getJarvisAuthHeaders()
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to delete routine (HTTP ${res.status}).`);
+      }
       setJobs(prev => prev.filter(j => j.id !== id));
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Failed to delete recurring routine', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete recurring routine.');
     }
   };
 
   const handleToggle = async (id: string, currentActive: boolean) => {
     playSound.tick();
     try {
-      await fetch(`/api/jobs/${id}`, {
+      const res = await fetch(`/api/jobs/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getJarvisAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !currentActive })
       });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to update routine (HTTP ${res.status}).`);
+      }
       setJobs(prev => prev.map(j => j.id === id ? { ...j, is_active: !currentActive } : j));
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Failed to update recurring routine', err);
+      setError(err instanceof Error ? err.message : 'Failed to update recurring routine.');
     }
   };
 
@@ -227,6 +250,11 @@ export function JobsPage({ onBack }: JobsPageProps) {
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-thin">
+        {error && (
+          <div role="alert" className="mb-4 rounded border border-red-800/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">
+            {error}
+          </div>
+        )}
         {showForm && (
           <div className="glass-panel p-4 md:p-6 rounded-xl border border-cyan-500/30 mb-8 max-w-4xl mx-auto shadow-[0_0_30px_rgba(34,211,238,0.05)]">
             <h2 className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-4 font-bold border-b border-cyan-900/50 pb-2">

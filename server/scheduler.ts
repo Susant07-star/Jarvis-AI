@@ -166,6 +166,7 @@ Rules:
 - For recurring research/news/latest/updates, type="research". For simple recurring good morning/text, type="message". For medicine/water/task nudges, type="reminder".
 - For one-time reminders, type="message" unless the user explicitly asks for alarm or call.
 - For cancel/modify, choose exact ids from the active lists. If the user says both/all matching items, include all matching ids.
+- If the user asks to stop/cancel a reminder and exactly one active recurring routine exists, cancel it even without an ID. If multiple active routines could match, ask which one.
 - If the user asks what is set, action="list".
 - Never pretend a recurring routine was created as a one-time task.`;
 
@@ -185,6 +186,18 @@ Rules:
 
       if (action === "list") {
         return { success: true, message: this.formatScheduleInventory(activeTasks, recurringRoutines) };
+      }
+
+      const activeRoutines = recurringRoutines.filter((routine) => routine.is_active);
+      const requestedTaskIds = normalizeIdList(parsed.target_task_ids).concat(normalizeIdList(parsed.target_task_id));
+      const hasMatchingOneTimeTask = requestedTaskIds.some((id) => activeTasks.some((task) => task.id === id));
+      if (action === "cancel" && scope === "one_time" && !hasMatchingOneTimeTask && activeTasks.length === 0 && activeRoutines.length === 1) {
+        return await this.handleRecurringRoutineCommand({
+          ...parsed,
+          action: "cancel",
+          scope: "recurring",
+          target_routine_ids: [activeRoutines[0].id],
+        }, chatId, recurringRoutines);
       }
 
       if (scope === "recurring") {
@@ -238,7 +251,9 @@ Rules:
     const targetChatId = chatId || this.cachedAdminChatId || parseInt(process.env.TELEGRAM_ADMIN_CHAT_ID || "0");
 
     if (action === "cancel") {
-      const ids = normalizeIdList(parsed.target_routine_ids).concat(normalizeIdList(parsed.target_routine_id));
+      let ids = normalizeIdList(parsed.target_routine_ids).concat(normalizeIdList(parsed.target_routine_id));
+      const activeRoutines = routines.filter((routine) => routine.is_active);
+      if (ids.length === 0 && activeRoutines.length === 1) ids = [activeRoutines[0].id];
       const uniqueIds = Array.from(new Set(ids));
       if (uniqueIds.length === 0) {
         return { success: false, message: `I need to know which recurring routine to delete, Boss.\n\n${this.formatScheduleInventory([], routines)}` };

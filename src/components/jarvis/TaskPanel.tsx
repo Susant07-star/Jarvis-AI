@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Bell, MessageSquare, Phone, Trash2, Edit3, Check, Clock, Loader2 } from 'lucide-react';
 import { playSound } from '../../utils/soundEffects';
+import { getJarvisAuthHeaders } from '../../services/api';
 
 export interface ScheduledTask {
   id: string;
@@ -201,17 +202,23 @@ function EditModal({
 export function TaskPanel({ showTaskPanel, onClose }: TaskPanelProps) {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<ScheduledTask | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch('/api/tasks');
-      if (!res.ok) return;
+      const res = await fetch('/api/tasks', { headers: getJarvisAuthHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to load scheduled tasks (HTTP ${res.status}).`);
+      }
       const data = await res.json();
       setTasks(data.tasks || []);
-    } catch {
-      // silently ignore network errors
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load scheduled tasks', err);
+      setError(err instanceof Error ? err.message : 'Failed to load scheduled tasks.');
     }
   }, []);
 
@@ -225,8 +232,19 @@ export function TaskPanel({ showTaskPanel, onClose }: TaskPanelProps) {
   const handleDelete = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+        headers: getJarvisAuthHeaders()
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to cancel task (HTTP ${res.status}).`);
+      }
       setTasks(prev => prev.filter(t => t.id !== id));
+      setError(null);
+    } catch (err) {
+      console.error('Failed to cancel scheduled task', err);
+      setError(err instanceof Error ? err.message : 'Failed to cancel scheduled task.');
     } finally {
       setLoading(false);
     }
@@ -236,14 +254,18 @@ export function TaskPanel({ showTaskPanel, onClose }: TaskPanelProps) {
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getJarvisAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, content, delay_seconds: delay }),
       });
-      if (res.ok) {
-        await fetchTasks();
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to update scheduled task (HTTP ${res.status}).`);
       }
-    } catch {
-      // ignore
+      await fetchTasks();
+      setError(null);
+    } catch (err) {
+      console.error('Failed to update scheduled task', err);
+      setError(err instanceof Error ? err.message : 'Failed to update scheduled task.');
     }
   }, [fetchTasks]);
 
@@ -287,6 +309,11 @@ export function TaskPanel({ showTaskPanel, onClose }: TaskPanelProps) {
 
 
         {/* Scheduled tasks */}
+        {error && (
+          <div role="alert" className="mb-2 rounded border border-red-800/60 bg-red-950/30 px-2 py-1.5 text-[9px] text-red-300">
+            {error}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-2">
           <span className="text-[9px] font-mono text-cyan-600 uppercase tracking-widest">One-Time Scheduled Tasks</span>
           {loading && <Loader2 className="w-2.5 h-2.5 text-cyan-600 animate-spin" />}

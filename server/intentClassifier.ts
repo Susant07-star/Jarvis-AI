@@ -22,6 +22,7 @@ export async function classifyIntent(text: string): Promise<IntentType> {
     "cancel alarm", "cancel my alarm", "cancel reminder", "cancel my reminder",
     "cancel the alarm", "cancel the reminder", "remove alarm", "remove reminder",
     "delete alarm", "delete reminder", "stop alarm", "turn off alarm",
+    "stop remainder", "stop the remainder", "stop remainders", "cancel remainder",
     // Modify
     "change my alarm", "change my reminder", "change the alarm", "update my alarm",
     "update my reminder", "modify alarm", "reschedule alarm", "reschedule reminder",
