@@ -21,7 +21,7 @@
 | Capability | Required configuration or service |
 |---|---|
 | Web chat | `GEMINI_API_KEY` and `GROQ_API_KEY` are both needed by the current chat route/classification path; provider access must be valid. |
-| Gemini Live voice | `GEMINI_API_KEY`, browser microphone permission, and access to the configured Gemini Live model. The code tries `gemini-3.8-live` first, then the existing fallbacks. Telegram Web App calls also require signed launch data and an allowlisted `TELEGRAM_CHAT_ID`. |
+| Gemini Live voice | `GEMINI_API_KEY`, browser microphone permission, and access to the configured Gemini Live model. The code tries `gemini-3.8-live` first, then the existing fallbacks. Telegram Web App calls also require signed launch data and an allowlisted `TELEGRAM_CHAT_ID` or `TELEGRAM_ADMIN_CHAT_ID`. |
 | Browser execution | `USE_BROWSER_AGENT=true` and the Python service reachable at `127.0.0.1:8000`; browser tasks are unavailable when the flag is off. |
 | Local desktop actions | I.R.I.S. daemon running and reachable at `IRIS_WORMHOLE_URL`, with a matching private `IRIS_API_KEY`. |
 | Telegram | Bot token, admin/chat configuration, and a reachable Telegram API. |

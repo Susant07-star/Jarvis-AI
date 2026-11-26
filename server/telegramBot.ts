@@ -30,6 +30,7 @@ import { runAutonomousLoop } from "./agenticLoop";
 import { buildPrompt } from "./agent_prompts/prompt_builder";
 import { ThreadManager, ThreadMessage } from "./threadManager";
 import { verifyVoice } from "./voice_bridge";
+import { getTelegramChatIdAllowlist } from "./telegramWebAppAuth";
 
 // ── In-process embedding cache (chatId → {embedding, originalText, timestamp}) ──
 // Stores the last unknown voice embedding per chat so that when the person
@@ -395,7 +396,7 @@ async function handleUpdate(token: string, update: any): Promise<void> {
   const webAppUrl = process.env.WEB_APP_URL;
 
   // ── Security Hardening: Validate Admin Chat ID ──
-  const adminChatIdStr = process.env.TELEGRAM_CHAT_ID;
+  const adminChatIdStr = getTelegramChatIdAllowlist();
   if (adminChatIdStr) {
     const adminIds = adminChatIdStr.split(',').map(id => parseInt(id.trim()));
     if (!adminIds.includes(chatId)) {

@@ -13,6 +13,13 @@ export type TelegramWebAppAuthFailureReason =
   | "user_not_allowed"
   | "invalid_signature";
 
+export function getTelegramChatIdAllowlist(): string | undefined {
+  const telegramChatIds = process.env.TELEGRAM_CHAT_ID?.split(",").map((id) => id.trim()).filter(Boolean) || [];
+  const adminChatIds = process.env.TELEGRAM_ADMIN_CHAT_ID?.split(",").map((id) => id.trim()).filter(Boolean) || [];
+  const allowedIds = telegramChatIds.length > 0 ? telegramChatIds : adminChatIds;
+  return allowedIds.length > 0 ? allowedIds.join(",") : undefined;
+}
+
 export function getTelegramWebAppAuthFailureReason(
   initData: string | undefined,
   botToken: string | undefined,

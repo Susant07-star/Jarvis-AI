@@ -60,7 +60,7 @@ The diagram shows integration points, not a promise that every optional service 
 
 ## Voice model priority
 
-The web voice client currently tries `gemini-3.8-live` first, followed by the existing Gemini Live fallback models, without extended-thinking configuration. Telegram Web App calls authenticate the key request with signed Telegram launch data and the configured `TELEGRAM_CHAT_ID` allowlist; normal browser calls continue using the J.A.R.V.I.S. PIN. This priority applies to the **Live voice session** only. Text chat, planning, and research use their own provider cascades in `server/llmRouter.ts`.
+The web voice client currently tries `gemini-3.8-live` first, followed by the existing Gemini Live fallback models, without extended-thinking configuration. Telegram Web App calls authenticate the key request with signed Telegram launch data and the configured `TELEGRAM_CHAT_ID` allowlist (`TELEGRAM_ADMIN_CHAT_ID` is supported as a fallback); normal browser calls continue using the J.A.R.V.I.S. PIN. This priority applies to the **Live voice session** only. Text chat, planning, and research use their own provider cascades in `server/llmRouter.ts`.
 
 ## Repository layout
 

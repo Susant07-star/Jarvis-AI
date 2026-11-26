@@ -12,7 +12,7 @@ import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
 import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
 import { isLogApiPath, registerLogPortalRoutes } from "./server/logPortal";
-import { getTelegramWebAppAuthFailureReason } from "./server/telegramWebAppAuth";
+import { getTelegramChatIdAllowlist, getTelegramWebAppAuthFailureReason } from "./server/telegramWebAppAuth";
 
 import { installConsoleLogCapture, logger } from "./server/logger";
 
@@ -56,7 +56,7 @@ async function startServer() {
           ? req.headers["x-telegram-init-data"]
           : undefined,
         process.env.TELEGRAM_BOT_TOKEN,
-        process.env.TELEGRAM_CHAT_ID,
+        getTelegramChatIdAllowlist(),
       )
       : null;
     const telegramRequestAuthorized = telegramKeyRequest && telegramAuthFailure === null;

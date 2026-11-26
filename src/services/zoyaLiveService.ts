@@ -217,12 +217,12 @@ export class ZoyaLiveService {
           const telegramErrors: Record<string, string> = {
             missing_init_data: "Open the call using the Call button in the Telegram bot, not the Render URL directly.",
             missing_bot_token: "Telegram authorization is not configured in Render: TELEGRAM_BOT_TOKEN is missing.",
-            missing_chat_allowlist: "Telegram authorization is not configured in Render: TELEGRAM_CHAT_ID is missing.",
+            missing_chat_allowlist: "Telegram authorization is not configured in Render: set TELEGRAM_CHAT_ID or TELEGRAM_ADMIN_CHAT_ID.",
             malformed_init_data: "Telegram launch data is incomplete. Close the call and reopen it from the Telegram bot.",
             invalid_auth_date: "Telegram launch data has an invalid timestamp. Reopen the call from the Telegram bot.",
             expired_init_data: "Telegram launch data expired. Close the call and reopen it from Telegram.",
             invalid_user: "Telegram launch data has no valid user. Open the call from your private chat with the bot.",
-            user_not_allowed: "This Telegram user is not allowed. TELEGRAM_CHAT_ID must include your private chat/user ID.",
+            user_not_allowed: "This Telegram user is not allowed. TELEGRAM_CHAT_ID or TELEGRAM_ADMIN_CHAT_ID must include your private chat/user ID.",
             invalid_signature: "Telegram launch data did not match this bot. Check that Render's TELEGRAM_BOT_TOKEN is correct.",
           };
           const telegramError = telegramErrors[errorData.telegramAuthFailure];

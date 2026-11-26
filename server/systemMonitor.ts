@@ -190,7 +190,8 @@ async function researchProcess(processName: string): Promise<string> {
  */
 async function sendAlert(message: string): Promise<void> {
   // Get admin chat ID from environment
-  const adminChatId = process.env.TELEGRAM_CHAT_ID;
+  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim()
+    || process.env.TELEGRAM_CHAT_ID?.split(",")[0]?.trim();
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   
   if (!adminChatId || !botToken) {

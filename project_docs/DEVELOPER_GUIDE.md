@@ -39,7 +39,7 @@ Use `.env.local` for local-only values. `.env.example` is a variable-name refere
 | `GROQ_API_KEY` | Required by the current `/api/chat` route and used by Groq-backed classification/transcription paths. A comma-separated pool is supported. |
 | `CEREBRAS_API_KEY`, `SAMBANOVA_API_KEY` | Optional text-provider fallback credentials. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_KEY` | Supabase URL and browser-safe anon key support Google auth; `SUPABASE_KEY` is server-side persistence only and must not be a service-role value exposed to the browser. Database tables and vector RPC functions must also be provisioned. |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID` | Optional Telegram bot and notification routing. |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`, `TELEGRAM_CHAT_ID` | Telegram bot token and admin routing. `TELEGRAM_CHAT_ID` is the authorization allowlist; `TELEGRAM_ADMIN_CHAT_ID` is supported as its fallback. |
 | `TAVILY_API_KEY`, `SERPAPI_API_KEY` | Optional search integrations used by selected research/planning paths. |
 | `JARVIS_PIN`, `JARVIS_LOG_TOKEN`, `OWNER_EMAIL` | Required Web API and WebSocket PIN, optional separate log access token, and owner configuration. The server refuses to start if `JARVIS_PIN` is missing; log routes enforce their own access rules. |
 | `USE_BROWSER_AGENT` | Set to `true` to enable the Python browser service path. The service must be running on `127.0.0.1:8000`. |
