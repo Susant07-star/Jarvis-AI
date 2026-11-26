@@ -99,15 +99,13 @@ ${priorContext}`;
 // ── Gemini Live model cascade ─────────────────────────────────────────────────
 //
 // Priority order:
-//   1. Gemini 3.8 Live Extended Thinking — high-reasoning native audio (primary)
+//   1. Gemini 3.8 Live (primary)
 //   2. Gemini 3.1 Flash Live Preview
 //   3. Gemini 2.5 Flash Preview Native Audio Dialog
 //   4. Gemini 2.5 Flash Native Audio Latest
 
-const GEMINI_LIVE_EXTENDED_THINKING = "gemini-3.8-live-extended-thinking";
-
 const LIVE_MODELS = [
-  GEMINI_LIVE_EXTENDED_THINKING,
+  "gemini-3.8-live",
   "gemini-3.1-flash-live-preview",
   "gemini-2.5-flash-preview-native-audio-dialog",
   "gemini-2.5-flash-native-audio-latest",
@@ -208,15 +206,22 @@ export class ZoyaLiveService {
       let rawKey = "";
       try {
         const pin = localStorage.getItem('jarvis_pin') || '';
+        const telegramInitData = window.Telegram?.WebApp?.initData;
+        const headers: Record<string, string> = { 'X-Jarvis-Pin': pin };
+        if (telegramInitData) headers['X-Telegram-Init-Data'] = telegramInitData;
         const keyRes = await fetch("/api/config/keys", {
-          headers: { 'X-Jarvis-Pin': pin }
+          headers
         });
-        if (keyRes.ok) {
-          const keyData = await keyRes.json();
-          rawKey = keyData.key;
+        if (!keyRes.ok) {
+          throw new Error(`Could not retrieve Gemini API key (HTTP ${keyRes.status}). Check Telegram authorization or your J.A.R.V.I.S. PIN.`);
         }
+        const keyData = await keyRes.json();
+        rawKey = typeof keyData.key === "string" ? keyData.key : "";
       } catch (err) {
-        console.warn("[ZoyaLive] Could not fetch keys from backend", err);
+        console.error("[ZoyaLive] Could not fetch keys from backend", err);
+        throw err instanceof Error
+          ? err
+          : new Error("Could not retrieve the Gemini API key from the backend.");
       }
 
       // Remove any literal quotes that might be wrapping the string or individual keys
@@ -352,9 +357,6 @@ export class ZoyaLiveService {
         model: this.currentModel,
         config: {
           responseModalities: [Modality.AUDIO],
-          ...(this.currentModel === GEMINI_LIVE_EXTENDED_THINKING
-            ? { thinkingConfig: { thinkingLevel: "high" } }
-            : {}),
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
           },
@@ -585,11 +587,7 @@ export class ZoyaLiveService {
                     required: ["query"],
                   },
                 },
-              ] as any[]).map((declaration) =>
-                this.currentModel === GEMINI_LIVE_EXTENDED_THINKING
-                  ? { ...declaration, behavior: "NON_BLOCKING" }
-                  : declaration
-              ),
+              ] as any[]),
             },
           ],
           // @ts-ignore - Temporary bypass for incomplete types in @google/genai LiveConnectConfig
@@ -730,7 +728,6 @@ export class ZoyaLiveService {
       });
     }
 
-    // Extended Thinking can finish a spoken filler while reasoning continues.
     // Save/reset the transcript only when the whole interaction is idle.
     const isInteractionComplete = interactionStatus !== "IN_PROGRESS";
     if ((message as any).serverContent?.turnComplete && isInteractionComplete) {

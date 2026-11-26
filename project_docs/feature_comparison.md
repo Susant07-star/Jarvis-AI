@@ -18,7 +18,7 @@ The system is not currently a distributed swarm of specialized autonomous agents
 
 ## Integration boundaries to preserve
 
-- **Voice and text chat have different cascades.** `gemini-3.8-live-extended-thinking` is first for the web Gemini Live session. Text chat, planning, and research use other cascades.
+- **Voice and text chat have different cascades.** `gemini-3.8-live` is first for the web Gemini Live session, without extended-thinking configuration. Text chat, planning, and research use other cascades.
 - **Browser tasks and local OS actions are different executors.** Browser work can go to the Python service; some action plans are transformed and forwarded to I.R.I.S. They do not share a single permission system.
 - **Persistence is split.** Thread messages, embeddings, knowledge records, tasks, cron jobs, runtime JSON files, and logs have different storage and recovery semantics.
 - **Electron and web are separate products in the repo.** Similar filenames or feature names do not establish a shared state store or identical action path.

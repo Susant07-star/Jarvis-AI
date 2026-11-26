@@ -12,6 +12,7 @@ import { startTelegramBot } from "./server/telegramBot";
 import { jarvisScheduler } from "./server/scheduler";
 import { startVoiceEngineHeartbeat } from "./server/voice_bridge";
 import { isLogApiPath, registerLogPortalRoutes } from "./server/logPortal";
+import { isAuthorizedTelegramWebApp } from "./server/telegramWebAppAuth";
 
 import { installConsoleLogCapture, logger } from "./server/logger";
 
@@ -46,7 +47,17 @@ async function startServer() {
 
     const requiredPin = process.env.JARVIS_PIN?.trim();
     const providedPin = req.headers['x-jarvis-pin'];
-    if (!requiredPin || providedPin !== requiredPin) {
+    const telegramKeyRequest =
+      req.method === "GET" &&
+      req.path === "/config/keys" &&
+      isAuthorizedTelegramWebApp(
+        typeof req.headers["x-telegram-init-data"] === "string"
+          ? req.headers["x-telegram-init-data"]
+          : undefined,
+        process.env.TELEGRAM_BOT_TOKEN,
+        process.env.TELEGRAM_CHAT_ID,
+      );
+    if ((!requiredPin || providedPin !== requiredPin) && !telegramKeyRequest) {
       return res.status(401).json({ error: "Unauthorized: Invalid Master PIN." });
     }
     next();

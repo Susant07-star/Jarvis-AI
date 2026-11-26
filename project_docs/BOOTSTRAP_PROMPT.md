@@ -31,7 +31,7 @@ Web chat enters through `/api/chat` and is classified as direct conversation, an
 
 ## Current facts and caveats
 
-- The Live voice cascade currently lists `gemini-3.8-live-extended-thinking` first and retains its configured fallback models. This applies to Live voice, not the text chat cascade.
+- The Live voice cascade currently lists `gemini-3.8-live` first and retains its configured fallback models, without extended-thinking configuration. This applies to Live voice, not the text chat cascade.
 - Root web chat currently requires both Gemini and Groq credentials on its route/classification path.
 - Browser execution requires the Python service; local OS control requires a connected I.R.I.S. daemon.
 - Supabase features require the expected schema and vector RPC functions.

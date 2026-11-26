@@ -70,7 +70,7 @@ There is no single model cascade for every task:
 
 | Request type | Current implementation |
 |---|---|
-| Live voice | `src/services/zoyaLiveService.ts` opens a Gemini Live session. `gemini-3.8-live-extended-thinking` is first in the configured order, followed by the retained Gemini Live fallback models. The first model receives high thinking configuration and non-blocking tool declarations. |
+| Live voice | `src/services/zoyaLiveService.ts` opens a Gemini Live session. `gemini-3.8-live` is first in the configured order, followed by the retained Gemini Live fallback models. Extended-thinking configuration is disabled. Telegram Web App key requests use signed launch data and the configured chat-ID allowlist; browser requests use the J.A.R.V.I.S. PIN. |
 | Chat | `server/llmRouter.ts` uses its chat provider list, currently starting with Gemini 3.1 Flash Lite and then configured Groq, Cerebras, SambaNova, and Gemini fallbacks. Image-bearing chat uses a separate Gemini-only list. |
 | Structured browser planning | `callPlannerWithCascade()` sends JSON-constrained requests through a smaller planner provider list. The planner parses actions and a confirmation flag. |
 | Research | `callResearchWithCascade()` uses Gemini models with Google Search grounding. |
