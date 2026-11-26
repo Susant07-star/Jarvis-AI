@@ -1550,8 +1550,14 @@ export class ZoyaLiveService {
     this.butlerPollInterval = setInterval(async () => {
       if (!this.isActive || !this.isSocketOpen) return;
       try {
-        const res = await fetch("/api/butler/results");
-        if (!res.ok) return;
+        const pin = localStorage.getItem("jarvis_pin") || "";
+        const res = await fetch("/api/butler/results", {
+          headers: { "X-Jarvis-Pin": pin },
+        });
+        if (!res.ok) {
+          console.warn(`[ZoyaLive] Butler result polling failed: HTTP ${res.status}`);
+          return;
+        }
         const data = await res.json();
         if (data.results && Array.isArray(data.results) && data.results.length > 0) {
           for (const item of data.results) {

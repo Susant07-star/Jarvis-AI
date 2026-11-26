@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { supabase } from "./supabaseClient";
 
 const THREADS_DIR = path.join(process.cwd(), "data", "threads");
+const EMBEDDING_DIMENSIONS = 768;
 
 // Ensure directory exists for local fallback
 if (!fs.existsSync(THREADS_DIR)) {
@@ -33,8 +34,18 @@ export class ThreadManager {
       const response = await ai.models.embedContent({
         model: 'gemini-embedding-001',
         contents: text,
+        config: { outputDimensionality: EMBEDDING_DIMENSIONS },
       });
-      return response.embeddings?.[0]?.values || null;
+      const embedding = response.embeddings?.[0]?.values;
+      if (!embedding) return null;
+      if (embedding.length !== EMBEDDING_DIMENSIONS) {
+        logger.error(
+          "ThreadManager",
+          `Expected ${EMBEDDING_DIMENSIONS}-dimension embedding, received ${embedding.length}.`
+        );
+        return null;
+      }
+      return embedding;
     } catch (e) {
       logger.error("ThreadManager", "Embedding failed", e);
       return null;

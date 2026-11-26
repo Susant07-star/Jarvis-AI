@@ -96,7 +96,7 @@ Tool calls are proposals produced by a model; the TypeScript backend parses and 
 
 ### Memory, knowledge, and scheduling
 
-- `ThreadManager` stores conversation history in Supabase `memory_store` when configured and also maintains rolling JSON files under `data/threads/` as local fallback/backup. Embeddings use Gemini's `gemini-embedding-001` model. Semantic history search requires the Supabase `match_memories` RPC.
+- `ThreadManager` stores conversation history in Supabase `memory_store` when configured and also maintains rolling JSON files under `data/threads/` as local fallback/backup. Embeddings use Gemini's `gemini-embedding-001` model with 768 output dimensions to match the vector columns. Semantic history search requires the Supabase `match_memories` RPC.
 - `KnowledgeManager` stores notes and documents in Supabase `knowledge_base` and queries the `match_knowledge` RPC. This is separate from short-term thread history and requires its table, embedding column, and function to be provisioned.
 - One-time tasks are represented in the in-process scheduler and may be recorded in Supabase. Startup initialization can restore persisted tasks, but delivery still depends on a running Node process and working downstream channels.
 - Recurring routines are read from Supabase `research_jobs` and scheduled in-process with `node-cron`. There is no external queue service in the current runtime, so downtime and timezone/configuration behavior need operational testing.
